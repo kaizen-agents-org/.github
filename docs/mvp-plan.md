@@ -181,3 +181,15 @@ Done when:
 3. Create the first minimal verifier contract and implementation.
 4. Wire `kaizen-loop` to call the builder and verifier through the initial contract.
 5. Run one end-to-end smoke test and capture the result.
+
+## Implementation Order
+
+The current implementation priority is:
+
+1. `builder-agent` Skill
+2. `verifier` Skill
+3. `kaizen-loop` integration
+4. Builder Agent CLI
+5. Product Kaizen Skill
+
+The Product Kaizen Skill is intentionally later because it answers what to build. The current system is focused on how to build a requested change with higher quality.

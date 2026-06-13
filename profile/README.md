@@ -157,3 +157,4 @@ Kaizen Agents is early-stage, experimental, and actively changing. The current f
 
 For deeper workflow details, see [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md).
 For the staged path to a usable end-to-end workflow, see [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md).
+For the design decisions behind the current direction, see [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md).
