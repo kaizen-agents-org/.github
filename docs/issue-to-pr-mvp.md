@@ -55,6 +55,9 @@ Recommended files:
 
 ```text
 AGENTS.md
+skills/
+  gh-link-issue-pr/
+  kaizen-bug-router/
 .kaizen/
   config.yml
 .github/
@@ -71,6 +74,16 @@ AGENTS.md
 - Which changes require human confirmation.
 - Whether the repository has special branch, commit, or PR conventions.
 - That PRs should be ready-for-review by default, not draft.
+- Which vendored Kaizen skills under `skills/` should be used for issue-linked PRs and bug routing.
+
+### `skills/`
+
+Target repositories vendor shared skills from `kaizen-agents-org/.github/skills`:
+
+- `gh-link-issue-pr`: keeps generated PRs linked to their source issues with GitHub closing keywords.
+- `kaizen-bug-router`: routes Kaizen Agents bug reports to the owning repository, or to `kaizen-loop` if ownership is unclear.
+
+The source of truth remains `.github/skills`. Shared skill changes are propagated by the sync workflow described in [Shared Skill Sync](./shared-skill-sync.md).
 
 ### `.kaizen/config.yml`
 

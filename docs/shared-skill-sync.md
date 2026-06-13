@@ -1,0 +1,75 @@
+# Shared Skill Sync
+
+This document describes how shared Kaizen Agents skills are made available inside the core projects and how updates are propagated.
+
+## Goal
+
+Each core project should support the same operating workflows:
+
+- Creating implementation PRs that correctly link and close their source issues.
+- Filing Kaizen Agents bugs in the repository that owns the failure.
+- Falling back to `kaizen-loop` when a bug spans projects or ownership is unclear.
+
+The shared skills make those workflows available in:
+
+- `kaizen-loop`
+- `builder-agent`
+- `verifier`
+
+## Source Of Truth
+
+The organization-level `.github` repository owns the shared skill source:
+
+```text
+skills/
+  gh-link-issue-pr/
+  kaizen-bug-router/
+```
+
+The core projects vendor copies of those directories under their own `skills/` directory. Their `AGENTS.md` files tell Codex to use the local copies when opening issue-linked PRs or routing Kaizen bug reports.
+
+## Update Flow
+
+When shared skills change in `.github`:
+
+1. The change is reviewed and merged in `.github`.
+2. `.github/workflows/sync-kaizen-shared-skills.yml` runs on `main`.
+3. The workflow copies `.github/skills` into:
+   - `builder-agent/skills`
+   - `verifier/skills`
+   - `kaizen-loop/skills`
+4. If a target project changes, the workflow updates or creates a ready-for-review PR in that project.
+5. A human reviews and merges each sync PR.
+
+The sync workflow does not merge PRs automatically.
+
+## Manual Sync
+
+For local or emergency syncs, run the script from a checkout where `.github`, `builder-agent`, `verifier`, and `kaizen-loop` are siblings:
+
+```sh
+cd kaizen-agents-org/.github
+scripts/sync-kaizen-shared-skills.sh "$PWD" "$PWD/../builder-agent" "$PWD/../verifier" "$PWD/../kaizen-loop"
+```
+
+Then review, test as needed, and open normal ready-for-review PRs in the target repositories.
+
+## Required Secret
+
+The GitHub Actions workflow needs a repository secret named `KAIZEN_SYNC_TOKEN`.
+
+The token must be able to:
+
+- clone `kaizen-agents-org/builder-agent`, `kaizen-agents-org/verifier`, and `kaizen-agents-org/kaizen-loop`
+- push branches to those repositories
+- create pull requests in those repositories
+
+The workflow uses a fixed branch name, `codex/sync-kaizen-shared-skills`, per target repository and updates an existing open sync PR instead of creating duplicate PRs.
+
+## Relationship To Issue-to-PR MVP
+
+The shared skills are not the runtime loop by themselves. They support the MVP by making the same agent-facing procedures available in each project:
+
+- `gh-link-issue-pr` keeps generated PRs connected to their source GitHub issues.
+- `kaizen-bug-router` turns observed Kaizen Agents bugs into routed GitHub issues.
+- `.kaizen/config.yml` and `.github/ISSUE_TEMPLATE/kaizen.yml` remain the per-repository runtime contract for issue selection and PR creation.
