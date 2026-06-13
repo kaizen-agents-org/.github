@@ -2,6 +2,18 @@
 
 This plan defines the shortest path to make `kaizen-agents-org` usable as an end-to-end workflow.
 
+## Product Goal
+
+The goal is a system where registering an issue leads to a high-quality pull request that solves the issue. A human maintainer reviews and merges that PR, and the merge is what resolves the original problem.
+
+That means the MVP should optimize for:
+
+- selecting the right issue
+- producing a focused, reviewable implementation
+- verifying the change before PR creation
+- explaining the solution and residual risk in the PR
+- keeping the human maintainer in control of the merge
+
 The first usable milestone is not full autonomy. The first milestone is:
 
 > Process one GitHub Issue, let `builder-agent` produce a change, let `kaizen-loop` run checks and create a PR, and let `verifier` return an independent gate result.
