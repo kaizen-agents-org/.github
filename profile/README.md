@@ -94,43 +94,42 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph Builder["builder-agent"]
-        A["Spec analysis"]
-        B["Architecture"]
-        C["Implementation"]
-        D["Self-review"]
-        E{"Score >= threshold?"}
-        A --> B --> C --> D --> E
+    subgraph BuilderAgent["BuilderAgent"]
+        BA1["Spec Analysis"]
+        BA2["Architecture"]
+        BA3["Implementation"]
+        BA4["Self Review"]
+        BA5{"Score >= Threshold?"}
+        BA1 --> BA2 --> BA3 --> BA4 --> BA5
+        BA5 -->|No| BA1
     end
 
-    subgraph Checks["mechanical verification"]
-        F["Lint"]
-        G["Typecheck"]
-        H["Test"]
-        I["Build"]
-        F --> G --> H --> I
+    subgraph MechanicalVerification["Mechanical Verification"]
+        MV1["Lint"]
+        MV2["TypeCheck"]
+        MV3["Test"]
+        MV4["Build"]
+        MV1 --> MV2 --> MV3 --> MV4
     end
 
-    subgraph Verifier["verifier"]
-        J["Spec review"]
-        K["Architecture review"]
-        L["Implementation review"]
-        M["Test review"]
-        N["Gate verdict"]
-        J --> K --> L --> M --> N
+    subgraph Verifier["Verifier"]
+        VF1["Spec Review"]
+        VF2["Architecture Review"]
+        VF3["Code Review"]
+        VF4["Test Review"]
+        VF5["Risk Review"]
+        VF1 --> VF2 --> VF3 --> VF4 --> VF5
     end
 
-    subgraph Policy["kaizen-loop policy"]
-        O{"Approved?"}
-        P["Commit / PR"]
-    end
+    Gate{"Approved?"}
+    Output["Commit / PR"]
 
-    E -->|no| A
-    E -->|yes| F
-    I --> J
-    N --> O
-    O -->|no| A
-    O -->|yes| P
+    BA5 -->|Yes| MV1
+    MV4 -->|Failed| BA1
+    MV4 -->|Passed| VF1
+    VF5 --> Gate
+    Gate -->|No| BA1
+    Gate -->|Yes| Output
 ```
 
 Builders build. Verifiers verify. Kaizen Loop coordinates.
