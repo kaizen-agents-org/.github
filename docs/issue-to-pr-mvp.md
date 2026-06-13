@@ -35,7 +35,7 @@ An MVP run is successful when:
 
 PRs are regular ready-for-review PRs by default. Do not create draft PRs and do not pass `--draft` to `gh pr create` unless a user explicitly asks for a draft.
 
-Every implementation PR must link its source issue in the PR body with a GitHub closing keyword such as `Closes #42`. A PR title containing `#42` or an issue comment saying "Implemented in ..." is not enough.
+Every implementation PR must target the repository's default branch and link its source issue in the PR body with a GitHub closing keyword such as `Closes #42`. A PR title containing `#42` or an issue comment saying "Implemented in ..." is not enough.
 
 ## Non-Goals
 
@@ -150,13 +150,14 @@ Example:
 Closes #42
 ```
 
-After PR creation, the workflow should verify that GitHub recognized the issue link:
+After PR creation, the workflow should verify that GitHub recognized the issue link and that the PR targets the repository default branch:
 
 ```sh
-gh pr view <number> --json closingIssuesReferences,isDraft,url
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+gh pr view <number> --json baseRefName,closingIssuesReferences,isDraft,url
 ```
 
-`closingIssuesReferences` must include the intended issue before the PR is considered ready.
+Compare `defaultBranchRef.name` from `gh repo view` with `baseRefName` from `gh pr view`. They must match, and `closingIssuesReferences` must include the intended issue before the PR is considered ready. GitHub only applies closing keywords automatically when the PR targets the default branch.
 
 ## Failure Behavior
 

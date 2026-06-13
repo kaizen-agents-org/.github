@@ -25,13 +25,14 @@ Those do not close the issue when the PR is merged.
    - If no issue exists, do not invent one. State that the PR has no linked issue.
 2. Put the closing reference in the PR body, preferably near the top or bottom.
 3. Create a regular ready-for-review PR unless the user explicitly asks for draft.
-4. After PR creation, verify GitHub recognizes the link:
+4. After PR creation, verify the PR targets the default branch and GitHub recognizes the link:
 
 ```sh
-gh pr view <number> --json closingIssuesReferences,isDraft,url
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+gh pr view <number> --json baseRefName,closingIssuesReferences,isDraft,url
 ```
 
-`closingIssuesReferences` should include the intended issue. `isDraft` should be `false` unless the user requested draft.
+Compare `defaultBranchRef.name` from `gh repo view` with `baseRefName` from `gh pr view`. They must match because GitHub only applies closing keywords automatically when the PR targets the default branch. `closingIssuesReferences` should include the intended issue. `isDraft` should be `false` unless the user requested draft.
 
 ## Closing Keyword Format
 
