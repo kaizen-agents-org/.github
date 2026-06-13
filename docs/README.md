@@ -17,12 +17,18 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Gate contracts
    - Operational readiness
 
-3. [Implementation Status](./implementation-status.md)
+3. [Issue-to-PR MVP](./issue-to-pr-mvp.md)
+   - Organization-level MVP goal
+   - Per-repository contract
+   - Ready-for-review PR requirements
+   - Failure behavior
+
+4. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - Why the target flow is not complete yet
 
-4. [Design Decisions](./design-decisions.md)
+5. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -36,6 +42,12 @@ This directory contains the organization-level documentation for Kaizen Agents.
 - **Responsibility split**: builders build, verifiers verify, Kaizen Loop coordinates.
 - **Quality gate**: builder self-review, mechanical verification, independent verifier, human review.
 - **Standalone principle**: `builder-agent`, `verifier`, and `kaizen-loop` should each be useful independently.
+- **MVP posture**: automate up to ready-for-review PR creation; keep merge under human control.
+- **Issue linkage**: implementation PRs must include a closing keyword such as `Closes #123` in the PR body.
+
+## Project Skills
+
+- [gh-link-issue-pr](../skills/gh-link-issue-pr/SKILL.md): project workflow for creating GitHub PRs that close their source issues.
 
 ## Current Focus
 
