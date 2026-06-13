@@ -28,12 +28,17 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Per-project vendoring
    - Update propagation workflow
 
-5. [Implementation Status](./implementation-status.md)
+5. [Organization Monitor](./org-monitor.md)
+   - Cross-repository coordination checks
+   - Conservative follow-up issue creation
+   - Safety boundaries for monitor automation
+
+6. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - Why the target flow is not complete yet
 
-6. [Design Decisions](./design-decisions.md)
+7. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -56,6 +61,10 @@ This directory contains the organization-level documentation for Kaizen Agents.
 - [kaizen-bug-router](../skills/kaizen-bug-router/SKILL.md): workflow for filing Kaizen Agents bug issues in the owning repository, falling back to `kaizen-loop` when ownership is unclear.
 
 Shared skills are synchronized into `builder-agent`, `verifier`, and `kaizen-loop`; see [Shared Skill Sync](./shared-skill-sync.md).
+
+## Organization Monitor
+
+The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, and responsibility alignment. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. See [Organization Monitor](./org-monitor.md).
 
 ## Current Focus
 
