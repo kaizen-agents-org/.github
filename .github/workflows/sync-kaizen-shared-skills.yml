@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: sync-kaizen-shared-skills-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   sync:
@@ -63,13 +63,29 @@ jobs:
               continue
             fi
 
-            branch="codex/sync-kaizen-shared-skills-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            branch="codex/sync-kaizen-shared-skills"
+            existing_pr="$(gh pr list \
+              --repo "kaizen-agents-org/${repo}" \
+              --head "${branch}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
             git config user.name "kaizen-agents-sync"
             git config user.email "actions@github.com"
             git switch -c "${branch}"
             git add skills
             git commit -m "Sync Kaizen shared skills"
-            git push -u origin "${branch}"
+            remote_sha="$(git ls-remote --heads origin "${branch}" | awk '{print $1}')"
+            if [ -n "${remote_sha}" ]; then
+              git push --force-with-lease="refs/heads/${branch}:${remote_sha}" -u origin "HEAD:${branch}"
+            else
+              git push -u origin "HEAD:${branch}"
+            fi
+            if [ -n "${existing_pr}" ]; then
+              echo "Updated existing PR for ${repo}: ${existing_pr}"
+              cd ..
+              continue
+            fi
             body_file="$(mktemp)"
             cat > "${body_file}" <<'EOF'
           ## Summary
