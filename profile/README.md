@@ -1,162 +1,114 @@
 # Kaizen Agents
 
-Experimental autonomous software development workflows built around **Build -> Verify -> Improve**.
+Kaizen Agents is an early-stage experiment for turning issues into high-quality, reviewable pull requests.
 
-Kaizen Agents is an early-stage organization for exploring continuous improvement loops in software development. The core idea is to keep building, verification, and orchestration as separate responsibilities so automated work can be improved without letting one agent become the only judge of its own output.
+The target workflow is simple:
 
-This is work in progress. The workflows, schemas, policies, and repository boundaries are expected to change as the system matures.
+1. A user registers an issue.
+2. The system builds a focused solution.
+3. The solution is checked, reviewed, and improved before review.
+4. A pull request is opened with enough context for a human maintainer.
+5. The human merges the PR, and the original issue is resolved.
 
-## Product Goal
+This organization is not trying to remove human ownership of repositories. It is trying to make AI-produced changes easier to trust, review, and merge.
 
-The goal is a workflow where a user registers an issue, the system proposes a high-quality solution as a pull request, and a human resolves the original problem by reviewing and merging that PR.
-
-The system should not bypass human ownership of the repository. It should prepare a solution that is clear, verified, reviewable, and safe enough for a human maintainer to merge with confidence.
-
-## What We Are Building
+## Core Idea
 
 ```mermaid
 flowchart LR
-    Build["Build"] --> Verify["Verify"]
+    Issue["Issue"] --> Build["Build"]
+    Build --> Verify["Verify"]
     Verify --> Improve["Improve"]
     Improve --> Build
+    Verify --> PR["Reviewable PR"]
+    PR --> Merge["Human merge"]
 ```
 
-- **Build**: a builder agent implements an approved task in an isolated workspace.
-- **Verify**: mechanical checks and an independent verifier evaluate the result.
-- **Improve**: structured feedback loops back into the builder until the change is acceptable or requires human input.
+The system is built around three responsibilities:
 
-## Core Repositories
+> Builders build. Verifiers verify. Kaizen Loop coordinates.
 
-| Repository | Responsibility | Status |
-| --- | --- | --- |
-| `kaizen-loop` | Coordinates task intake, workspace setup, agent execution, verification, risk decisions, commits, and pull requests. | Early-stage |
-| `builder-agent` | Builds approved changes, runs an internal self-review loop, and returns structured self-review output. | Experimental |
-| `verifier` | Independently reviews the completed change and returns a gate verdict. It does not implement changes. | Work in progress |
+## Core Projects
 
-Each core project should also be useful on its own. `builder-agent` should help implement a requested change without `kaizen-loop`; `verifier` should evaluate a change independently; and `kaizen-loop` should orchestrate workflows through clear adapters instead of hard-coding one inseparable implementation.
+| Project | What it is | Standalone use | Current status |
+| --- | --- | --- | --- |
+| `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP implementation exists on a feature branch. |
+| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | Detailed specs exist; executable implementation is still pending. |
+| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | CLI foundation exists; builder/verifier integration is not complete yet. |
 
-## Component Roles
+Each project should be useful on its own. The integrated system should compose them through explicit contracts rather than turning them into one inseparable automation script.
 
-- **`kaizen-loop`** is the orchestrator. It selects a task, prepares an isolated workspace, runs the builder, executes mechanical verification, calls the verifier, and applies the repository policy for PRs or direct commits.
-- **`builder-agent`** is the implementation worker. It understands the task, designs the change, writes code, adds or updates tests, and self-reviews until its configured threshold is met.
-- **`verifier`** is the independent quality gate. It reviews the completed change for spec fit, architecture, code quality, tests, maintainability, and risk, then returns an approval, rejection, or PR-only result.
-
-## Workflow Overview
-
-```mermaid
-flowchart TB
-    Task["GitHub Issue / Linear Task"] --> Loop["kaizen-loop"]
-    Loop --> Workspace["Create isolated workspace<br/>and branch"]
-    Workspace --> Builder["Builder Agent"]
-
-    Builder --> Checks["Mechanical Verification<br/>lint / typecheck / test / build"]
-    Checks -->|failed| BuilderFeedback["Return logs to Builder"]
-    BuilderFeedback --> Builder
-
-    Checks -->|passed| Verifier["Independent Verifier"]
-    Verifier --> Gate{"Gate passed?"}
-
-    Gate -->|no| Improvement["Return must_fix / should_fix feedback"]
-    Improvement --> Builder
-
-    Gate -->|yes| Risk["Risk / Policy Decision"]
-    Risk -->|low risk and allowed| Commit["Direct Commit"]
-    Risk -->|review required| PR["Pull Request"]
-
-    Commit --> Done["Done"]
-    PR --> Done
-```
-
-## Responsibility Pipeline
+## Intended Flow
 
 ```mermaid
 flowchart LR
-    subgraph BuilderAgent["BuilderAgent"]
-        BA1["Spec Analysis"]
-        BA2["Architecture"]
+    subgraph BuilderAgent["builder-agent"]
+        BA1["Spec analysis"]
+        BA2["Plan"]
         BA3["Implementation"]
-        BA4["Self Review"]
-        BA5{"Score >= Threshold?"}
+        BA4["Self-review"]
+        BA5{"Ready?"}
         BA1 --> BA2 --> BA3 --> BA4 --> BA5
-        BA5 -->|No| BA1
+        BA5 -->|no| BA2
     end
 
-    subgraph MechanicalVerification["Mechanical Verification"]
-        MV1["Lint"]
-        MV2["TypeCheck"]
-        MV3["Test"]
-        MV4["Build"]
+    subgraph Mechanical["mechanical verification"]
+        MV1["lint"]
+        MV2["typecheck"]
+        MV3["test"]
+        MV4["build"]
         MV1 --> MV2 --> MV3 --> MV4
     end
 
-    subgraph Verifier["Verifier"]
-        VF1["Spec Review"]
-        VF2["Architecture Review"]
-        VF3["Code Review"]
-        VF4["Test Review"]
-        VF5["Risk Review"]
+    subgraph Verifier["verifier"]
+        VF1["Spec review"]
+        VF2["Architecture review"]
+        VF3["Code review"]
+        VF4["Test review"]
+        VF5["Risk review"]
         VF1 --> VF2 --> VF3 --> VF4 --> VF5
     end
 
-    Gate{"Approved?"}
-    Output["Commit / PR"]
-
-    BA5 -->|Yes| MV1
-    MV4 -->|Failed| BA1
-    MV4 -->|Passed| VF1
-    VF5 --> Gate
-    Gate -->|No| BA1
-    Gate -->|Yes| Output
+    Issue["GitHub Issue"] --> KL["kaizen-loop"]
+    KL --> BA1
+    BA5 -->|yes| MV1
+    MV4 -->|failed| BA2
+    MV4 -->|passed| VF1
+    VF5 --> Gate{"Approved?"}
+    Gate -->|no| BA2
+    Gate -->|yes| PR["Pull Request"]
 ```
 
-Builders build. Verifiers verify. Kaizen Loop coordinates.
-
-Builder self-review is useful, but it is not the final quality gate. The final gate is layered:
+Builder self-review improves the work, but it is not the final gate. The final quality gate is layered:
 
 1. Builder self-review
 2. Mechanical verification
 3. Independent verifier review
-4. Human review or repository policy
+4. Human review
 
-## Gate Decision Model
+## Current Reality
 
-```mermaid
-flowchart TB
-    Result["Verifier Result"] --> Blocking{"Blocking issues?"}
+The full flow is not implemented yet.
 
-    Blocking -->|yes| MustFix["Rejected<br/>return must_fix"]
-    Blocking -->|no| Scores{"Required scores met?"}
+- `kaizen-loop` can already process issues, run an agent, run configured verification commands, and create PRs.
+- `builder-agent` already has a standalone loop controller and schema-backed artifacts.
+- `verifier` currently has design/spec documents, but no runnable verifier package yet.
+- `kaizen-loop` does not yet call `builder-agent` or `verifier` through the intended contracts.
 
-    Scores -->|no| WeakAreas["Rejected<br/>improve weak areas"]
-    Scores -->|yes| Confidence{"Confidence sufficient?"}
+The next practical milestone is a vertical slice:
 
-    Confidence -->|no| PROnly["PR-only<br/>human review required"]
-    Confidence -->|yes| Approved["Approved<br/>continue to risk decision"]
-```
+> GitHub Issue -> builder-agent -> mechanical verification -> verifier -> pull request.
 
-## Design Principles
+## Documentation
 
-- Separate implementation from evaluation.
-- Treat self-review as useful but insufficient.
-- Prefer objective verification where possible.
-- Keep approval gates explicit.
-- Preserve user changes.
-- Keep implementation scope constrained.
-- Make every loop observable.
+Start here:
 
-## Current Status
+- [Docs Index](https://github.com/kaizen-agents-org/.github/blob/main/docs/README.md): map of the documentation set.
+- [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md): system responsibilities and flow diagrams.
+- [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md): staged plan to make the system usable.
+- [Implementation Status](https://github.com/kaizen-agents-org/.github/blob/main/docs/implementation-status.md): what works today and what is missing.
+- [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md): rationale behind the current direction.
 
-Kaizen Agents is early-stage, experimental, and actively changing. The current focus is defining clear responsibility boundaries, useful feedback loops, and explicit quality gates before treating the workflow as production-ready automation.
+## Status
 
-## Planned Direction
-
-- `builder-agent` skill and CLI workflows
-- `verifier` CLI and structured gate reports
-- `kaizen-loop` orchestration over GitHub Issues and Linear tasks
-- Isolated workspace and branch management
-- PR creation and merge-readiness workflows
-- Policy-based low-risk direct commits
-
-For deeper workflow details, see [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md).
-For the staged path to a usable end-to-end workflow, see [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md).
-For the design decisions behind the current direction, see [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md).
+Kaizen Agents is early-stage, experimental, and actively changing. APIs, schemas, repository boundaries, and workflows may change as the implementation catches up with the architecture.
