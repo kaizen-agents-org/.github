@@ -43,6 +43,11 @@ This directory contains the organization-level documentation for Kaizen Agents.
 - **Quality gate**: builder self-review, mechanical verification, independent verifier, human review.
 - **Standalone principle**: `builder-agent`, `verifier`, and `kaizen-loop` should each be useful independently.
 - **MVP posture**: automate up to ready-for-review PR creation; keep merge under human control.
+- **Issue linkage**: implementation PRs must include a closing keyword such as `Closes #123` in the PR body.
+
+## Project Skills
+
+- [gh-link-issue-pr](../skills/gh-link-issue-pr/SKILL.md): project workflow for creating GitHub PRs that close their source issues.
 
 ## Current Focus
 

@@ -35,6 +35,8 @@ An MVP run is successful when:
 
 PRs are regular ready-for-review PRs by default. Do not create draft PRs and do not pass `--draft` to `gh pr create` unless a user explicitly asks for a draft.
 
+Every implementation PR must link its source issue in the PR body with a GitHub closing keyword such as `Closes #42`. A PR title containing `#42` or an issue comment saying "Implemented in ..." is not enough.
+
 ## Non-Goals
 
 - Automatic merge.
@@ -124,7 +126,7 @@ flowchart LR
 
 Every generated PR should include:
 
-- The linked issue, using `Closes #<issue-number>` when appropriate.
+- The linked issue, using `Closes #<issue-number>` for same-repository issues or `Closes owner/repo#<issue-number>` for cross-repository issues.
 - A concise summary of the change.
 - Verification commands and results.
 - The verifier result.
@@ -147,6 +149,14 @@ Example:
 
 Closes #42
 ```
+
+After PR creation, the workflow should verify that GitHub recognized the issue link:
+
+```sh
+gh pr view <number> --json closingIssuesReferences,isDraft,url
+```
+
+`closingIssuesReferences` must include the intended issue before the PR is considered ready.
 
 ## Failure Behavior
 
