@@ -6,6 +6,20 @@ The central principle is simple:
 
 > Builders build. Verifiers verify. Kaizen Loop coordinates.
 
+## Product Goal
+
+The target user experience is:
+
+1. A user registers an issue.
+2. `kaizen-loop` selects the issue and creates an isolated workspace.
+3. `builder-agent` produces a focused implementation.
+4. Mechanical verification and `verifier` evaluate the result.
+5. The system opens a high-quality pull request with enough context for review.
+6. A human maintainer reviews and merges the PR.
+7. The original issue is resolved by that merge.
+
+The system optimizes for high-quality, reviewable PRs rather than unreviewed autonomy. Human merge remains the normal completion point for meaningful changes.
+
 ## Repository Map
 
 ```mermaid

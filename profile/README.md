@@ -6,6 +6,12 @@ Kaizen Agents is an early-stage organization for exploring continuous improvemen
 
 This is work in progress. The workflows, schemas, policies, and repository boundaries are expected to change as the system matures.
 
+## Product Goal
+
+The goal is a workflow where a user registers an issue, the system proposes a high-quality solution as a pull request, and a human resolves the original problem by reviewing and merging that PR.
+
+The system should not bypass human ownership of the repository. It should prepare a solution that is clear, verified, reviewable, and safe enough for a human maintainer to merge with confidence.
+
 ## What We Are Building
 
 ```mermaid
