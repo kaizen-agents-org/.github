@@ -107,7 +107,14 @@ Start here:
 - [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md): system responsibilities and flow diagrams.
 - [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md): staged plan to make the system usable.
 - [Implementation Status](https://github.com/kaizen-agents-org/.github/blob/main/docs/implementation-status.md): what works today and what is missing.
+- [Shared Skill Sync](https://github.com/kaizen-agents-org/.github/blob/main/docs/shared-skill-sync.md): how shared Kaizen skills are distributed to the core projects.
 - [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md): rationale behind the current direction.
+
+## Shared Project Skills
+
+The organization-level `.github` repository is the source of truth for shared Kaizen skills. The core projects vendor those skills under `skills/` so Codex can use the same issue-linked PR and bug-routing workflows inside `kaizen-loop`, `builder-agent`, and `verifier`.
+
+When shared skills change, the sync workflow opens ready-for-review PRs in the core projects. The workflow does not merge those PRs automatically.
 
 ## Status
 

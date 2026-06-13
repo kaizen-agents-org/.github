@@ -23,12 +23,17 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Ready-for-review PR requirements
    - Failure behavior
 
-4. [Implementation Status](./implementation-status.md)
+4. [Shared Skill Sync](./shared-skill-sync.md)
+   - Shared skill source of truth
+   - Per-project vendoring
+   - Update propagation workflow
+
+5. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - Why the target flow is not complete yet
 
-5. [Design Decisions](./design-decisions.md)
+6. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -48,6 +53,9 @@ This directory contains the organization-level documentation for Kaizen Agents.
 ## Project Skills
 
 - [gh-link-issue-pr](../skills/gh-link-issue-pr/SKILL.md): project workflow for creating GitHub PRs that close their source issues.
+- [kaizen-bug-router](../skills/kaizen-bug-router/SKILL.md): workflow for filing Kaizen Agents bug issues in the owning repository, falling back to `kaizen-loop` when ownership is unclear.
+
+Shared skills are synchronized into `builder-agent`, `verifier`, and `kaizen-loop`; see [Shared Skill Sync](./shared-skill-sync.md).
 
 ## Current Focus
 
