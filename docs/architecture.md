@@ -1,14 +1,12 @@
 # Kaizen Agents Architecture Notes
 
-These notes describe the intended workflow model behind Kaizen Agents. They are a design reference, not a production guarantee. The system is early-stage and the exact commands, policies, and schemas may change.
+These notes describe the intended workflow model behind Kaizen Agents. They are a design reference for an early-stage, experimental system, not a production guarantee.
 
-## System Model
+The central principle is simple:
 
-Kaizen Agents is built around a simple separation:
+> Builders build. Verifiers verify. Kaizen Loop coordinates.
 
-- **`kaizen-loop` coordinates** task intake, workspace setup, loop control, verification calls, risk decisions, commits, and pull requests.
-- **`builder-agent` builds** by understanding requirements, designing a solution, implementing changes, adding tests, and running self-review.
-- **`verifier` verifies** by independently evaluating the result and producing a gate verdict.
+## Repository Map
 
 ```mermaid
 flowchart TB
@@ -16,199 +14,261 @@ flowchart TB
 
     ORG --> KL["kaizen-loop<br/>orchestration"]
     ORG --> BA["builder-agent<br/>build + self-improve"]
-    ORG --> VF["verifier<br/>independent gate"]
+    ORG --> VF["verifier<br/>independent quality gate"]
 
-    BA --> KL
-    VF --> KL
+    KL --> BA
+    KL --> VF
 ```
 
-## End-to-End Flow
+| Repository | Primary responsibility | Does not own |
+| --- | --- | --- |
+| `kaizen-loop` | Orchestration, workspace lifecycle, loop control, policy decisions, commits, and PR creation. | Implementing code changes or judging quality directly. |
+| `builder-agent` | Requirement understanding, design, implementation, tests, and self-review. | Final approval. |
+| `verifier` | Independent review, scoring, risk assessment, and gate verdicts. | Editing the implementation. |
 
-The main loop starts from a GitHub Issue or task, creates an isolated workspace, delegates implementation, verifies the result, and then chooses whether to create a pull request, commit directly, or stop for human input.
+## Component Process Flows
+
+Each repository owns a different part of the loop. The system is easier to reason about when those processes are described independently.
+
+### kaizen-loop
+
+`kaizen-loop` is the coordinator. It does not implement code or make the verifier's quality judgment itself; it connects the task source, workspace, agents, checks, and repository policy.
 
 ```mermaid
 flowchart TB
-    A["GitHub Issue<br/>kaizen label"] --> B["kaizen run"]
-    B --> C["Preflight<br/>auth / config / locks"]
-    C --> D["Issue selection"]
-    D --> E["Create isolated workspace<br/>and branch"]
-    E --> F["Builder Agent<br/>Claude / Codex implementation"]
+    KL1["Read task source<br/>GitHub Issue / Linear Task"] --> KL2["Run preflight<br/>auth / config / locks"]
+    KL2 --> KL3["Select task"]
+    KL3 --> KL4["Create isolated workspace<br/>and branch"]
+    KL4 --> KL5["Run builder-agent"]
+    KL5 --> KL6["Run mechanical verification"]
+    KL6 --> KL7{"Checks passed?"}
 
-    F --> G["Mechanical verification<br/>test / lint / build"]
+    KL7 -->|no| KL8["Return logs to builder<br/>or stop at retry limit"]
+    KL8 --> KL5
 
-    G -->|failed| H{"Retry budget<br/>remaining?"}
-    H -->|yes| F
-    H -->|no| I["Failure comment<br/>needs human"]
+    KL7 -->|yes| KL9["Run verifier"]
+    KL9 --> KL10{"Gate passed?"}
 
-    G -->|passed| J["Verifier<br/>spec / design / implementation / tests"]
-    J --> K{"Gate passed?"}
+    KL10 -->|no| KL11["Return verifier feedback<br/>must_fix / should_fix"]
+    KL11 --> KL5
 
-    K -->|yes| L["Risk decision"]
-    L -->|low risk| M["Direct commit to main<br/>close issue"]
-    L -->|high risk| N["Create PR<br/>human review"]
-
-    K -->|no| O["Generate improvement feedback<br/>must_fix / should_fix"]
-    O --> P{"Fix target"}
-    P -->|design issue| Q["Revise design"]
-    P -->|unclear requirement| R["Clarify issue / requirement"]
-    P -->|test gap| S["Add tests"]
-    P -->|implementation issue| T["Revise implementation"]
-
-    Q --> F
-    R --> F
-    S --> F
-    T --> F
-
-    I --> U["Done"]
-    M --> U
-    N --> U
+    KL10 -->|yes| KL12["Apply risk / repository policy"]
+    KL12 -->|direct commit allowed| KL13["Commit and close task"]
+    KL12 -->|review required| KL14["Create pull request"]
 ```
 
-## Builder-Centered Improvement Loop
+### builder-agent
 
-This view focuses on the builder's feedback cycle. The builder receives a task, loops internally until self-review passes, then receives external feedback from mechanical verification and the independent verifier.
+`builder-agent` owns implementation. It may self-review and improve its own output, but that self-review is an internal quality loop rather than the final gate.
 
 ```mermaid
 flowchart TB
-    A["GitHub Issue / Linear Task"] --> B["Builder Agent"]
+    BA1["Receive task context"] --> BA2["Understand requirements"]
+    BA2 --> BA3["Design solution"]
+    BA3 --> BA4["Implement change"]
+    BA4 --> BA5["Add or update tests"]
+    BA5 --> BA6["Self-review"]
+    BA6 --> BA7{"Threshold met<br/>and must_fix = 0?"}
 
-    subgraph Builder["Builder Agent"]
-        C["Spec understanding"]
-        D["Design"]
-        E["Implementation"]
-        F["Self-review"]
-        G{"Self-review<br/>threshold met?"}
+    BA7 -->|no| BA2
+    BA7 -->|yes| BA8["Return code changes<br/>and self-review report"]
 
-        C --> D --> E --> F --> G
-        G -->|no| C
-    end
-
-    B --> C
-    G -->|yes| H["Mechanical verification<br/>test / lint / build"]
-
-    H -->|failed| I["Retry with error logs"]
-    I --> C
-
-    H -->|passed| J["Verifier"]
-    J --> K{"Gate passed?"}
-
-    K -->|no| L["Generate improvement feedback"]
-    L --> C
-
-    K -->|yes| M["Risk analysis"]
-    M -->|low risk| N["Direct commit"]
-    M -->|high risk| O["Create PR"]
-
-    N --> P["Done"]
-    O --> P
+    BA9["Receive external feedback<br/>logs / verifier comments"] --> BA2
 ```
 
-## Responsibility Boundaries
+### verifier
 
-Each component has a narrow job. The builder can self-review, but the verifier remains independent and does not implement changes.
+`verifier` evaluates the completed change independently. It should produce structured output that can drive the next loop, but it should not edit the implementation.
+
+```mermaid
+flowchart TB
+    VF1["Receive task, diff,<br/>checks, and builder report"] --> VF2["Review spec fit"]
+    VF2 --> VF3["Review architecture"]
+    VF3 --> VF4["Review implementation"]
+    VF4 --> VF5["Review tests"]
+    VF5 --> VF6["Review maintainability<br/>and risk"]
+    VF6 --> VF7["Produce structured result<br/>scores / issues / confidence"]
+    VF7 --> VF8{"Gate verdict"}
+
+    VF8 -->|rejected| VF9["Return must_fix<br/>and weak areas"]
+    VF8 -->|PR-only| VF10["Require human review"]
+    VF8 -->|approved| VF11["Continue to risk decision"]
+```
+
+## End-to-End Workflow
+
+The main workflow starts from an approved task and continues until the change is committed, opened as a PR, or handed back to a human.
+
+```mermaid
+flowchart TB
+    Task["GitHub Issue / Linear Task<br/>kaizen label"] --> Run["kaizen run"]
+    Run --> Preflight["Preflight<br/>auth / config / locks"]
+    Preflight --> Select["Select task"]
+    Select --> Workspace["Create isolated workspace<br/>and branch"]
+    Workspace --> Builder["Builder Agent<br/>implements change"]
+
+    Builder --> Checks["Mechanical verification<br/>test / lint / build"]
+    Checks -->|failed| Retry{"Retry budget<br/>remaining?"}
+    Retry -->|yes| Builder
+    Retry -->|no| Human["Leave failure comment<br/>needs human"]
+
+    Checks -->|passed| Verifier["Verifier<br/>spec / design / implementation / tests"]
+    Verifier --> Gate{"Gate passed?"}
+
+    Gate -->|no| Feedback["Generate improvement feedback<br/>must_fix / should_fix"]
+    Feedback --> Target{"Fix target"}
+    Target -->|design issue| Design["Revise design"]
+    Target -->|unclear requirement| Requirement["Clarify issue / requirement"]
+    Target -->|test gap| Tests["Add tests"]
+    Target -->|implementation issue| Implementation["Revise implementation"]
+
+    Design --> Builder
+    Requirement --> Builder
+    Tests --> Builder
+    Implementation --> Builder
+
+    Gate -->|yes| Risk["Risk analysis"]
+    Risk -->|low risk and policy allows| Commit["Direct commit<br/>close task"]
+    Risk -->|review required| PR["Create PR<br/>human review"]
+
+    Human --> Done["Done"]
+    Commit --> Done
+    PR --> Done
+```
+
+## Responsibility Pipeline
+
+This is the clearest view of the core responsibility boundary. The builder has an internal quality loop, mechanical verification catches objective failures, and the verifier makes an independent approval decision.
 
 ```mermaid
 flowchart LR
-    subgraph BA["Builder Agent"]
-        A["Spec analysis"]
-        B["Architecture"]
-        C["Implementation"]
-        D["Self-review"]
-        E{"Score >= threshold?"}
-        A --> B --> C --> D --> E
+    subgraph BuilderAgent["BuilderAgent"]
+        BA1["Spec Analysis"]
+        BA2["Architecture"]
+        BA3["Implementation"]
+        BA4["Self Review"]
+        BA5{"Score >= Threshold?"}
+        BA1 --> BA2 --> BA3 --> BA4 --> BA5
+        BA5 -->|No| BA1
     end
 
-    subgraph MV["Mechanical Verification"]
-        F["Lint"]
-        G["Typecheck"]
-        H["Test"]
-        I["Build"]
-        F --> G --> H --> I
+    subgraph MechanicalVerification["Mechanical Verification"]
+        MV1["Lint"]
+        MV2["TypeCheck"]
+        MV3["Test"]
+        MV4["Build"]
+        MV1 --> MV2 --> MV3 --> MV4
     end
 
-    subgraph VF["Verifier"]
-        J["Spec review"]
-        K["Architecture review"]
-        L["Code review"]
-        M["Test review"]
-        N["Risk review"]
-        J --> K --> L --> M --> N
+    subgraph Verifier["Verifier"]
+        VF1["Spec Review"]
+        VF2["Architecture Review"]
+        VF3["Code Review"]
+        VF4["Test Review"]
+        VF5["Risk Review"]
+        VF1 --> VF2 --> VF3 --> VF4 --> VF5
     end
 
-    subgraph KL["kaizen-loop"]
-        O{"Approved?"}
-        P["Commit / PR"]
-    end
+    Gate{"Approved?"}
+    Output["Commit / PR"]
 
-    E -->|no| A
-    E -->|yes| F
-    I --> J
-    N --> O
-    O -->|no| A
-    O -->|yes| P
+    BA5 -->|Yes| MV1
+    MV4 -->|Failed| BA1
+    MV4 -->|Passed| VF1
+    VF5 --> Gate
+    Gate -->|No| BA1
+    Gate -->|Yes| Output
 ```
 
-## Builder Internal Loop
+## Builder Improvement Loop
 
-The builder owns implementation quality before the external verification stages run.
+The builder is allowed to self-review and improve its own work before external verification. That self-review is useful for iteration, but it is not trusted as the final gate.
 
 ```mermaid
 flowchart TB
-    A["Understand requirements"] --> B["Design solution"]
-    B --> C["Implement change"]
-    C --> D["Add or update tests"]
-    D --> E["Self-review"]
-    E --> F{"Score >= threshold<br/>and must_fix = 0?"}
-    F -->|no| A
-    F -->|yes| G["Submit to mechanical verification"]
+    Task["GitHub Issue / Linear Task"] --> Start["Builder Agent"]
+
+    subgraph BuilderAgent["Builder Agent"]
+        Spec["Spec understanding"]
+        Design["Design"]
+        Implement["Implementation"]
+        SelfReview["Self-review"]
+        Threshold{"Self-review<br/>threshold met?"}
+
+        Spec --> Design --> Implement --> SelfReview --> Threshold
+        Threshold -->|no| Spec
+    end
+
+    Start --> Spec
+    Threshold -->|yes| Checks["Mechanical verification<br/>test / lint / build"]
+
+    Checks -->|failed| Logs["Retry with error logs"]
+    Logs --> Spec
+
+    Checks -->|passed| Verifier["Verifier"]
+    Verifier --> Gate{"Gate passed?"}
+
+    Gate -->|no| Feedback["Generate improvement feedback"]
+    Feedback --> Spec
+
+    Gate -->|yes| Risk["Risk analysis"]
+    Risk -->|low risk| Commit["Direct commit"]
+    Risk -->|high risk| PR["Create PR"]
+
+    Commit --> Done["Done"]
+    PR --> Done
 ```
 
-Self-review should produce structured output, such as:
+Structured self-review output should include enough information to drive the next loop:
 
 - `score`
 - `must_fix`
 - `should_fix`
 - `confidence`
-- notes on residual risk
-
-This output is useful for improvement, but it is not the final gate.
+- residual risk notes
 
 ## Gate Decision Model
 
-The verifier evaluates the result after builder self-review and mechanical verification. It should not implement changes.
+The verifier runs after builder self-review and mechanical verification. It evaluates the completed change without editing it.
 
 ```mermaid
 flowchart TB
-    A["Verifier evaluation result"] --> B{"blocking_issues present?"}
+    Result["Verifier evaluation result"] --> Blocking{"blocking_issues present?"}
 
-    B -->|yes| C["Rejected<br/>return must_fix"]
-    B -->|no| D{"Required scores met?"}
+    Blocking -->|yes| MustFix["Rejected<br/>return must_fix"]
+    Blocking -->|no| Scores{"Required scores met?"}
 
-    D -->|no| E["Rejected<br/>improve weak areas"]
-    D -->|yes| F{"Confidence sufficient?"}
+    Scores -->|no| Improve["Rejected<br/>improve weak areas"]
+    Scores -->|yes| Confidence{"Confidence sufficient?"}
 
-    F -->|no| G["PR-only<br/>human review required"]
-    F -->|yes| H["Approved<br/>continue to risk decision"]
+    Confidence -->|no| PROnly["PR-only<br/>human review required"]
+    Confidence -->|yes| Approved["Approved<br/>continue to risk decision"]
 ```
+
+The gate has three meaningful outcomes:
+
+- **Rejected**: the builder must address `must_fix` items or weak scoring areas.
+- **PR-only**: no blocking issue is known, but confidence is not high enough for direct commit.
+- **Approved**: the change can continue to risk analysis and repository policy.
 
 ## Artifact Flow
 
-Each loop should leave behind enough structured information to make the next decision observable.
+Every loop should leave behind enough structured information to make the next decision observable.
 
 ```mermaid
 flowchart TB
-    A["Task / Issue"] --> B["Implementation plan"]
-    B --> C["Code changes"]
-    C --> D["Builder self-review report"]
-    D --> E["Mechanical verification logs"]
-    E --> F["Verifier report"]
+    Task["Task / Issue"] --> Plan["Implementation plan"]
+    Plan --> Changes["Code changes"]
+    Changes --> SelfReview["Builder self-review report"]
+    SelfReview --> Logs["Mechanical verification logs"]
+    Logs --> Report["Verifier report"]
 
-    F --> G{"Gate verdict"}
-    G -->|rejected| H["must_fix / should_fix feedback"]
-    H --> B
+    Report --> Verdict{"Gate verdict"}
+    Verdict -->|rejected| Feedback["must_fix / should_fix feedback"]
+    Feedback --> Plan
 
-    G -->|approved| I["Risk classification"]
-    I --> J["Pull request or direct commit"]
+    Verdict -->|approved| Risk["Risk classification"]
+    Risk --> Output["Pull request or direct commit"]
 ```
 
 ## Final Quality Gate
@@ -222,7 +282,7 @@ The final quality gate is deliberately layered:
 
 This prevents the builder from being the only judge of its own output while still using self-review as an improvement mechanism.
 
-## Open Design Areas
+## Current Design Questions
 
 - Exact verifier scoring schema
 - Retry budget and stopping rules
