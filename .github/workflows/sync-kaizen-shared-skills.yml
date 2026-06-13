@@ -63,7 +63,7 @@ jobs:
               continue
             fi
 
-            branch="codex/sync-kaizen-shared-skills-${GITHUB_RUN_ID}"
+            branch="codex/sync-kaizen-shared-skills-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             git config user.name "kaizen-agents-sync"
             git config user.email "actions@github.com"
             git switch -c "${branch}"
