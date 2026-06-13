@@ -31,6 +31,16 @@ Responsibilities must stay separated:
 - `verifier` independently evaluates the result.
 - `kaizen-loop` coordinates the workflow.
 
+## Standalone Project Principle
+
+The three projects should work together, but they should not only work together. Each project should be useful as a standalone tool or skill:
+
+- `builder-agent` should be usable to implement a requested change in a local workspace even when no `kaizen-loop` run is involved.
+- `verifier` should be usable to evaluate an existing diff, PR, or local change even when the change was not produced by `builder-agent`.
+- `kaizen-loop` should be usable as an orchestrator that can call the default builder and verifier, while keeping those integrations behind clear contracts.
+
+This keeps the system easier to test, easier to replace component by component, and less likely to collapse into one tightly coupled automation script.
+
 ## Why Self-Review Is Not Enough
 
 The builder should review its own output because self-review improves implementation quality before external checks run.

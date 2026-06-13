@@ -40,6 +40,29 @@ flowchart TB
 | `builder-agent` | Requirement understanding, design, implementation, tests, and self-review. | Final approval. |
 | `verifier` | Independent review, scoring, risk assessment, and gate verdicts. | Editing the implementation. |
 
+## Standalone And Integrated Use
+
+The three projects should compose into one workflow, but each should also remain useful by itself.
+
+```mermaid
+flowchart TB
+    subgraph Standalone["Standalone usage"]
+        A["builder-agent<br/>implement a requested change"]
+        B["verifier<br/>evaluate an existing diff"]
+        C["kaizen-loop<br/>coordinate issue workflows through adapters"]
+    end
+
+    subgraph Integrated["Integrated workflow"]
+        D["Issue"] --> E["kaizen-loop"]
+        E --> F["builder-agent"]
+        F --> G["Mechanical verification"]
+        G --> H["verifier"]
+        H --> I["Pull Request"]
+    end
+```
+
+This means integration boundaries should be explicit. `kaizen-loop` can call the builder and verifier, but the builder and verifier should not require `kaizen-loop` to be valuable.
+
 ## Component Process Flows
 
 Each repository owns a different part of the loop. The system is easier to reason about when those processes are described independently.

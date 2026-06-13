@@ -45,6 +45,8 @@ Done when:
 
 Goal: connect the three components with the smallest working contract.
 
+The vertical slice should not make the components inseparable. Each component should expose a usable standalone path first, then `kaizen-loop` should compose those paths through explicit contracts.
+
 ### builder-agent
 
 Start as a Codex-compatible skill rather than a CLI.
