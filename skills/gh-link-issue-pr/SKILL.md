@@ -28,10 +28,11 @@ Those do not close the issue when the PR is merged.
 4. After PR creation, verify the PR targets the default branch and GitHub recognizes the link:
 
 ```sh
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
 gh pr view <number> --json baseRefName,closingIssuesReferences,isDraft,url
 ```
 
-`baseRefName` must be the repository's default branch because GitHub only applies closing keywords automatically when the PR targets the default branch. `closingIssuesReferences` should include the intended issue. `isDraft` should be `false` unless the user requested draft.
+Compare `defaultBranchRef.name` from `gh repo view` with `baseRefName` from `gh pr view`. They must match because GitHub only applies closing keywords automatically when the PR targets the default branch. `closingIssuesReferences` should include the intended issue. `isDraft` should be `false` unless the user requested draft.
 
 ## Closing Keyword Format
 

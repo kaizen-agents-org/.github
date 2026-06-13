@@ -150,13 +150,14 @@ Example:
 Closes #42
 ```
 
-After PR creation, the workflow should verify that GitHub recognized the issue link:
+After PR creation, the workflow should verify that GitHub recognized the issue link and that the PR targets the repository default branch:
 
 ```sh
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
 gh pr view <number> --json baseRefName,closingIssuesReferences,isDraft,url
 ```
 
-`baseRefName` must be the repository's default branch and `closingIssuesReferences` must include the intended issue before the PR is considered ready. GitHub only applies closing keywords automatically when the PR targets the default branch.
+Compare `defaultBranchRef.name` from `gh repo view` with `baseRefName` from `gh pr view`. They must match, and `closingIssuesReferences` must include the intended issue before the PR is considered ready. GitHub only applies closing keywords automatically when the PR targets the default branch.
 
 ## Failure Behavior
 
