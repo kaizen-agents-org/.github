@@ -18,6 +18,8 @@ The first usable milestone is not full autonomy. The first milestone is:
 
 > Process one GitHub Issue, let `builder-agent` produce a change, let `kaizen-loop` run checks and create a PR, and let `verifier` return an independent gate result.
 
+See [Issue-to-PR MVP](./issue-to-pr-mvp.md) for the organization-level contract that should be installed into each target repository.
+
 ## Current State
 
 - **`kaizen-loop`** already has the strongest implementation base. It is a TypeScript CLI with commands such as `kaizen run`, `kaizen fix`, `kaizen doctor`, `kaizen report`, verification retries, agent selection, and PR-oriented workflow pieces.
@@ -115,7 +117,7 @@ Required behavior:
 - run mechanical verification
 - invoke `verifier`
 - loop on feedback when needed
-- create a PR for review-required changes
+- create a regular ready-for-review PR by default
 
 Done when:
 
@@ -133,7 +135,7 @@ Goal: prove that the vertical slice works in a controlled repo.
 4. Run `kaizen run` to execute the builder.
 5. Run lint, typecheck, test, and build through the configured mechanical verification.
 6. Run the verifier on the resulting change.
-7. Treat the first passing result as review-required and create a PR.
+7. Treat the first passing result as review-required and create a ready-for-review PR.
 8. Record the output as an example workflow.
 
 Done when:
@@ -150,7 +152,7 @@ Goal: make the quality gates predictable.
 2. Define the verifier result schema.
 3. Define `must_fix`, `should_fix`, `confidence`, and `risk` semantics.
 4. Define retry budget and stopping rules.
-5. Define `needs-human`, `pr_only`, and direct-commit behavior.
+5. Define `needs-human`, `pr_only`, and later opt-in direct-commit behavior.
 6. Add `kaizen doctor` checks for builder and verifier setup.
 
 Done when:

@@ -36,7 +36,7 @@ flowchart TB
 
 | Repository | Primary responsibility | Does not own |
 | --- | --- | --- |
-| `kaizen-loop` | Orchestration, workspace lifecycle, loop control, policy decisions, commits, and PR creation. | Implementing code changes or judging quality directly. |
+| `kaizen-loop` | Orchestration, workspace lifecycle, loop control, policy decisions, branch pushes, and PR creation. | Implementing code changes or judging quality directly. |
 | `builder-agent` | Requirement understanding, design, implementation, tests, and self-review. | Final approval. |
 | `verifier` | Independent review, scoring, risk assessment, and gate verdicts. | Editing the implementation. |
 
@@ -89,9 +89,9 @@ flowchart TB
     KL10 -->|no| KL11["Return verifier feedback<br/>must_fix / should_fix"]
     KL11 --> KL5
 
-    KL10 -->|yes| KL12["Apply risk / repository policy"]
-    KL12 -->|direct commit allowed| KL13["Commit and close task"]
-    KL12 -->|review required| KL14["Create pull request"]
+    KL10 -->|yes| KL12["Apply repository policy"]
+    KL12 -->|MVP default| KL14["Create ready-for-review PR"]
+    KL12 -->|explicit later opt-in| KL13["Direct commit and close task"]
 ```
 
 ### builder-agent
@@ -134,7 +134,7 @@ flowchart TB
 
 ## End-to-End Workflow
 
-The main workflow starts from an approved task and continues until the change is committed, opened as a PR, or handed back to a human.
+The main workflow starts from an approved task and continues until the change is opened as a PR or handed back to a human. Direct commit is a later repository-level opt-in, not the MVP default.
 
 ```mermaid
 flowchart TB
@@ -164,9 +164,9 @@ flowchart TB
     Tests --> Builder
     Implementation --> Builder
 
-    Gate -->|yes| Risk["Risk analysis"]
-    Risk -->|low risk and policy allows| Commit["Direct commit<br/>close task"]
-    Risk -->|review required| PR["Create PR<br/>human review"]
+    Gate -->|yes| Risk["Repository policy"]
+    Risk -->|MVP default| PR["Create PR<br/>human review"]
+    Risk -->|explicit later opt-in| Commit["Direct commit<br/>close task"]
 
     Human --> Done["Done"]
     Commit --> Done
@@ -207,7 +207,7 @@ flowchart LR
     end
 
     Gate{"Approved?"}
-    Output["Commit / PR"]
+    Output["Ready-for-review PR"]
 
     BA5 -->|Yes| MV1
     MV4 -->|Failed| BA1
@@ -248,9 +248,9 @@ flowchart TB
     Gate -->|no| Feedback["Generate improvement feedback"]
     Feedback --> Spec
 
-    Gate -->|yes| Risk["Risk analysis"]
-    Risk -->|low risk| Commit["Direct commit"]
-    Risk -->|high risk| PR["Create PR"]
+    Gate -->|yes| Risk["Repository policy"]
+    Risk -->|MVP default| PR["Create PR"]
+    Risk -->|explicit later opt-in| Commit["Direct commit"]
 
     Commit --> Done["Done"]
     PR --> Done
@@ -285,7 +285,7 @@ flowchart TB
 The gate has three meaningful outcomes:
 
 - **Rejected**: the builder must address `must_fix` items or weak scoring areas.
-- **PR-only**: no blocking issue is known, but confidence is not high enough for direct commit.
+- **PR-only**: no blocking issue is known, but the change should go through human review. This is the MVP default.
 - **Approved**: the change can continue to risk analysis and repository policy.
 
 ## Artifact Flow
@@ -304,8 +304,8 @@ flowchart TB
     Verdict -->|rejected| Feedback["must_fix / should_fix feedback"]
     Feedback --> Plan
 
-    Verdict -->|approved| Risk["Risk classification"]
-    Risk --> Output["Pull request or direct commit"]
+    Verdict -->|approved| Risk["Repository policy"]
+    Risk --> Output["Ready-for-review PR"]
 ```
 
 ## Final Quality Gate
@@ -323,7 +323,7 @@ This prevents the builder from being the only judge of its own output while stil
 
 - Exact verifier scoring schema
 - Retry budget and stopping rules
-- Direct-commit policy for low-risk changes
+- Later opt-in direct-commit policy for low-risk changes
 - Human escalation rules
 - PR body format and review handoff
 - Persistent logs and observability model
