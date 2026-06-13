@@ -27,6 +27,12 @@ flowchart LR
 | `builder-agent` | Builds approved changes, runs an internal self-review loop, and returns structured self-review output. | Experimental |
 | `verifier` | Independently reviews the completed change and returns a gate verdict. It does not implement changes. | Work in progress |
 
+## Component Roles
+
+- **`kaizen-loop`** is the orchestrator. It selects a task, prepares an isolated workspace, runs the builder, executes mechanical verification, calls the verifier, and applies the repository policy for PRs or direct commits.
+- **`builder-agent`** is the implementation worker. It understands the task, designs the change, writes code, adds or updates tests, and self-reviews until its configured threshold is met.
+- **`verifier`** is the independent quality gate. It reviews the completed change for spec fit, architecture, code quality, tests, maintainability, and risk, then returns an approval, rejection, or PR-only result.
+
 ## Workflow Overview
 
 ```mermaid

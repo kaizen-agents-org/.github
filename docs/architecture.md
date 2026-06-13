@@ -26,6 +26,75 @@ flowchart TB
 | `builder-agent` | Requirement understanding, design, implementation, tests, and self-review. | Final approval. |
 | `verifier` | Independent review, scoring, risk assessment, and gate verdicts. | Editing the implementation. |
 
+## Component Process Flows
+
+Each repository owns a different part of the loop. The system is easier to reason about when those processes are described independently.
+
+### kaizen-loop
+
+`kaizen-loop` is the coordinator. It does not implement code or make the verifier's quality judgment itself; it connects the task source, workspace, agents, checks, and repository policy.
+
+```mermaid
+flowchart TB
+    KL1["Read task source<br/>GitHub Issue / Linear Task"] --> KL2["Run preflight<br/>auth / config / locks"]
+    KL2 --> KL3["Select task"]
+    KL3 --> KL4["Create isolated workspace<br/>and branch"]
+    KL4 --> KL5["Run builder-agent"]
+    KL5 --> KL6["Run mechanical verification"]
+    KL6 --> KL7{"Checks passed?"}
+
+    KL7 -->|no| KL8["Return logs to builder<br/>or stop at retry limit"]
+    KL8 --> KL5
+
+    KL7 -->|yes| KL9["Run verifier"]
+    KL9 --> KL10{"Gate passed?"}
+
+    KL10 -->|no| KL11["Return verifier feedback<br/>must_fix / should_fix"]
+    KL11 --> KL5
+
+    KL10 -->|yes| KL12["Apply risk / repository policy"]
+    KL12 -->|direct commit allowed| KL13["Commit and close task"]
+    KL12 -->|review required| KL14["Create pull request"]
+```
+
+### builder-agent
+
+`builder-agent` owns implementation. It may self-review and improve its own output, but that self-review is an internal quality loop rather than the final gate.
+
+```mermaid
+flowchart TB
+    BA1["Receive task context"] --> BA2["Understand requirements"]
+    BA2 --> BA3["Design solution"]
+    BA3 --> BA4["Implement change"]
+    BA4 --> BA5["Add or update tests"]
+    BA5 --> BA6["Self-review"]
+    BA6 --> BA7{"Threshold met<br/>and must_fix = 0?"}
+
+    BA7 -->|no| BA2
+    BA7 -->|yes| BA8["Return code changes<br/>and self-review report"]
+
+    BA9["Receive external feedback<br/>logs / verifier comments"] --> BA2
+```
+
+### verifier
+
+`verifier` evaluates the completed change independently. It should produce structured output that can drive the next loop, but it should not edit the implementation.
+
+```mermaid
+flowchart TB
+    VF1["Receive task, diff,<br/>checks, and builder report"] --> VF2["Review spec fit"]
+    VF2 --> VF3["Review architecture"]
+    VF3 --> VF4["Review implementation"]
+    VF4 --> VF5["Review tests"]
+    VF5 --> VF6["Review maintainability<br/>and risk"]
+    VF6 --> VF7["Produce structured result<br/>scores / issues / confidence"]
+    VF7 --> VF8{"Gate verdict"}
+
+    VF8 -->|rejected| VF9["Return must_fix<br/>and weak areas"]
+    VF8 -->|PR-only| VF10["Require human review"]
+    VF8 -->|approved| VF11["Continue to risk decision"]
+```
+
 ## End-to-End Workflow
 
 The main workflow starts from an approved task and continues until the change is committed, opened as a PR, or handed back to a human.
