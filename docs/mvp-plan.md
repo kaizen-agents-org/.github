@@ -2,6 +2,18 @@
 
 This plan defines the shortest path to make `kaizen-agents-org` usable as an end-to-end workflow.
 
+## Product Goal
+
+The goal is a system where registering an issue leads to a high-quality pull request that solves the issue. A human maintainer reviews and merges that PR, and the merge is what resolves the original problem.
+
+That means the MVP should optimize for:
+
+- selecting the right issue
+- producing a focused, reviewable implementation
+- verifying the change before PR creation
+- explaining the solution and residual risk in the PR
+- keeping the human maintainer in control of the merge
+
 The first usable milestone is not full autonomy. The first milestone is:
 
 > Process one GitHub Issue, let `builder-agent` produce a change, let `kaizen-loop` run checks and create a PR, and let `verifier` return an independent gate result.
@@ -32,6 +44,8 @@ Done when:
 ## Phase 1: Minimal Vertical Slice
 
 Goal: connect the three components with the smallest working contract.
+
+The vertical slice should not make the components inseparable. Each component should expose a usable standalone path first, then `kaizen-loop` should compose those paths through explicit contracts.
 
 ### builder-agent
 
@@ -169,3 +183,15 @@ Done when:
 3. Create the first minimal verifier contract and implementation.
 4. Wire `kaizen-loop` to call the builder and verifier through the initial contract.
 5. Run one end-to-end smoke test and capture the result.
+
+## Implementation Order
+
+The current implementation priority is:
+
+1. `builder-agent` Skill
+2. `verifier` Skill
+3. `kaizen-loop` integration
+4. Builder Agent CLI
+5. Product Kaizen Skill
+
+The Product Kaizen Skill is intentionally later because it answers what to build. The current system is focused on how to build a requested change with higher quality.

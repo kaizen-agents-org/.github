@@ -6,6 +6,20 @@ The central principle is simple:
 
 > Builders build. Verifiers verify. Kaizen Loop coordinates.
 
+## Product Goal
+
+The target user experience is:
+
+1. A user registers an issue.
+2. `kaizen-loop` selects the issue and creates an isolated workspace.
+3. `builder-agent` produces a focused implementation.
+4. Mechanical verification and `verifier` evaluate the result.
+5. The system opens a high-quality pull request with enough context for review.
+6. A human maintainer reviews and merges the PR.
+7. The original issue is resolved by that merge.
+
+The system optimizes for high-quality, reviewable PRs rather than unreviewed autonomy. Human merge remains the normal completion point for meaningful changes.
+
 ## Repository Map
 
 ```mermaid
@@ -25,6 +39,29 @@ flowchart TB
 | `kaizen-loop` | Orchestration, workspace lifecycle, loop control, policy decisions, commits, and PR creation. | Implementing code changes or judging quality directly. |
 | `builder-agent` | Requirement understanding, design, implementation, tests, and self-review. | Final approval. |
 | `verifier` | Independent review, scoring, risk assessment, and gate verdicts. | Editing the implementation. |
+
+## Standalone And Integrated Use
+
+The three projects should compose into one workflow, but each should also remain useful by itself.
+
+```mermaid
+flowchart TB
+    subgraph Standalone["Standalone usage"]
+        A["builder-agent<br/>implement a requested change"]
+        B["verifier<br/>evaluate an existing diff"]
+        C["kaizen-loop<br/>coordinate issue workflows through adapters"]
+    end
+
+    subgraph Integrated["Integrated workflow"]
+        D["Issue"] --> E["kaizen-loop"]
+        E --> F["builder-agent"]
+        F --> G["Mechanical verification"]
+        G --> H["verifier"]
+        H --> I["Pull Request"]
+    end
+```
+
+This means integration boundaries should be explicit. `kaizen-loop` can call the builder and verifier, but the builder and verifier should not require `kaizen-loop` to be valuable.
 
 ## Component Process Flows
 

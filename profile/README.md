@@ -6,6 +6,12 @@ Kaizen Agents is an early-stage organization for exploring continuous improvemen
 
 This is work in progress. The workflows, schemas, policies, and repository boundaries are expected to change as the system matures.
 
+## Product Goal
+
+The goal is a workflow where a user registers an issue, the system proposes a high-quality solution as a pull request, and a human resolves the original problem by reviewing and merging that PR.
+
+The system should not bypass human ownership of the repository. It should prepare a solution that is clear, verified, reviewable, and safe enough for a human maintainer to merge with confidence.
+
 ## What We Are Building
 
 ```mermaid
@@ -26,6 +32,8 @@ flowchart LR
 | `kaizen-loop` | Coordinates task intake, workspace setup, agent execution, verification, risk decisions, commits, and pull requests. | Early-stage |
 | `builder-agent` | Builds approved changes, runs an internal self-review loop, and returns structured self-review output. | Experimental |
 | `verifier` | Independently reviews the completed change and returns a gate verdict. It does not implement changes. | Work in progress |
+
+Each core project should also be useful on its own. `builder-agent` should help implement a requested change without `kaizen-loop`; `verifier` should evaluate a change independently; and `kaizen-loop` should orchestrate workflows through clear adapters instead of hard-coding one inseparable implementation.
 
 ## Component Roles
 
@@ -151,3 +159,4 @@ Kaizen Agents is early-stage, experimental, and actively changing. The current f
 
 For deeper workflow details, see [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md).
 For the staged path to a usable end-to-end workflow, see [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md).
+For the design decisions behind the current direction, see [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md).
