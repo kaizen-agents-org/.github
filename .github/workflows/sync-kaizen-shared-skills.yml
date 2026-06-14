@@ -43,6 +43,8 @@ jobs:
           gh repo clone kaizen-agents-org/builder-agent builder-agent
           gh repo clone kaizen-agents-org/verifier verifier
           gh repo clone kaizen-agents-org/kaizen-loop kaizen-loop
+          gh repo clone kaizen-agents-org/coderabbit coderabbit
+          gh repo clone kaizen-agents-org/renovate-config renovate-config
 
       - name: Sync shared skills
         run: |
@@ -50,12 +52,14 @@ jobs:
             "${PWD}/source" \
             "${PWD}/builder-agent" \
             "${PWD}/verifier" \
-            "${PWD}/kaizen-loop"
+            "${PWD}/kaizen-loop" \
+            "${PWD}/coderabbit" \
+            "${PWD}/renovate-config"
 
       - name: Create target PRs
         run: |
           set -euo pipefail
-          for repo in builder-agent verifier kaizen-loop; do
+          for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
             cd "${repo}"
             if [ -z "$(git status --porcelain -- skills)" ]; then
               echo "No skill changes for ${repo}"

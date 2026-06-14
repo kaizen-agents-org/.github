@@ -54,6 +54,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
 
 - [gh-link-issue-pr](../skills/gh-link-issue-pr/SKILL.md): project workflow for creating GitHub PRs that close their source issues.
 - [kaizen-bug-router](../skills/kaizen-bug-router/SKILL.md): workflow for filing Kaizen Agents bug issues in the owning repository, falling back to `kaizen-loop` when ownership is unclear.
+- [pr-guardian](../skills/pr-guardian/SKILL.md): workflow for monitoring opened PRs until they are mergeable or a real blocker remains.
 
 Shared skills are synchronized into `builder-agent`, `verifier`, and `kaizen-loop`; see [Shared Skill Sync](./shared-skill-sync.md).
 

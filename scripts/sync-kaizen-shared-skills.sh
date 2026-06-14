@@ -19,6 +19,7 @@ fi
 skills=(
   "gh-link-issue-pr"
   "kaizen-bug-router"
+  "pr-guardian"
 )
 
 for target_root in "$@"; do

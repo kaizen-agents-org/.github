@@ -19,7 +19,7 @@ commands:
   setup: null
   verify:
     - "test -f docs/README.md && test -f docs/issue-to-pr-mvp.md && test -f profile/README.md"
-    - "test -f skills/gh-link-issue-pr/SKILL.md && test -f skills/kaizen-bug-router/SKILL.md"
+    - "test -f skills/gh-link-issue-pr/SKILL.md && test -f skills/kaizen-bug-router/SKILL.md && test -f skills/pr-guardian/SKILL.md"
   verifyTimeoutMinutes: 15
 
 builder:
