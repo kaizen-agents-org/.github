@@ -51,7 +51,7 @@ The sync workflow does not merge PRs automatically.
 
 ## Manual Sync
 
-For local or emergency syncs, run the script from a checkout where `.github`, `builder-agent`, `verifier`, and `kaizen-loop` are siblings:
+For local or emergency syncs, run the script from a checkout where `.github`, `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config` are siblings:
 
 ```sh
 cd kaizen-agents-org/.github
