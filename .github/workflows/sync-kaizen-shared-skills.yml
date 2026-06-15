@@ -25,20 +25,25 @@ jobs:
       GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
     steps:
       - name: Check token
+        id: check_token
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "KAIZEN_SYNC_TOKEN is required to push branches and create PRs in target repositories." >&2
-            exit 1
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice title=Shared skill sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
+            exit 0
           fi
+          echo "available=true" >> "${GITHUB_OUTPUT}"
           gh auth setup-git
 
       - name: Checkout source
+        if: ${{ steps.check_token.outputs.available == 'true' }}
         uses: actions/checkout@v4
         with:
           path: source
           persist-credentials: false
 
       - name: Clone target repositories
+        if: ${{ steps.check_token.outputs.available == 'true' }}
         run: |
           gh repo clone kaizen-agents-org/builder-agent builder-agent
           gh repo clone kaizen-agents-org/verifier verifier
@@ -47,6 +52,7 @@ jobs:
           gh repo clone kaizen-agents-org/renovate-config renovate-config
 
       - name: Sync shared skills
+        if: ${{ steps.check_token.outputs.available == 'true' }}
         run: |
           bash source/scripts/sync-kaizen-shared-skills.sh \
             "${PWD}/source" \
@@ -57,6 +63,7 @@ jobs:
             "${PWD}/renovate-config"
 
       - name: Create target PRs
+        if: ${{ steps.check_token.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do

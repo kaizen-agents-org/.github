@@ -127,9 +127,9 @@ flowchart TB
     VF6 --> VF7["Produce structured result<br/>scores / issues / confidence"]
     VF7 --> VF8{"Gate verdict"}
 
-    VF8 -->|rejected| VF9["Return must_fix<br/>and weak areas"]
-    VF8 -->|PR-only| VF10["Require human review"]
-    VF8 -->|approved| VF11["Continue to risk decision"]
+    VF8 -->|block_pr| VF9["Return must_fix<br/>and weak areas"]
+    VF8 -->|needs_context| VF10["Require human clarification"]
+    VF8 -->|open_pr / open_pr_with_warning| VF11["Continue to risk decision"]
 ```
 
 ## End-to-End Workflow
@@ -272,21 +272,22 @@ The verifier runs after builder self-review and mechanical verification. It eval
 flowchart TB
     Result["Verifier evaluation result"] --> Blocking{"blocking_issues present?"}
 
-    Blocking -->|yes| MustFix["Rejected<br/>return must_fix"]
+    Blocking -->|yes| MustFix["block_pr<br/>return must_fix"]
     Blocking -->|no| Scores{"Required scores met?"}
 
-    Scores -->|no| Improve["Rejected<br/>improve weak areas"]
+    Scores -->|no| Improve["block_pr<br/>improve weak areas"]
     Scores -->|yes| Confidence{"Confidence sufficient?"}
 
-    Confidence -->|no| PROnly["PR-only<br/>human review required"]
-    Confidence -->|yes| Approved["Approved<br/>continue to risk decision"]
+    Confidence -->|no| Warning["open_pr_with_warning<br/>show risk to reviewers"]
+    Confidence -->|yes| OpenPR["open_pr<br/>continue to risk decision"]
 ```
 
-The gate has three meaningful outcomes:
+The MVP gate has four meaningful outcomes:
 
-- **Rejected**: the builder must address `must_fix` items or weak scoring areas.
-- **PR-only**: no blocking issue is known, but the change should go through human review. This is the MVP default.
-- **Approved**: the change can continue to risk analysis and repository policy.
+- **`open_pr`**: no blocking or warning signal was found; continue to ready-for-review PR creation.
+- **`open_pr_with_warning`**: no blocking issue is known, but non-blocking risk should be shown to reviewers.
+- **`block_pr`**: the builder must address `must_fix` items or weak scoring areas before PR creation.
+- **`needs_context`**: task or diff context is insufficient; stop for human clarification.
 
 ## Artifact Flow
 
@@ -301,10 +302,10 @@ flowchart TB
     Logs --> Report["Verifier report"]
 
     Report --> Verdict{"Gate verdict"}
-    Verdict -->|rejected| Feedback["must_fix / should_fix feedback"]
+    Verdict -->|block_pr| Feedback["must_fix / should_fix feedback"]
     Feedback --> Plan
 
-    Verdict -->|approved| Risk["Repository policy"]
+    Verdict -->|open_pr / open_pr_with_warning| Risk["Repository policy"]
     Risk --> Output["Ready-for-review PR"]
 ```
 

@@ -65,11 +65,11 @@ scripts/sync-kaizen-shared-skills.sh "$PWD" \
 
 Then review, test as needed, and open normal ready-for-review PRs in the target repositories.
 
-## Required Secret
+## Optional Secret
 
-The GitHub Actions workflow needs a repository secret named `KAIZEN_SYNC_TOKEN`.
+The GitHub Actions workflow needs a repository secret named `KAIZEN_SYNC_TOKEN` to push sync branches and create target PRs. If the secret is missing, the workflow exits successfully after reporting a skipped sync instead of failing `main`.
 
-The token must be able to:
+When configured, the token must be able to:
 
 - clone `kaizen-agents-org/builder-agent`, `kaizen-agents-org/verifier`, `kaizen-agents-org/kaizen-loop`, `kaizen-agents-org/coderabbit`, and `kaizen-agents-org/renovate-config`
 - push branches to those repositories

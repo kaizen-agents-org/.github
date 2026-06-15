@@ -1,6 +1,6 @@
 # Kaizen Agents Design Decisions
 
-Date: 2026-06-13
+Date: 2026-06-15
 
 This document records the design decisions that should guide implementation across `kaizen-loop`, `builder-agent`, and `verifier`.
 
@@ -134,26 +134,25 @@ Default passing conditions:
 - `mustFix.length === 0`
 - `confidence >= 0.7`
 
-### Skill Before CLI
+### Skill And CLI
 
-The first implementation of `builder-agent` should be a Codex-compatible skill, not a CLI.
+The MVP includes both a Codex-compatible skill and a small CLI.
 
 Reason:
 
-> The core of Builder Agent is a working method, not a command-line interface.
+> The core of Builder Agent is a working method, but `kaizen-loop` also needs a stable executable contract.
 
-Start with:
+The skill remains useful for local agent work, while the CLI provides a structured integration boundary:
 
 ```text
 builder-agent/
 |- SKILL.md
+|- src/
+|- schemas/
 `- prompts/
-   |- implement.md
-   |- self-review.md
-   `- improve.md
 ```
 
-A CLI can be added after the behavior, prompts, schemas, and loop are proven.
+The CLI is an MVP contract, not final approval.
 
 ## verifier
 
@@ -175,15 +174,15 @@ Expected output shape:
 
 ```json
 {
-  "approved": false,
-  "score": 82,
+  "verdict": "open_pr_with_warning",
   "must_fix": [],
   "should_fix": [],
+  "confidence": 82,
   "risk": "medium"
 }
 ```
 
-The verifier should produce a gate result and feedback. It should not modify the implementation.
+The current MVP verifier status vocabulary is `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`. The verifier should produce a gate result and feedback. It should not modify the implementation.
 
 ## kaizen-loop
 
@@ -222,11 +221,11 @@ Therefore Product Kaizen should not be included in the first `builder-agent` / `
 
 Build in this order:
 
-1. `builder-agent` Skill
-2. `verifier` Skill
-3. `kaizen-loop` integration
-4. Builder Agent CLI
-5. Product Kaizen Skill
+1. Harden `kaizen-loop` integration with the shipped `builder-agent` and `verifier` MVP CLIs.
+2. Improve builder artifacts and verifier feedback quality.
+3. Expand the verifier toward staged review.
+4. Strengthen PR guardian and CI follow-up behavior.
+5. Product Kaizen Skill.
 
 The first usable milestone is a vertical slice:
 

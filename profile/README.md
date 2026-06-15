@@ -32,9 +32,9 @@ The system is built around three responsibilities:
 
 | Project | What it is | Standalone use | Current status |
 | --- | --- | --- | --- |
-| `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP implementation exists on a feature branch. |
-| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | Detailed specs exist; executable implementation is still pending. |
-| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | CLI foundation exists; builder/verifier integration is not complete yet. |
+| `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP CLI and Codex skill are shipped on `main`. |
+| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | MVP CLI is shipped on `main`; fuller staged verifier work remains future. |
+| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | Phase 2 CLI supports builder-agent fixes, verifier review, isolated worktrees, PR creation, and pr-guardian follow-up. |
 
 Each project should be useful on its own. The integrated system should compose them through explicit contracts rather than turning them into one inseparable automation script.
 
@@ -88,16 +88,16 @@ Builder self-review improves the work, but it is not the final gate. The final q
 
 ## Current Reality
 
-The full flow is not implemented yet.
+The first usable vertical slice exists, but the product is still early and the contracts are still being hardened.
 
-- `kaizen-loop` can already process issues, run an agent, run configured verification commands, and create PRs.
-- `builder-agent` already has a standalone loop controller and schema-backed artifacts.
-- `verifier` currently has design/spec documents, but no runnable verifier package yet.
-- `kaizen-loop` does not yet call `builder-agent` or `verifier` through the intended contracts.
+- `kaizen-loop` can process issues, create isolated per-issue worktrees, run builder-agent-based fixes, run configured verification commands, call verifier review, create PRs, and follow up with the vendored `pr-guardian` skill.
+- `builder-agent` has a standalone MVP CLI, a Codex-compatible skill, schema-backed artifacts, and a loop controller for implementation plus self-review.
+- `verifier` has a runnable MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
+- The richer staged verifier described in the design docs remains future work; the shipped verifier is the minimal verdict CLI needed for orchestration.
 
-The next practical milestone is a vertical slice:
+The current practical milestone is hardening this path:
 
-> GitHub Issue -> builder-agent -> mechanical verification -> verifier -> pull request.
+> GitHub Issue -> builder-agent -> mechanical verification -> verifier -> ready-for-review pull request.
 
 ## Documentation
 
@@ -113,7 +113,7 @@ Start here:
 
 ## Shared Project Skills
 
-The organization-level `.github` repository is the source of truth for shared Kaizen skills. The core projects vendor those skills under `skills/` so Codex can use the same issue-linked PR and bug-routing workflows inside `kaizen-loop`, `builder-agent`, and `verifier`.
+The organization-level `.github` repository is the source of truth for shared Kaizen skills. The core projects vendor those skills under `skills/` so Codex can use the same issue-linked PR and bug-routing workflows inside `kaizen-loop`, `builder-agent`, `verifier`, `coderabbit`, and `renovate-config`.
 
 When shared skills change, the sync workflow opens ready-for-review PRs in the core projects. The workflow does not merge those PRs automatically.
 
