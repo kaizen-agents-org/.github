@@ -67,7 +67,7 @@ Then review, test as needed, and open normal ready-for-review PRs in the target 
 
 ## Optional Secret
 
-The GitHub Actions workflow needs a repository secret named `KAIZEN_SYNC_TOKEN` to push sync branches and create target PRs. If the secret is missing, the workflow exits successfully after reporting a skipped sync instead of failing `main`.
+`KAIZEN_SYNC_TOKEN` is optional and only needed to enable cross-repository sync. If the secret is missing, the workflow exits successfully after reporting a skipped sync instead of failing `main`.
 
 When configured, the token must be able to:
 
