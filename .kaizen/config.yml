@@ -15,6 +15,15 @@ run:
   maxAttemptsPerIssue: 3
   latestStartHour: 7
 
+scheduler:
+  nightly:
+    enabled: true
+    time: "01:30"
+  poll:
+    enabled: true
+    intervalMinutes: 5
+    skipIfRunning: true
+
 commands:
   setup: null
   verify:
@@ -31,6 +40,12 @@ verifier:
   command: "verifier"
   resultPath: ".kaizen/verifier/verify-result.json"
   timeoutMinutes: 15
+
+guardian:
+  enabled: true
+  command: "codex"
+  timeoutMinutes: 60
+  maxAttempts: 5
 
 policy:
   mode: pr-only
