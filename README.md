@@ -37,6 +37,8 @@ flowchart TB
     Skills --> BA["builder-agent/skills"]
     Skills --> KL["kaizen-loop/skills"]
     Skills --> VF["verifier/skills"]
+    Skills --> CR["coderabbit/skills"]
+    Skills --> RC["renovate-config/skills"]
 ```
 
 ## Core Repositories
