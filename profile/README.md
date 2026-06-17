@@ -1,27 +1,23 @@
 # Kaizen Agents
 
-Kaizen Agents is an early-stage experiment for turning issues into high-quality, reviewable pull requests.
+Kaizen Agents turns GitHub Issues into high-quality, reviewable pull requests.
 
-The target workflow is simple:
+The system is intentionally conservative: automation can build, verify, and open a PR, but human maintainers still own merge decisions.
 
-1. A user registers an issue.
-2. The system builds a focused solution.
-3. The solution is checked, reviewed, and improved before review.
-4. A pull request is opened with enough context for a human maintainer.
-5. The human merges the PR, and the original issue is resolved.
-
-This organization is not trying to remove human ownership of repositories. It is trying to make AI-produced changes easier to trust, review, and merge.
-
-## Core Idea
+## Issue-To-PR Flow
 
 ```mermaid
 flowchart LR
-    Issue["Issue"] --> Build["Build"]
-    Build --> Verify["Verify"]
-    Verify --> Improve["Improve"]
-    Improve --> Build
-    Verify --> PR["Reviewable PR"]
-    PR --> Merge["Human merge"]
+    Issue["GitHub Issue"] --> Loop["kaizen-loop<br/>orchestrates"]
+    Loop --> Workspace["isolated workspace<br/>and branch"]
+    Workspace --> Builder["builder-agent<br/>implements + self-reviews"]
+    Builder --> Checks["mechanical checks<br/>test / typecheck / build"]
+    Checks --> Verifier["verifier<br/>independent gate"]
+    Verifier --> PR["ready-for-review PR"]
+    PR --> Human["human review + merge"]
+
+    Checks -->|failed| Builder
+    Verifier -->|must_fix| Builder
 ```
 
 The system is built around three responsibilities:
@@ -32,51 +28,41 @@ The system is built around three responsibilities:
 
 | Project | What it is | Standalone use | Current status |
 | --- | --- | --- | --- |
-| `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP CLI and Codex skill are shipped on `main`. |
-| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | MVP CLI is shipped on `main`; fuller staged verifier work remains future. |
-| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | Phase 2 CLI supports builder-agent fixes, verifier review, isolated worktrees, PR creation, and pr-guardian follow-up. |
+| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, policy, and PR creation. | Coordinate GitHub Issue workflows through repository config. | TypeScript CLI with run, fix, report, queue, improve, scheduler, doctor, logs, builder integration, verifier integration, and PR guardian hooks. |
+| `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP CLI, schema-backed artifacts, Codex/Claude provider fallback, and Kaizen Loop integration payload. |
+| `verifier` | Independent evaluator for completed changes. | Evaluate task, diff, verification logs, and builder report, then return a gate verdict. | MVP CLI returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`; staged verifier design remains roadmap. |
+| `coderabbit` | Shared CodeRabbit review configuration. | Provides organization-level PR review defaults. | Active YAML config and setup docs. |
+| `renovate-config` | Shared Renovate dependency update defaults. | Provides conservative dependency PR policy. | Active `default.json` preset and setup docs. |
 
 Each project should be useful on its own. The integrated system should compose them through explicit contracts rather than turning them into one inseparable automation script.
 
-## Intended Flow
+## Responsibility Model
 
 ```mermaid
-flowchart LR
-    subgraph BuilderAgent["builder-agent"]
-        BA1["Spec analysis"]
-        BA2["Plan"]
-        BA3["Implementation"]
-        BA4["Self-review"]
-        BA5{"Ready?"}
-        BA1 --> BA2 --> BA3 --> BA4 --> BA5
-        BA5 -->|no| BA2
+flowchart TB
+    subgraph Orchestrator["kaizen-loop"]
+        KL1["select issue"]
+        KL2["prepare workspace"]
+        KL3["run gates"]
+        KL4["create PR or handoff"]
     end
 
-    subgraph Mechanical["mechanical verification"]
-        MV1["lint"]
-        MV2["typecheck"]
-        MV3["test"]
-        MV4["build"]
-        MV1 --> MV2 --> MV3 --> MV4
+    subgraph Builder["builder-agent"]
+        BA1["analyze task"]
+        BA2["implement"]
+        BA3["self-review"]
+        BA4["return build result"]
     end
 
-    subgraph Verifier["verifier"]
-        VF1["Spec review"]
-        VF2["Architecture review"]
-        VF3["Code review"]
-        VF4["Test review"]
-        VF5["Risk review"]
-        VF1 --> VF2 --> VF3 --> VF4 --> VF5
+    subgraph Gate["verifier"]
+        VF1["read task + diff + logs"]
+        VF2["classify findings"]
+        VF3["return verdict"]
     end
 
-    Issue["GitHub Issue"] --> KL["kaizen-loop"]
-    KL --> BA1
-    BA5 -->|yes| MV1
-    MV4 -->|failed| BA2
-    MV4 -->|passed| VF1
-    VF5 --> Gate{"Approved?"}
-    Gate -->|no| BA2
-    Gate -->|yes| PR["Pull Request"]
+    KL1 --> KL2 --> BA1
+    BA1 --> BA2 --> BA3 --> BA4 --> KL3
+    KL3 --> VF1 --> VF2 --> VF3 --> KL4
 ```
 
 Builder self-review improves the work, but it is not the final gate. The final quality gate is layered:
@@ -105,7 +91,7 @@ Start here:
 
 - [Docs Index](https://github.com/kaizen-agents-org/.github/blob/main/docs/README.md): map of the documentation set.
 - [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md): system responsibilities and flow diagrams.
-- [MVP Plan](https://github.com/kaizen-agents-org/.github/blob/main/docs/mvp-plan.md): staged plan to make the system usable.
+- [Issue-to-PR MVP](https://github.com/kaizen-agents-org/.github/blob/main/docs/issue-to-pr-mvp.md): organization-level contract for turning issues into ready-for-review PRs.
 - [Implementation Status](https://github.com/kaizen-agents-org/.github/blob/main/docs/implementation-status.md): what works today and what is missing.
 - [Shared Skill Sync](https://github.com/kaizen-agents-org/.github/blob/main/docs/shared-skill-sync.md): how shared Kaizen skills are distributed to the core projects.
 - [Organization Monitor](https://github.com/kaizen-agents-org/.github/blob/main/docs/org-monitor.md): how the cross-repository coordination monitor reports drift and files focused follow-up issues.
