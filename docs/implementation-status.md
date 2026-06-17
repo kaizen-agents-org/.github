@@ -1,6 +1,6 @@
 # Implementation Status
 
-Date: 2026-06-13
+Date: 2026-06-15
 
 This document tracks how close the current implementation is to the intended Kaizen Agents flow.
 
@@ -20,15 +20,13 @@ The intended product outcome is a high-quality PR that a human maintainer can re
 
 ## Summary
 
-The target flow is not complete yet.
-
-The current repositories contain useful pieces, but the full `Issue -> builder -> checks -> verifier -> PR` path is not wired together.
+The first usable target flow is now wired together, but it is still an MVP. The current work is about hardening contracts, improving evidence quality, and expanding the verifier beyond the minimal verdict CLI.
 
 | Component | Current state | What works | Main gap |
 | --- | --- | --- | --- |
-| `kaizen-loop` | TypeScript CLI foundation exists. | Issue selection, workspaces, agent execution, configured verification, PR/direct-commit policy pieces. | It does not yet call `builder-agent` or `verifier` through the intended contracts. |
-| `builder-agent` | MVP loop controller exists on a feature branch. | Adapter-based `analyze -> plan -> implement -> selfReview -> improve` loop, schemas, CLI, tests. | It is not yet integrated into `kaizen-loop` as the build phase. |
-| `verifier` | Specs and design documents exist. | Detailed verifier product/spec/eval design. | No executable verifier package or minimal gate CLI exists yet. |
+| `kaizen-loop` | Phase 2 TypeScript CLI exists. | Issue selection, isolated per-issue worktrees, builder-agent-based fixes, configured verification, verifier review, PR creation, `pr-guardian` follow-up, opt-in queueing, and operational commands. | Continue hardening retry behavior, observability, and final contract edges. |
+| `builder-agent` | MVP CLI and Codex skill are shipped on `main`. | Adapter-based `analyze -> plan -> implement -> selfReview -> improve` loop, schemas, CLI, tests, and Kaizen integration payloads. | Continue improving adapter behavior and the quality of artifacts consumed by `kaizen-loop` and `verifier`. |
+| `verifier` | MVP CLI is shipped on `main`. | `verifier check` and Kaizen integration payloads with `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`. | The fuller staged verifier from the design docs is future work. |
 
 ## Current Capabilities
 
@@ -37,96 +35,103 @@ The current repositories contain useful pieces, but the full `Issue -> builder -
 Implemented capabilities include:
 
 - GitHub Issue selection by label
-- isolated workspace and branch setup
-- Claude/Codex agent execution
+- isolated per-issue workspace and branch setup
+- builder-agent-based fixes through the integration contract
+- Claude/Codex agent execution through configured adapters
 - baseline verification
 - verification retry loop
 - configured `lint` / `typecheck` / `test` / `build` command execution
+- verifier review
 - PR creation
+- `pr-guardian` follow-up after PR creation
+- opt-in issue queueing with `kaizen:ready`
 - policy-based direct commit decision logic
 - operational commands such as `doctor`, `status`, `logs`, and `report`
 
 Current limitation:
 
-- The implementation agent is invoked directly through Claude/Codex adapters.
-- There is no `builder-agent` contract boundary in the main run loop yet.
-- There is no independent verifier step after mechanical verification.
+- The builder and verifier contracts are MVP contracts and still need hardening.
+- The verifier step is a minimal verdict gate, not the full staged verifier described in the product design.
+- `kaizen watch` remains a later-phase capability.
 
 ### builder-agent
 
 Implemented capabilities include:
 
 - standalone `builder-agent` CLI
+- Codex-compatible builder skill
 - adapter-based implementation loop
 - structured build request normalization
 - structured self-review normalization
 - structured build result artifacts
 - passing tests for the loop controller and CLI
+- Kaizen integration mode that writes the result contract expected by `kaizen-loop`
 
 Current limitation:
 
 - It depends on an adapter to perform actual implementation work.
-- It is not yet called by `kaizen-loop`.
-- Its self-review artifacts are not yet consumed by `kaizen-loop` or `verifier`.
+- Its artifacts and discovered-issue reports still need more production mileage across repositories.
 
 ### verifier
 
-Available assets include:
+Implemented capabilities include:
 
-- product/spec documentation
-- design documentation
-- evaluation harness specification
-- intended verdict model
+- runnable `verifier check` CLI
+- minimal JSON verdict output
+- Kaizen integration mode through `KAIZEN_VERIFIER_RESULT_PATH`
+- current status vocabulary: `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`
+- product/spec documentation, design documentation, and evaluation harness specification
 
 Current limitation:
 
-- There is no runnable `verifier check` command yet.
-- There is no minimal JSON verdict implementation yet.
-- `kaizen-loop` cannot call the verifier because no executable contract exists.
+- The shipped verifier intentionally does not implement the full staged verifier from `docs/`.
+- Advanced review stages, probes, and richer scoring remain future work.
 
-## Why The Full Flow Does Not Work Yet
+## What Still Needs Hardening
 
-The missing pieces are integration and the verifier runtime.
+The main missing pieces are no longer the builder/verifier executables. The remaining work is contract depth, evidence quality, and operational maturity.
 
 ```mermaid
 flowchart TB
     A["GitHub Issue"] --> B["kaizen-loop"]
-    B --> C["Current Claude/Codex agent call"]
+    B --> C["builder-agent"]
     C --> D["Mechanical verification"]
-    D --> E["PR / direct policy"]
+    D --> E["verifier MVP gate"]
+    E --> F["PR / repository policy"]
 
-    B -. missing .-> F["builder-agent contract"]
-    D -. missing .-> G["verifier gate"]
-    G -. missing .-> H["feedback loop / PR-only / approved"]
+    C -. harden .-> G["builder artifacts"]
+    E -. future .-> H["staged verifier review"]
+    F -. harden .-> I["observability and follow-up"]
 ```
 
-The system can already approximate:
+The system can now run:
 
 ```text
-Issue -> agent fix -> mechanical verification -> PR
+Issue -> builder-agent -> mechanical verification -> verifier MVP -> PR
 ```
 
-It cannot yet guarantee:
+It still needs more work before claiming:
 
 ```text
-Issue -> builder self-review loop -> mechanical verification -> independent verifier -> high-quality PR
+Issue -> high-confidence staged verifier review -> mature feedback loops -> consistently high-quality PR
 ```
 
-## Minimum Work To Complete The First Vertical Slice
+## Minimum Work To Harden The Vertical Slice
 
-1. Stabilize and merge `builder-agent` MVP.
-2. Define the `kaizen-loop` build-phase contract:
-   - input: issue/task, repository context, constraints, threshold
-   - output: build result, self-review report, changed files
-3. Add a `builder-agent` adapter to `kaizen-loop`.
-4. Create a minimal verifier executable:
+1. Keep the `builder-agent` and `verifier` CLI contracts stable across `kaizen-loop` releases.
+2. Improve builder artifacts consumed by the verifier:
+   - task understanding
+   - changed files
+   - self-review report
+   - residual risk
+3. Expand verifier behavior beyond the minimal MVP gate:
    - input: task, diff, verification logs, builder report
-   - output: `approved`, `rejected`, or `pr_only`
+   - output status: `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`
    - include `must_fix`, `should_fix`, `confidence`, and `risk`
-5. Add a verifier step to `kaizen-loop` after mechanical verification.
-6. Route verifier rejection back to the builder loop.
-7. Make the initial integrated mode PR-only.
-8. Run one end-to-end smoke test on a small issue.
+4. Route `block_pr` feedback back to the builder loop until retry budget is exhausted.
+5. Route `needs_context` to a human clarification path.
+6. Keep the default integrated mode PR-first and ready-for-review.
+7. Run repeated end-to-end smoke tests on small issues across the core repositories.
 
 ## First Acceptance Test
 

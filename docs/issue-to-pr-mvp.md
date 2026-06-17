@@ -129,9 +129,9 @@ flowchart LR
     Builder --> Checks["Mechanical checks<br/>test / lint / build"]
     Checks --> Verifier["verifier<br/>independent gate"]
     Verifier --> Decision{"Gate result"}
-    Decision -->|approved / pr_only| PR["Ready-for-review PR"]
-    Decision -->|must_fix| Builder
-    Decision -->|blocked| Comment["Issue comment<br/>needs human"]
+    Decision -->|open_pr / open_pr_with_warning| PR["Ready-for-review PR"]
+    Decision -->|block_pr| Builder
+    Decision -->|needs_context| Comment["Issue comment<br/>needs human"]
     PR --> Human["Human review<br/>and merge"]
 ```
 
@@ -157,7 +157,7 @@ Example:
 - `npm run lint`
 
 ## Gate
-- verifier: approved
+- verifier: open_pr
 - risk: low
 
 Closes #42
@@ -180,7 +180,8 @@ When the system cannot produce a reviewable PR, it should leave a useful issue c
 | --- | --- |
 | Requirement is unclear | Ask for the missing information and mark the issue as needing human input. |
 | Checks fail after retry budget | Comment with the failed commands and relevant log summary. |
-| Verifier rejects the change | Feed `must_fix` back to the builder until retry budget is exhausted. |
+| Verifier returns `block_pr` | Feed `must_fix` back to the builder until retry budget is exhausted. |
+| Verifier returns `needs_context` | Comment with the missing context and stop for human clarification. |
 | Forbidden path changed | Discard the change and report the policy violation. |
 | High-risk change requires approval | Stop and ask for explicit human confirmation. |
 
@@ -190,9 +191,9 @@ When the system cannot produce a reviewable PR, it should leave a useful issue c
 
 - One trigger label: `kaizen`.
 - One issue produces one branch and one PR.
-- `builder-agent` can run manually or through the initial adapter.
+- `builder-agent` can run manually or through the Kaizen integration adapter.
 - Mechanical verification is required before PR creation.
-- `verifier` returns a structured result.
+- `verifier` returns a structured result with `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
 - Failure cases comment on the issue.
 
 ### MVP v2

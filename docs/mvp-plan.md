@@ -23,8 +23,8 @@ See [Issue-to-PR MVP](./issue-to-pr-mvp.md) for the organization-level contract 
 ## Current State
 
 - **`kaizen-loop`** already has the strongest implementation base. It is a TypeScript CLI with commands such as `kaizen run`, `kaizen fix`, `kaizen doctor`, `kaizen report`, verification retries, agent selection, and PR-oriented workflow pieces.
-- **`builder-agent`** has local skill and prompt files, but those files still need to be committed and reviewed as the first usable builder package.
-- **`verifier`** is still close to initial state locally. Its first useful version should be a small independent gate that returns structured results.
+- **`builder-agent`** has a shipped MVP CLI, local skill, schemas, tests, and a Kaizen integration payload for the build phase.
+- **`verifier`** has a shipped MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`. The fuller staged verifier remains future work.
 - **`.github`** contains the Organization profile and architecture docs that describe the intended responsibility boundaries.
 
 ## Phase 0: Repository Baseline
@@ -32,7 +32,7 @@ See [Issue-to-PR MVP](./issue-to-pr-mvp.md) for the organization-level contract 
 Goal: make the repository set understandable and stable enough to coordinate.
 
 1. Merge the Organization profile and architecture documentation.
-2. Turn the local `builder-agent` skill, prompts, and docs into a reviewed PR.
+2. Keep the shipped `builder-agent` skill, prompts, CLI, and docs aligned.
 3. Confirm source-of-truth locations for `kaizen-loop` and `verifier`, including local paths and GitHub remotes.
 4. Confirm branch and PR conventions across all repositories.
 5. Keep the initial scope explicit: build, verify, and open a PR; do not claim production-ready automation.
@@ -51,7 +51,7 @@ The vertical slice should not make the components inseparable. Each component sh
 
 ### builder-agent
 
-Start as a Codex-compatible skill rather than a CLI.
+The MVP includes both a Codex-compatible skill and a small CLI.
 
 Inputs:
 
@@ -90,7 +90,7 @@ Inputs:
 
 Outputs:
 
-- `approved`, `rejected`, or `pr_only`
+- `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`
 - `must_fix`
 - `should_fix`
 - `confidence`
@@ -152,7 +152,7 @@ Goal: make the quality gates predictable.
 2. Define the verifier result schema.
 3. Define `must_fix`, `should_fix`, `confidence`, and `risk` semantics.
 4. Define retry budget and stopping rules.
-5. Define `needs-human`, `pr_only`, and later opt-in direct-commit behavior.
+5. Define `needs_context`, `open_pr_with_warning`, and later opt-in direct-commit behavior.
 6. Add `kaizen doctor` checks for builder and verifier setup.
 
 Done when:
@@ -181,19 +181,19 @@ Done when:
 ## Immediate Next Actions
 
 1. Review and merge the Organization documentation PR.
-2. Create a PR for the local `builder-agent` skill and prompts.
-3. Create the first minimal verifier contract and implementation.
-4. Wire `kaizen-loop` to call the builder and verifier through the initial contract.
-5. Run one end-to-end smoke test and capture the result.
+2. Keep the `builder-agent` MVP contract stable as `kaizen-loop` integration matures.
+3. Expand verifier behavior beyond the minimal verdict CLI while preserving the MVP status vocabulary.
+4. Harden `kaizen-loop` feedback loops for `block_pr` and `needs_context`.
+5. Run repeated end-to-end smoke tests and capture the results.
 
 ## Implementation Order
 
 The current implementation priority is:
 
-1. `builder-agent` Skill
-2. `verifier` Skill
-3. `kaizen-loop` integration
-4. Builder Agent CLI
-5. Product Kaizen Skill
+1. Harden `kaizen-loop` integration with the shipped `builder-agent` and `verifier` MVP CLIs.
+2. Improve builder artifacts and verifier feedback quality.
+3. Expand the verifier toward staged review.
+4. Strengthen PR guardian and CI follow-up behavior.
+5. Product Kaizen Skill.
 
 The Product Kaizen Skill is intentionally later because it answers what to build. The current system is focused on how to build a requested change with higher quality.
