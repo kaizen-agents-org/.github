@@ -63,6 +63,14 @@ flowchart TB
 
 This means integration boundaries should be explicit. `kaizen-loop` can call the builder and verifier, but the builder and verifier should not require `kaizen-loop` to be valuable.
 
+## Current MVP Snapshot
+
+The architecture above is now partially implemented as a usable MVP slice. `kaizen-loop` Phase 2 support can coordinate builder-agent-based fixes, isolated per-issue worktrees, configured mechanical verification, verifier review, ready-for-review PR creation, scheduler registration, opt-in queueing, operational commands, and `pr-guardian` follow-up.
+
+`builder-agent` is available as a standalone MVP CLI and Codex-compatible skill. `verifier` is available as a minimal runnable `verifier check` CLI and can write Kaizen Loop verdict payloads through `KAIZEN_VERIFIER_RESULT_PATH`.
+
+The remaining gap is no longer "no runnable builder/verifier path." The gap is hardening the MVP contracts, improving artifacts and evidence quality, and expanding `verifier` from the minimal verdict gate toward the fuller staged review model described below.
+
 ## Component Process Flows
 
 Each repository owns a different part of the loop. The system is easier to reason about when those processes are described independently.

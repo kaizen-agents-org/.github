@@ -76,9 +76,9 @@ Builder self-review improves the work, but it is not the final gate. The final q
 
 The first usable vertical slice exists, but the product is still early and the contracts are still being hardened.
 
-- `kaizen-loop` can process issues, create isolated per-issue worktrees, run builder-agent-based fixes, run configured verification commands, call verifier review, create PRs, and follow up with the vendored `pr-guardian` skill.
+- `kaizen-loop` can process issues, create isolated per-issue worktrees, run builder-agent-based fixes, run configured verification commands, call verifier review, create PRs, register scheduled runs, support opt-in queueing, run operational commands, and follow up with the vendored `pr-guardian` skill.
 - `builder-agent` has a standalone MVP CLI, a Codex-compatible skill, schema-backed artifacts, and a loop controller for implementation plus self-review.
-- `verifier` has a runnable MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
+- `verifier` has a runnable MVP `verifier check` CLI, including Kaizen Loop integration through `KAIZEN_VERIFIER_RESULT_PATH`, that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
 - The richer staged verifier described in the design docs remains future work; the shipped verifier is the minimal verdict CLI needed for orchestration.
 
 The current practical milestone is hardening this path:

@@ -1,6 +1,6 @@
 # Implementation Status
 
-Date: 2026-06-15
+Date: 2026-06-17
 
 This document tracks how close the current implementation is to the intended Kaizen Agents flow.
 
@@ -24,9 +24,9 @@ The first usable target flow is now wired together, but it is still an MVP. The 
 
 | Component | Current state | What works | Main gap |
 | --- | --- | --- | --- |
-| `kaizen-loop` | Phase 2 TypeScript CLI exists. | Issue selection, isolated per-issue worktrees, builder-agent-based fixes, configured verification, verifier review, PR creation, `pr-guardian` follow-up, opt-in queueing, and operational commands. | Continue hardening retry behavior, observability, and final contract edges. |
+| `kaizen-loop` | Phase 2 TypeScript CLI exists. | Issue selection, isolated per-issue worktrees, builder-agent-based fixes, configured verification, verifier review, scheduler registration, opt-in queueing, PR creation, `pr-guardian` follow-up, and operational commands. | Continue hardening retry behavior, observability, and final contract edges. |
 | `builder-agent` | MVP CLI and Codex skill are shipped on `main`. | Adapter-based `analyze -> plan -> implement -> selfReview -> improve` loop, schemas, CLI, tests, and Kaizen integration payloads. | Continue improving adapter behavior and the quality of artifacts consumed by `kaizen-loop` and `verifier`. |
-| `verifier` | MVP CLI is shipped on `main`. | `verifier check` and Kaizen integration payloads with `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`. | The fuller staged verifier from the design docs is future work. |
+| `verifier` | MVP `verifier check` CLI is shipped on `main`. | Kaizen integration payloads with `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`. | The fuller staged verifier from the design docs is future work. |
 
 ## Current Capabilities
 
@@ -42,6 +42,7 @@ Implemented capabilities include:
 - verification retry loop
 - configured `lint` / `typecheck` / `test` / `build` command execution
 - verifier review
+- scheduler registration
 - PR creation
 - `pr-guardian` follow-up after PR creation
 - opt-in issue queueing with `kaizen:ready`
