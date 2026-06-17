@@ -69,7 +69,7 @@ The Codex automation `Kaizen Agents org monitor` periodically reviews the core r
 
 ## Current Focus
 
-The current focus is the first usable vertical slice:
+The first usable vertical slice is now wired together as an MVP:
 
 ```text
 GitHub Issue
@@ -80,4 +80,6 @@ GitHub Issue
   -> human merge
 ```
 
-The system should optimize for reviewable PRs, not unreviewed autonomy.
+`kaizen-loop` has Phase 2 support for builder-agent-based fixes, verifier review, isolated per-issue worktrees, scheduler registration, opt-in queueing, PR creation, and `pr-guardian` follow-up. `verifier` has a runnable `verifier check` CLI and writes Kaizen Loop verdict payloads through `KAIZEN_VERIFIER_RESULT_PATH`.
+
+The current focus is hardening contracts, evidence quality, and operational behavior while keeping the system optimized for reviewable PRs, not unreviewed autonomy.

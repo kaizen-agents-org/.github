@@ -33,8 +33,8 @@ The system is built around three responsibilities:
 | Project | What it is | Standalone use | Current status |
 | --- | --- | --- | --- |
 | `builder-agent` | Implementation worker with an internal self-review and improvement loop. | Implement a requested change in a local workspace and produce structured build artifacts. | MVP CLI and Codex skill are shipped on `main`. |
-| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | MVP CLI is shipped on `main`; fuller staged verifier work remains future. |
-| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | Phase 2 CLI supports builder-agent fixes, verifier review, isolated worktrees, PR creation, and pr-guardian follow-up. |
+| `verifier` | Independent evaluator for completed changes. | Evaluate an existing diff, PR, or local change and return a gate verdict. | MVP `verifier check` CLI is shipped on `main`; fuller staged verifier work remains future. |
+| `kaizen-loop` | Orchestrator for issue intake, workspaces, checks, verifier calls, and PR creation. | Coordinate GitHub Issue workflows through adapters. | Phase 2 CLI supports builder-agent fixes, verifier review, isolated worktrees, scheduler registration, opt-in queueing, PR creation, and pr-guardian follow-up. |
 
 Each project should be useful on its own. The integrated system should compose them through explicit contracts rather than turning them into one inseparable automation script.
 
@@ -90,9 +90,9 @@ Builder self-review improves the work, but it is not the final gate. The final q
 
 The first usable vertical slice exists, but the product is still early and the contracts are still being hardened.
 
-- `kaizen-loop` can process issues, create isolated per-issue worktrees, run builder-agent-based fixes, run configured verification commands, call verifier review, create PRs, and follow up with the vendored `pr-guardian` skill.
+- `kaizen-loop` can process issues, create isolated per-issue worktrees, run builder-agent-based fixes, run configured verification commands, call verifier review, create PRs, register scheduled runs, support opt-in queueing, run operational commands, and follow up with the vendored `pr-guardian` skill.
 - `builder-agent` has a standalone MVP CLI, a Codex-compatible skill, schema-backed artifacts, and a loop controller for implementation plus self-review.
-- `verifier` has a runnable MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
+- `verifier` has a runnable MVP `verifier check` CLI, including Kaizen Loop integration through `KAIZEN_VERIFIER_RESULT_PATH`, that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`.
 - The richer staged verifier described in the design docs remains future work; the shipped verifier is the minimal verdict CLI needed for orchestration.
 
 The current practical milestone is hardening this path:
