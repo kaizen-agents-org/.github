@@ -12,7 +12,7 @@ When a Kaizen Agents bug is reported, investigate where the bug originates befor
 ## Repository Routing
 
 - `kaizen-agents-org/builder-agent`: builder execution, build request/result contracts, Codex/Claude backend invocation, self-review, implementation output, builder artifacts, or generated change quality before verifier review.
-- `kaizen-agents-org/verifier`: verifier execution, verdict schemas, approval/rejection logic, verification prompts, risk evaluation, or verifier result artifacts.
+- `kaizen-agents-org/verifier`: verifier execution, verdict schemas, MVP verdict statuses (`open_pr`, `open_pr_with_warning`, `block_pr`, `needs_context`), `must_fix`/`should_fix` semantics, approval/rejection logic, verification prompts, risk evaluation, or verifier result artifacts.
 - `kaizen-agents-org/kaizen-loop`: issue selection, labels, scheduling, registry/config loading, orchestration, retry loops, workspace/git handling, GitHub issue/PR operations, reflection policy, protected path handling, comments, or cross-agent handoff.
 - `kaizen-agents-org/coderabbit`: CodeRabbit configuration, review policy, automated review rules, or review feedback behavior owned by the shared CodeRabbit setup.
 - `kaizen-agents-org/renovate-config`: Renovate presets, dependency update policy, package rule behavior, or shared dependency automation configuration.
@@ -38,14 +38,13 @@ Use `kaizen-loop` as the fallback when symptoms span multiple projects or the av
    gh issue create --repo kaizen-agents-org/<repo> --title "<title>" --body-file <body-file>
    ```
 
-Only pass `--label` values that exist. Prefer `bug` for ordinary bug reports. Do not add the repository's Kaizen selection label for ordinary issue filing; in repositories where `.kaizen/config.yml` still has `issues.label: "kaizen"`, the base `kaizen` label is an execution-selection label, not just a visibility label. If no useful non-selection labels exist, create the issue without labels rather than blocking.
+Only pass `--label` values that exist. Prefer `bug` for ordinary bug reports and add the base `kaizen` label by default when it exists. Treat `kaizen` as a visibility/routing label, not execution authorization. If no useful labels exist, create the issue without labels rather than blocking.
 
 Issue creation and execution authorization are separate:
 
-- Do not add `kaizen`, `kaizen:ready`, or any other Kaizen selection label by default.
-- Treat the target repository's configured `.kaizen/config.yml` `issues.label` value as the execution authorization label.
+- Add `kaizen` by default when the label exists, but do not add `kaizen:ready` or any other execution-selection label by default.
 - Add the execution authorization label only when the user asks to queue, approve, run, execute, or put the issue on the Kaizen Loop.
-- In opt-in selection mode, prefer `kaizen:ready` as the execution authorization label when it exists and is configured for selection.
+- In opt-in selection mode, prefer `kaizen:ready` as the execution authorization label when it exists.
 - If the user asks for immediate execution, file the issue, add the execution authorization label when available, then report the explicit command that should run next, such as `kaizen fix <issue>`.
 - If the issue needs human clarification before automation, prefer `kaizen:needs-human` instead of `kaizen:ready`.
 
