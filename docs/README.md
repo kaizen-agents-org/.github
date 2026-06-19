@@ -28,17 +28,22 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Per-project vendoring
    - Update propagation workflow
 
-5. [Organization Monitor](./org-monitor.md)
+5. [Daily Dogfood Sync](./daily-dogfood-sync.md)
+   - Daily deterministic sync workflow
+   - Shared skill sync delegation
+   - Organization monitor contract
+
+6. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
 
-6. [Implementation Status](./implementation-status.md)
+7. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-7. [Design Decisions](./design-decisions.md)
+8. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -63,9 +68,11 @@ This directory contains the organization-level documentation for Kaizen Agents.
 
 Shared skills are synchronized into `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`; see [Shared Skill Sync](./shared-skill-sync.md).
 
+The daily dogfood sync runs the deterministic shared skill sync contract on a schedule; see [Daily Dogfood Sync](./daily-dogfood-sync.md).
+
 ## Organization Monitor
 
-The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, and responsibility alignment. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. See [Organization Monitor](./org-monitor.md).
+The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, responsibility alignment, and daily dogfood sync health. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. See [Organization Monitor](./org-monitor.md).
 
 ## Current Focus
 
