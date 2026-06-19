@@ -27,6 +27,7 @@ Each run produces a concise coordination report covering:
 - Open GitHub pull requests and issues.
 - CI and check status where available.
 - Documentation and implementation drift across the core and support components.
+- Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, and stays limited to deterministic files it can update safely.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
 
@@ -44,6 +45,8 @@ Automatic issue creation is intentionally conservative:
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 
 Speculative ideas, low-confidence observations, duplicate work, and broad cleanup suggestions should stay in the report instead of becoming issues.
+
+Daily dogfood sync drift should be reported when the monitor cannot resolve it deterministically, including a missing scheduled workflow, a broken shared-skill sync delegation, or changes outside the documented deterministic file list.
 
 ## Safety Boundaries
 
