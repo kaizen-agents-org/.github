@@ -19,11 +19,14 @@ The first supported contract is the shared skill sync:
 
 The called workflow:
 
-1. Checks whether `KAIZEN_SYNC_TOKEN` is configured.
-2. Exits successfully with a notice when the token is missing.
+1. Requires `KAIZEN_SYNC_TOKEN` so target repositories can be cloned, updated, and opened as PRs.
+2. Fails with an explicit error when the token is missing.
 3. Clones the target repositories when the token is available.
 4. Runs `scripts/sync-kaizen-shared-skills.sh` to copy only the documented shared skill directories.
-5. Opens or updates ready-for-review sync PRs in target repositories when copied files changed.
+5. Verifies that each target checkout now matches the source shared skill directories.
+6. Opens or updates ready-for-review sync PRs in target repositories when copied files changed.
+7. Asserts that no target repository's `origin/main` still drifts from the source shared skills without an open sync PR, failing the run if it does.
+8. Reports the per-repository outcome in the workflow summary.
 
 The workflow must not merge PRs automatically.
 
