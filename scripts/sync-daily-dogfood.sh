@@ -47,6 +47,10 @@ while IFS= read -r repo; do
 
   managed_targets=()
   while IFS=$'\t' read -r type source target; do
+    if ! is_safe_repo_relative_path "${source}"; then
+      echo "unsafe managed source path for ${repo}: ${source}" >&2
+      exit 1
+    fi
     if ! is_safe_repo_relative_path "${target}"; then
       echo "unsafe managed target path for ${repo}: ${target}" >&2
       exit 1
