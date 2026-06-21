@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync-shared-skills:
-    name: Sync deterministic shared skills
-    uses: ./.github/workflows/sync-kaizen-shared-skills.yml
+  sync-dogfood-contracts:
+    name: Sync deterministic dogfood contracts
+    uses: ./.github/workflows/sync-daily-dogfood.yml
     secrets:
       KAIZEN_SYNC_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
