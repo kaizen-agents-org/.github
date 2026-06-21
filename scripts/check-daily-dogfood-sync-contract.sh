@@ -51,7 +51,7 @@ grep -q "Dogfood drift unresolved" "${dogfood_workflow}"
 grep -q "Daily dogfood sync incomplete" "${dogfood_workflow}"
 grep -q "Report sync outcome" "${dogfood_workflow}"
 grep -q -- "--base" "${dogfood_workflow}"
-grep -q 'pr_head="${owner}:${branch}"' "${dogfood_workflow}"
+grep -q 'pr_head="${branch}"' "${dogfood_workflow}"
 grep -q "gh pr ready" "${dogfood_workflow}"
 if grep -q -- "--draft" "${dogfood_workflow}"; then
   echo "daily dogfood sync workflow must create ready-for-review PRs, not drafts" >&2

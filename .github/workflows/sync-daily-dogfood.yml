@@ -98,7 +98,7 @@ jobs:
           owner="$(jq -r '.owner' "${manifest}")"
           base="$(jq -r '.defaultBranch' "${manifest}")"
           branch="$(jq -r '.syncBranch' "${manifest}")"
-          pr_head="${owner}:${branch}"
+          pr_head="${branch}"
           report="${PWD}/daily-dogfood-sync-report.md"
           {
             echo "## Daily dogfood sync report"
@@ -194,7 +194,7 @@ jobs:
           owner="$(jq -r '.owner' "${manifest}")"
           base="$(jq -r '.defaultBranch' "${manifest}")"
           branch="$(jq -r '.syncBranch' "${manifest}")"
-          pr_head="${owner}:${branch}"
+          pr_head="${branch}"
           drifted=0
 
           while IFS= read -r repo; do
