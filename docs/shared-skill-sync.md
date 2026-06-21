@@ -2,6 +2,8 @@
 
 This document describes how shared Kaizen Agents skills are made available inside the core projects and how updates are propagated.
 
+Shared skills are one part of the broader dogfooding contract. The [daily dogfood sync](./daily-dogfood-sync.md) also keeps each target's `.kaizen/config.yml`, `AGENTS.md`, and the shared issue template aligned. This document covers the shared-skill fast path only; the daily dogfood sync is the scheduled, manifest-driven superset.
+
 ## Goal
 
 Each core project should support the same operating workflows:
