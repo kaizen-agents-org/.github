@@ -70,7 +70,19 @@ fi
 
 # Shared-skill fast path stays callable.
 grep -q "workflow_call:" "${shared_skill_workflow}"
+grep -q "require_token:" "${shared_skill_workflow}"
 grep -q "required: true" "${shared_skill_workflow}"
+grep -Fq 'TOKEN_REQUIRED: ${{ inputs.require_token == true }}' "${shared_skill_workflow}"
+grep -Fq 'if [ "${TOKEN_REQUIRED}" = "true" ]; then' "${shared_skill_workflow}"
+grep -q "Shared skill sync blocked" "${shared_skill_workflow}"
+grep -q "available=false" "${shared_skill_workflow}"
+grep -q "Shared skill sync skipped" "${shared_skill_workflow}"
+grep -q "Verify synced skill copies" "${shared_skill_workflow}"
+grep -q "Assert no target drifts silently" "${shared_skill_workflow}"
+grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
+grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
+grep -q "Report sync outcome" "${shared_skill_workflow}"
+grep -q -- "--base main" "${shared_skill_workflow}"
 
 # Manifest is valid JSON and lists every target.
 jq -e . "${manifest}" >/dev/null

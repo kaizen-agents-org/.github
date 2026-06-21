@@ -2,6 +2,12 @@ name: Sync Kaizen Shared Skills
 
 on:
   workflow_call:
+    inputs:
+      require_token:
+        description: "Fail when KAIZEN_SYNC_TOKEN is unavailable."
+        required: false
+        type: boolean
+        default: true
     secrets:
       KAIZEN_SYNC_TOKEN:
         required: true
@@ -27,13 +33,19 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
+      TOKEN_REQUIRED: ${{ inputs.require_token == true }}
     steps:
       - name: Check token
         id: check_token
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error title=Shared skill sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
-            exit 1
+            if [ "${TOKEN_REQUIRED}" = "true" ]; then
+              echo "::error title=Shared skill sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
+              exit 1
+            fi
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice title=Shared skill sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
+            exit 0
           fi
           echo "available=true" >> "${GITHUB_OUTPUT}"
           gh auth setup-git
