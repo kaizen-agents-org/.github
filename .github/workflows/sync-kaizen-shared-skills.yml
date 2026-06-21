@@ -97,6 +97,7 @@ jobs:
             branch="codex/sync-kaizen-shared-skills"
             existing_pr="$(gh pr list \
               --repo "kaizen-agents-org/${repo}" \
+              --base main \
               --head "${branch}" \
               --state open \
               --json url \
@@ -137,6 +138,7 @@ jobs:
               --body-file "${body_file}"
             open_pr="$(gh pr list \
               --repo "kaizen-agents-org/${repo}" \
+              --base main \
               --head "${branch}" \
               --state open \
               --json url \
@@ -181,6 +183,7 @@ jobs:
             fi
             open_pr="$(gh pr list \
               --repo "kaizen-agents-org/${repo}" \
+              --base main \
               --head "${branch}" \
               --state open \
               --json url \

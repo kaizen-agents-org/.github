@@ -23,6 +23,7 @@ grep -q "Assert no target drifts silently" "${shared_skill_workflow}"
 grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
 grep -q "Report sync outcome" "${shared_skill_workflow}"
+grep -q -- "--base main" "${shared_skill_workflow}"
 
 for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
   grep -q "${repo}" "${shared_skill_workflow}"

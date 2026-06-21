@@ -76,11 +76,11 @@ When configured, the token must be able to:
 - push branches to those repositories
 - create pull requests in those repositories
 
-The workflow uses a fixed branch name, `codex/sync-kaizen-shared-skills`, per target repository and updates an existing open sync PR instead of creating duplicate PRs.
+The workflow uses a fixed branch name, `codex/sync-kaizen-shared-skills`, per target repository and updates an existing open sync PR targeting `main` instead of creating duplicate PRs.
 
-After copying, the workflow verifies the vendored skill directories in every target checkout against the source directories and writes a per-repository summary. A successful run means each target had no local skill diff after sync or has an open ready-for-review sync PR.
+After copying, the workflow verifies the vendored skill directories in every target checkout against the source directories and writes a per-repository summary. A successful run means each target had no local skill diff after sync or has an open ready-for-review sync PR targeting `main`.
 
-As a final guard, the workflow re-checks each target repository's committed `origin/main` (not the working copy the sync script just overwrote) against the source shared skills. If any target's `origin/main` still drifts and has no open sync PR, the run fails with an explicit error so a successful workflow run cannot silently leave a target drifted.
+As a final guard, the workflow re-checks each target repository's committed `origin/main` (not the working copy the sync script just overwrote) against the source shared skills. If any target's `origin/main` still drifts and has no open sync PR targeting `main`, the run fails with an explicit error so a successful workflow run cannot silently leave a target drifted.
 
 ## Relationship To Issue-to-PR MVP
 

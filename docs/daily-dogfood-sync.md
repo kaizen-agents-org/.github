@@ -24,8 +24,8 @@ The called workflow:
 3. Clones the target repositories when the token is available.
 4. Runs `scripts/sync-kaizen-shared-skills.sh` to copy only the documented shared skill directories.
 5. Verifies that each target checkout now matches the source shared skill directories.
-6. Opens or updates ready-for-review sync PRs in target repositories when copied files changed.
-7. Asserts that no target repository's `origin/main` still drifts from the source shared skills without an open sync PR, failing the run if it does.
+6. Opens or updates ready-for-review sync PRs targeting `main` in target repositories when copied files changed.
+7. Asserts that no target repository's `origin/main` still drifts from the source shared skills without an open sync PR targeting `main`, failing the run if it does.
 8. Reports the per-repository outcome in the workflow summary.
 
 The workflow must not merge PRs automatically.
