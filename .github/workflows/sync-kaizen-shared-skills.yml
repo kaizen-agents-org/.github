@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       KAIZEN_SYNC_TOKEN:
-        required: false
+        required: true
   workflow_dispatch:
   push:
     branches:
@@ -32,9 +32,8 @@ jobs:
         id: check_token
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "available=false" >> "${GITHUB_OUTPUT}"
-            echo "::notice title=Shared skill sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
-            exit 0
+            echo "::error title=Shared skill sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
+            exit 1
           fi
           echo "available=true" >> "${GITHUB_OUTPUT}"
           gh auth setup-git
@@ -66,14 +65,31 @@ jobs:
             "${PWD}/coderabbit" \
             "${PWD}/renovate-config"
 
-      - name: Create target PRs
+      - name: Verify synced skill copies
         if: ${{ steps.check_token.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
+            for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
+              diff -qr "source/skills/${skill}" "${repo}/skills/${skill}" >/dev/null
+            done
+            echo "Verified synced skill copies for ${repo}"
+          done
+
+      - name: Create target PRs
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          report="${PWD}/shared-skill-sync-report.md"
+          {
+            echo "## Shared skill sync report"
+            echo
+          } > "${report}"
+          for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
             cd "${repo}"
             if [ -z "$(git status --porcelain -- skills)" ]; then
               echo "No skill changes for ${repo}"
+              echo "- ${repo}: no skill changes" >> "${report}"
               cd ..
               continue
             fi
@@ -81,6 +97,7 @@ jobs:
             branch="codex/sync-kaizen-shared-skills"
             existing_pr="$(gh pr list \
               --repo "kaizen-agents-org/${repo}" \
+              --base main \
               --head "${branch}" \
               --state open \
               --json url \
@@ -98,6 +115,7 @@ jobs:
             fi
             if [ -n "${existing_pr}" ]; then
               echo "Updated existing PR for ${repo}: ${existing_pr}"
+              echo "- ${repo}: updated ${existing_pr}" >> "${report}"
               cd ..
               continue
             fi
@@ -118,5 +136,74 @@ jobs:
               --head "${branch}" \
               --title "Sync Kaizen shared skills" \
               --body-file "${body_file}"
+            open_pr="$(gh pr list \
+              --repo "kaizen-agents-org/${repo}" \
+              --base main \
+              --head "${branch}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Sync PR assertion failed::${repo} has skill changes but no open shared-skill sync PR."
+              exit 1
+            fi
+            echo "- ${repo}: opened ${open_pr}" >> "${report}"
             cd ..
           done
+
+      - name: Assert no target drifts silently
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          branch="codex/sync-kaizen-shared-skills"
+          drifted=0
+          for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
+            # Compare the source skills against the target's committed origin/main,
+            # not the working copy the sync script just overwrote, so a successful
+            # run cannot silently leave a target's main branch drifted.
+            git -C "${repo}" fetch --quiet origin main
+            origin_skills="$(mktemp -d)"
+            target_drift=0
+            for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
+              mkdir -p "${origin_skills}/${skill}"
+              if git -C "${repo}" archive "origin/main" "skills/${skill}" 2>/dev/null \
+                | tar -x -C "${origin_skills}" --strip-components=1 2>/dev/null; then
+                if ! diff -qr "source/skills/${skill}" "${origin_skills}/${skill}" >/dev/null 2>&1; then
+                  target_drift=1
+                fi
+              else
+                # Skill directory absent on origin/main is itself drift.
+                target_drift=1
+              fi
+            done
+            rm -rf "${origin_skills}"
+            if [ "${target_drift}" -eq 0 ]; then
+              echo "${repo}: origin/main matches source shared skills"
+              continue
+            fi
+            open_pr="$(gh pr list \
+              --repo "kaizen-agents-org/${repo}" \
+              --base main \
+              --head "${branch}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Shared skill drift unresolved::${repo} origin/main still differs from the source shared skills and has no open sync PR."
+              echo "- ${repo}: DRIFTED with no open sync PR" >> "${PWD}/shared-skill-sync-report.md"
+              drifted=1
+            else
+              echo "${repo}: origin/main drifts but open sync PR exists (${open_pr})"
+            fi
+          done
+          if [ "${drifted}" -ne 0 ]; then
+            echo "::error title=Shared skill sync incomplete::One or more target repositories remain drifted with no open sync PR after the sync run."
+            exit 1
+          fi
+
+      - name: Report sync outcome
+        if: ${{ always() && steps.check_token.outputs.available == 'true' }}
+        run: |
+          if [ -f shared-skill-sync-report.md ]; then
+            cat shared-skill-sync-report.md >> "${GITHUB_STEP_SUMMARY}"
+          fi

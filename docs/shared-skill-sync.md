@@ -45,7 +45,8 @@ When shared skills change in `.github`:
    - `coderabbit/skills`
    - `renovate-config/skills`
 4. If a target project changes, the workflow updates or creates a ready-for-review PR in that project.
-5. A human reviews and merges each sync PR.
+5. The workflow asserts that no target's `origin/main` remains drifted without an open sync PR, failing loudly otherwise.
+6. A human reviews and merges each sync PR.
 
 The sync workflow does not merge PRs automatically.
 
@@ -65,9 +66,9 @@ scripts/sync-kaizen-shared-skills.sh "$PWD" \
 
 Then review, test as needed, and open normal ready-for-review PRs in the target repositories.
 
-## Optional Secret
+## Sync Secret
 
-`KAIZEN_SYNC_TOKEN` is optional and only needed to enable cross-repository sync. If the secret is missing, the workflow exits successfully after reporting a skipped sync instead of failing `main`.
+`KAIZEN_SYNC_TOKEN` is required for cross-repository sync. If the secret is missing, the workflow fails before reporting success because it cannot clone target repositories, push sync branches, or open target PRs.
 
 When configured, the token must be able to:
 
@@ -75,7 +76,11 @@ When configured, the token must be able to:
 - push branches to those repositories
 - create pull requests in those repositories
 
-The workflow uses a fixed branch name, `codex/sync-kaizen-shared-skills`, per target repository and updates an existing open sync PR instead of creating duplicate PRs.
+The workflow uses a fixed branch name, `codex/sync-kaizen-shared-skills`, per target repository and updates an existing open sync PR targeting `main` instead of creating duplicate PRs.
+
+After copying, the workflow verifies the vendored skill directories in every target checkout against the source directories and writes a per-repository summary. A successful run means each target had no local skill diff after sync or has an open ready-for-review sync PR targeting `main`.
+
+As a final guard, the workflow re-checks each target repository's committed `origin/main` (not the working copy the sync script just overwrote) against the source shared skills. If any target's `origin/main` still drifts and has no open sync PR targeting `main`, the run fails with an explicit error so a successful workflow run cannot silently leave a target drifted.
 
 ## Relationship To Issue-to-PR MVP
 
