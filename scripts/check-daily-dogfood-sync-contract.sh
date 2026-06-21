@@ -43,18 +43,28 @@ grep -q "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}"
 
 # Dogfood sync workflow: reusable, token-gated, deterministic, drift-aware, no auto-merge.
 grep -q "workflow_call:" "${dogfood_workflow}"
-grep -q "KAIZEN_SYNC_TOKEN" "${dogfood_workflow}"
+grep -Fq "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}"
+if ! grep -A2 "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}" | grep -q "required: true"; then
+  echo "daily dogfood sync workflow must require KAIZEN_SYNC_TOKEN in workflow_call" >&2
+  exit 1
+fi
+grep -Fq "GH_TOKEN: \${{ secrets.KAIZEN_SYNC_TOKEN }}" "${dogfood_workflow}"
 grep -q "Daily dogfood sync blocked" "${dogfood_workflow}"
 grep -q "Verify managed copies" "${dogfood_workflow}"
 grep -q "Assert no target drifts silently" "${dogfood_workflow}"
 grep -q "Dogfood drift unresolved" "${dogfood_workflow}"
 grep -q "Daily dogfood sync incomplete" "${dogfood_workflow}"
 grep -q "Report sync outcome" "${dogfood_workflow}"
-grep -q -- "--base" "${dogfood_workflow}"
-grep -q 'pr_head="${branch}"' "${dogfood_workflow}"
+grep -Fq "base=\"\$(jq -r '.defaultBranch' \"\${manifest}\")\"" "${dogfood_workflow}"
+grep -Fq -- "--base \"\${base}\"" "${dogfood_workflow}"
+grep -Fq "pr_head=\"\${branch}\"" "${dogfood_workflow}"
 grep -q "gh pr ready" "${dogfood_workflow}"
 if grep -q -- "--draft" "${dogfood_workflow}"; then
   echo "daily dogfood sync workflow must create ready-for-review PRs, not drafts" >&2
+  exit 1
+fi
+if grep -q "gh pr merge" "${dogfood_workflow}"; then
+  echo "daily dogfood sync workflow must not merge PRs automatically" >&2
   exit 1
 fi
 
@@ -64,6 +74,7 @@ grep -q "required: true" "${shared_skill_workflow}"
 
 # Manifest is valid JSON and lists every target.
 jq -e . "${manifest}" >/dev/null
+jq -e '.defaultBranch == "main"' "${manifest}" >/dev/null
 
 for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
   if ! jq -e --arg repo "${repo}" '.targets[] | select(.name == $repo)' "${manifest}" >/dev/null; then

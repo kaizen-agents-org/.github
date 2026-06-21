@@ -81,4 +81,34 @@ grep -q "unmanaged dogfood drift in builder-agent: UNMANAGED_DRIFT.txt" "${guard
   || fail "sync aborted but did not report the unmanaged path"
 echo "PASS: unmanaged drift aborts the sync"
 
+# --- Safety: unsafe manifest target paths abort before copy/delete. ---
+unsafe_source="$(mktemp -d)"
+unsafe_targets="$(mktemp -d)"
+trap 'rm -rf "${happy}" "${guard}" "${unsafe_source}" "${unsafe_targets}"' EXIT
+mkdir -p "${unsafe_source}/.github/dogfood-sync" "${unsafe_targets}/builder-agent"
+git -C "${unsafe_targets}/builder-agent" init -q
+git -C "${unsafe_targets}/builder-agent" config user.email "test@example.com"
+git -C "${unsafe_targets}/builder-agent" config user.name "test"
+: > "${unsafe_targets}/builder-agent/.keep"
+git -C "${unsafe_targets}/builder-agent" add -A
+git -C "${unsafe_targets}/builder-agent" commit -qm init
+echo "safe" > "${unsafe_source}/safe.txt"
+cat > "${unsafe_source}/.github/dogfood-sync/manifest.json" <<'JSON'
+{
+  "targets": [{"name": "builder-agent"}],
+  "managedPaths": [
+    {"type": "file", "source": "safe.txt", "target": "../ESCAPE.txt"}
+  ]
+}
+JSON
+
+if bash "${sync_script}" "${unsafe_source}" "${unsafe_targets}" >/dev/null 2>"${unsafe_targets}/err.log"; then
+  fail "sync did not abort on unsafe target path"
+fi
+grep -q "unsafe managed target path for builder-agent: ../ESCAPE.txt" "${unsafe_targets}/err.log" \
+  || fail "sync aborted but did not report the unsafe target path"
+[[ ! -e "${unsafe_targets}/ESCAPE.txt" ]] \
+  || fail "sync wrote outside the target repository"
+echo "PASS: unsafe target paths abort before copy"
+
 echo "All sync-daily-dogfood tests passed."

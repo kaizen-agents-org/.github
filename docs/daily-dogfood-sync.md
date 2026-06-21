@@ -12,7 +12,7 @@ The synced contract covers the dogfooding files the monitored repositories depen
 - Target repositories: `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`
 - Deterministic source of truth: `.github/dogfood-sync/manifest.json`
 
-The manifest enumerates every managed path. Two kinds of paths are managed today:
+The manifest enumerates every managed path. Three kinds of paths are managed today:
 
 - **Shared skills** copied identically into each target's `skills/` directory:
   `skills/gh-link-issue-pr`, `skills/kaizen-bug-router`, and `skills/pr-guardian`.
@@ -20,7 +20,8 @@ The manifest enumerates every managed path. Two kinds of paths are managed today
   `.github/dogfood-sync/targets/<repo>/`:
   - `.kaizen/config.yml` — the per-repository runtime contract.
   - `AGENTS.md` — agent guidance.
-  - The shared issue template `.github/ISSUE_TEMPLATE/kaizen.yml` (identical across targets).
+- **Global identical files** that live outside the per-repository target tree:
+  - `.github/ISSUE_TEMPLATE/kaizen.yml` — the shared issue template.
 
 ## Workflow
 

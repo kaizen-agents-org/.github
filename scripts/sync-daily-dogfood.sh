@@ -29,6 +29,15 @@ is_managed_path() {
   return 1
 }
 
+is_safe_repo_relative_path() {
+  local path="$1"
+
+  [[ -n "${path}" ]] || return 1
+  [[ "${path}" != /* ]] || return 1
+  [[ "${path}" != "." && "${path}" != ".." ]] || return 1
+  [[ "${path}" != ../* && "${path}" != */../* && "${path}" != */.. ]] || return 1
+}
+
 while IFS= read -r repo; do
   target_root="${target_parent}/${repo}"
   if [[ ! -d "${target_root}/.git" ]]; then
@@ -38,6 +47,11 @@ while IFS= read -r repo; do
 
   managed_targets=()
   while IFS=$'\t' read -r type source target; do
+    if ! is_safe_repo_relative_path "${target}"; then
+      echo "unsafe managed target path for ${repo}: ${target}" >&2
+      exit 1
+    fi
+
     source_path="${source_root}/${source}"
     target_path="${target_root}/${target}"
     managed_targets+=("${target}")
