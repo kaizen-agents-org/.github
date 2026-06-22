@@ -29,8 +29,8 @@ The manifest enumerates every managed path. Three kinds of paths are managed tod
 
 The called workflow:
 
-1. Requires `KAIZEN_SYNC_TOKEN` (and `jq`) so target repositories can be cloned, updated, and opened as PRs.
-2. Fails with an explicit error when the token or `jq` is missing.
+1. Checks for `KAIZEN_SYNC_TOKEN` and skips successfully when it is missing, unless a reusable caller explicitly sets `require_token: true`.
+2. Requires `jq`, failing with an explicit error when it is missing.
 3. Clones the target repositories listed in the manifest when the token is available.
 4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
 5. Verifies that each target checkout now matches the manifest-managed sources.
@@ -64,7 +64,7 @@ The organization monitor should check that:
 - `.github/workflows/daily-dogfood-sync.yml` exists.
 - The daily workflow has both `schedule` and `workflow_dispatch` triggers.
 - The daily workflow delegates to `.github/workflows/sync-daily-dogfood.yml`.
-- The called sync workflow remains callable through `workflow_call` and requires `KAIZEN_SYNC_TOKEN`.
+- The called sync workflow remains callable through `workflow_call`, skips cleanly when `KAIZEN_SYNC_TOKEN` is missing, and can fail closed when called with `require_token: true`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
