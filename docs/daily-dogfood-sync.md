@@ -30,7 +30,7 @@ The manifest enumerates every managed path. Three kinds of paths are managed tod
 The called workflow:
 
 1. Checks for `KAIZEN_SYNC_TOKEN` and skips successfully when it is missing, unless a reusable caller explicitly sets `require_token: true`.
-2. Requires `jq`, failing with an explicit error when it is missing.
+2. Requires `jq` after token validation succeeds, failing with an explicit error when `jq` is missing.
 3. Clones the target repositories listed in the manifest when the token is available.
 4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
 5. Verifies that each target checkout now matches the manifest-managed sources.
