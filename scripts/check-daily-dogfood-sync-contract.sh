@@ -40,6 +40,10 @@ done
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"
 grep -q "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}"
+if grep -A6 "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}" | grep -q "require_token: true"; then
+  echo "scheduled daily dogfood sync must not force KAIZEN_SYNC_TOKEN to be required" >&2
+  exit 1
+fi
 
 # Dogfood sync workflow: reusable, token-aware, deterministic, drift-aware, no auto-merge.
 grep -q "workflow_call:" "${dogfood_workflow}"
