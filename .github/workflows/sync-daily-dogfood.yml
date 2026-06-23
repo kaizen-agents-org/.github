@@ -2,9 +2,15 @@ name: Sync Daily Dogfood Contracts
 
 on:
   workflow_call:
+    inputs:
+      require_token:
+        description: "Fail when KAIZEN_SYNC_TOKEN is unavailable."
+        required: false
+        type: boolean
+        default: false
     secrets:
       KAIZEN_SYNC_TOKEN:
-        required: true
+        required: false
   workflow_dispatch:
 
 permissions:
@@ -20,13 +26,19 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
+      TOKEN_REQUIRED: ${{ inputs.require_token == true }}
     steps:
       - name: Check token and tools
         id: check_token
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error title=Daily dogfood sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
-            exit 1
+            if [ "${TOKEN_REQUIRED}" = "true" ]; then
+              echo "::error title=Daily dogfood sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
+              exit 1
+            fi
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice title=Daily dogfood sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
+            exit 0
           fi
           if ! command -v jq >/dev/null 2>&1; then
             echo "::error title=Daily dogfood sync blocked::jq is required to read the deterministic sync manifest."

@@ -70,7 +70,7 @@ Then review, test as needed, and open normal ready-for-review PRs in the target 
 
 ## Sync Secret
 
-`KAIZEN_SYNC_TOKEN` is required for cross-repository sync. Reusable workflow callers require the token and fail before reporting success if it is missing because they cannot clone target repositories, push sync branches, or open target PRs. Direct `push` and manual runs without the token emit a skip notice and do not attempt cross-repository sync.
+`KAIZEN_SYNC_TOKEN` is required to perform cross-repository sync. Direct `push` and manual workflow runs without the token emit a skip notice and do not attempt to clone target repositories, push sync branches, or open target PRs. Reusable workflow callers remain fail-closed by default because `KAIZEN_SYNC_TOKEN` is declared as a required secret and `require_token` defaults to `true`; callers can set `require_token: false` only when a skip is acceptable.
 
 When configured, the token must be able to:
 
