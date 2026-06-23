@@ -40,7 +40,12 @@ done
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"
 grep -q "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}"
-if grep -A6 "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}" | grep -q "require_token: true"; then
+if awk '
+  /uses: \.\/\.github\/workflows\/sync-daily-dogfood\.yml[[:space:]]*$/ { in_job=1; next }
+  in_job && (/^[[:space:]]{2}[A-Za-z0-9_-]+:/ || /^[A-Za-z0-9_-]+:/) { in_job=0 }
+  in_job && /^[[:space:]]+require_token:[[:space:]]*true([[:space:]]*#.*)?$/ { found=1 }
+  END { exit(found ? 0 : 1) }
+' "${daily_workflow}"; then
   echo "scheduled daily dogfood sync must not force KAIZEN_SYNC_TOKEN to be required" >&2
   exit 1
 fi
