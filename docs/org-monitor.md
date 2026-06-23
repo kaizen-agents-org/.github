@@ -19,6 +19,24 @@ The monitor reviews the core and support organization repositories:
 
 The local automation may inspect local checkouts for these repositories as well as their GitHub remotes.
 
+## Local Kaizen Loop Scheduler
+
+Local dogfooding runs should follow the current `kaizen-loop` scheduler contract: each repository defines named jobs under `scheduler.jobs` in its `.kaizen/config.yml`, and scheduler operations sync those job definitions from the YAML config.
+
+The monitor should treat job names such as `maintenance` as repository-owned configuration, not as fixed organization-wide fields like `nightly`, `afternoon`, or `poll`. Staggering is still an operational goal, but it should come from each job's schedule settings, such as interval cadence and anchor time, so repositories can adjust their own safe run windows without changing the monitor contract.
+
+For example, a local maintenance posture can be represented as an interval job:
+
+```yaml
+scheduler:
+  jobs:
+    maintenance:
+      schedule:
+        type: interval
+        everyHours: 8
+        anchorTime: "02:45"
+```
+
 ## What It Checks
 
 Each run produces a concise coordination report covering:
@@ -27,6 +45,7 @@ Each run produces a concise coordination report covering:
 - Open GitHub pull requests and issues.
 - CI and check status where available.
 - Documentation and implementation drift across the core and support components.
+- Whether local Kaizen Loop scheduler documentation and repository configs use the current `scheduler.jobs` model instead of stale fixed job fields.
 - Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, and stays limited to deterministic files it can update safely.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
