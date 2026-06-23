@@ -45,7 +45,7 @@ Implemented capabilities include:
 - scheduler registration
 - PR creation
 - `pr-guardian` follow-up after PR creation
-- opt-in issue queueing with `kaizen:ready`
+- opt-in issue queueing with repository-configured execution authorization labels when available
 - policy-based direct commit decision logic
 - operational commands such as `doctor`, `status`, `logs`, and `report`
 
