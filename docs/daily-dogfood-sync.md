@@ -40,7 +40,7 @@ The called workflow:
 
 The workflow must not merge PRs automatically.
 
-Generated dogfood sync PRs can be linked to a source issue when the sync resolves an issue-backed task. Run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`, and new sync PR bodies include `Closes <source_issue>`. If an open sync PR already exists, the workflow adds the provided closing keyword to that PR body. Scheduled runs without `source_issue` still create or update ready-for-review sync PRs, but the PR body or workflow notice explicitly records that the source issue was not supplied.
+Generated dogfood sync PRs can be linked to a source issue when the sync resolves an issue-backed task. Run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`, and new sync PR bodies include `Closes <source_issue>`. If an open sync PR already exists, the workflow adds the provided closing keyword to that PR body. After writing a closing keyword, the workflow checks `closingIssuesReferences` and fails if GitHub did not link the expected issue. Scheduled runs without `source_issue` still create or update ready-for-review sync PRs, but the PR body or workflow notice explicitly records that the source issue was not supplied.
 
 `.github/workflows/sync-kaizen-shared-skills.yml` remains the dedicated, push-triggered fast path for shared-skill-only propagation and stays callable through `workflow_call`. The daily dogfood sync is the broader scheduled contract.
 
