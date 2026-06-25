@@ -39,7 +39,9 @@ done
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"
+grep -q "source_issue:" "${daily_workflow}"
 grep -q "uses: ./.github/workflows/sync-daily-dogfood.yml" "${daily_workflow}"
+grep -Fq "source_issue: \${{ inputs.source_issue || '' }}" "${daily_workflow}"
 if awk '
   /uses: \.\/\.github\/workflows\/sync-daily-dogfood\.yml[[:space:]]*$/ { in_job=1; next }
   in_job && (/^[[:space:]]{2}[A-Za-z0-9_-]+:/ || /^[A-Za-z0-9_-]+:/) { in_job=0 }
@@ -53,6 +55,7 @@ fi
 # Dogfood sync workflow: reusable, token-aware, deterministic, drift-aware, no auto-merge.
 grep -q "workflow_call:" "${dogfood_workflow}"
 grep -q "require_token:" "${dogfood_workflow}"
+grep -q "source_issue:" "${dogfood_workflow}"
 grep -Fq "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}"
 if ! grep -A2 "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}" | grep -q "required: false"; then
   echo "daily dogfood sync workflow must allow missing KAIZEN_SYNC_TOKEN in workflow_call" >&2
@@ -60,6 +63,7 @@ if ! grep -A2 "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}" | grep -q "required: fa
 fi
 grep -Fq "GH_TOKEN: \${{ secrets.KAIZEN_SYNC_TOKEN }}" "${dogfood_workflow}"
 grep -Fq 'TOKEN_REQUIRED: ${{ inputs.require_token == true }}' "${dogfood_workflow}"
+grep -Fq "SOURCE_ISSUE: \${{ inputs.source_issue || '' }}" "${dogfood_workflow}"
 grep -Fq 'if [ "${TOKEN_REQUIRED}" = "true" ]; then' "${dogfood_workflow}"
 grep -q "Daily dogfood sync blocked" "${dogfood_workflow}"
 grep -q "available=false" "${dogfood_workflow}"
@@ -73,6 +77,12 @@ grep -Fq "base=\"\$(jq -r '.defaultBranch' \"\${manifest}\")\"" "${dogfood_workf
 grep -Fq -- "--base \"\${base}\"" "${dogfood_workflow}"
 grep -Fq "pr_head=\"\${branch}\"" "${dogfood_workflow}"
 grep -q "gh pr ready" "${dogfood_workflow}"
+grep -q "closingIssuesReferences" "${dogfood_workflow}"
+grep -Fq "Closes \${source_issue}" "${dogfood_workflow}"
+grep -q "Dogfood sync source issue not linked" "${dogfood_workflow}"
+grep -q "assert_pr_links_source_issue" "${dogfood_workflow}"
+grep -q "Dogfood sync source issue not supplied" "${dogfood_workflow}"
+grep -q "Source issue: not supplied by this automated sync run." "${dogfood_workflow}"
 if grep -q -- "--draft" "${dogfood_workflow}"; then
   echo "daily dogfood sync workflow must create ready-for-review PRs, not drafts" >&2
   exit 1
@@ -85,8 +95,12 @@ fi
 # Shared-skill fast path stays callable.
 grep -q "workflow_call:" "${shared_skill_workflow}"
 grep -q "require_token:" "${shared_skill_workflow}"
+grep -q "source_issue:" "${shared_skill_workflow}"
 grep -q "required: true" "${shared_skill_workflow}"
 grep -Fq 'TOKEN_REQUIRED: ${{ inputs.require_token == true }}' "${shared_skill_workflow}"
+grep -Fq "SOURCE_ISSUE: \${{ inputs.source_issue || '' }}" "${shared_skill_workflow}"
+grep -q "derive_source_issue_from_push" "${shared_skill_workflow}"
+grep -q "commits/\${GITHUB_SHA}/pulls" "${shared_skill_workflow}"
 grep -Fq 'if [ "${TOKEN_REQUIRED}" = "true" ]; then' "${shared_skill_workflow}"
 grep -q "Shared skill sync blocked" "${shared_skill_workflow}"
 grep -q "available=false" "${shared_skill_workflow}"
@@ -97,6 +111,12 @@ grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
 grep -q "Report sync outcome" "${shared_skill_workflow}"
 grep -q -- "--base main" "${shared_skill_workflow}"
+grep -q "closingIssuesReferences" "${shared_skill_workflow}"
+grep -Fq "Closes \${source_issue}" "${shared_skill_workflow}"
+grep -q "Shared skill sync source issue not linked" "${shared_skill_workflow}"
+grep -q "assert_pr_links_source_issue" "${shared_skill_workflow}"
+grep -q "Shared skill sync source issue not supplied" "${shared_skill_workflow}"
+grep -q "Source issue: not supplied by this automated sync run." "${shared_skill_workflow}"
 
 # Manifest is valid JSON and lists every target.
 jq -e . "${manifest}" >/dev/null

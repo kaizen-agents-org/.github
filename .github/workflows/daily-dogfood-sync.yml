@@ -2,6 +2,11 @@ name: Daily Dogfood Sync
 
 on:
   workflow_dispatch:
+    inputs:
+      source_issue:
+        description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
+        required: false
+        type: string
   schedule:
     - cron: "17 3 * * *"
 
@@ -16,5 +21,7 @@ jobs:
   sync-dogfood-contracts:
     name: Sync deterministic dogfood contracts
     uses: ./.github/workflows/sync-daily-dogfood.yml
+    with:
+      source_issue: ${{ inputs.source_issue || '' }}
     secrets:
       KAIZEN_SYNC_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
