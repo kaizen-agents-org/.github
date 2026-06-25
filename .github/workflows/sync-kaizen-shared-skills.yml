@@ -108,6 +108,30 @@ jobs:
             echo "::error title=Invalid shared skill sync source issue::source_issue must use owner/repo#number format."
             exit 1
           fi
+          derive_source_issue_from_push() {
+            if [ -n "${source_issue}" ] || [ "${GITHUB_EVENT_NAME:-}" != "push" ]; then
+              return
+            fi
+            local merged_pr
+            merged_pr="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+              --jq '.[0].number // ""')"
+            if [ -z "${merged_pr}" ]; then
+              echo "::notice title=Shared skill sync source issue not found::Push commit ${GITHUB_SHA} has no associated pull request; generated target PRs will record that no source issue was supplied."
+              return
+            fi
+            source_issue="$(gh pr view "${merged_pr}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json closingIssuesReferences \
+              --jq '.closingIssuesReferences[0] | if . == null then "" else (.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) end')"
+            if [ -n "${source_issue}" ]; then
+              echo "::notice title=Shared skill sync source issue derived::Using ${source_issue} from ${GITHUB_REPOSITORY}#${merged_pr}."
+            else
+              echo "::notice title=Shared skill sync source issue not found::${GITHUB_REPOSITORY}#${merged_pr} has no closing issue reference; generated target PRs will record that no source issue was supplied."
+            fi
+          }
+          derive_source_issue_from_push
           assert_pr_links_source_issue() {
             local repo="$1"
             local pr_url="$2"
