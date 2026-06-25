@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Regression test for the shared-skill sync workflow's source issue assertion.
 # It extracts the workflow function and drives it with a fake gh command so the
-# test covers retry and delayed-link fallback behavior without network access.
+# test covers retry behavior and keeps body-only fallback from bypassing
+# closingIssuesReferences without network access.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workflow="${repo_root}/.github/workflows/sync-kaizen-shared-skills.yml"
@@ -27,8 +28,6 @@ awk '
 
 grep -q "Shared skill sync source issue link pending" "${tmp}/assertion.sh" \
   || fail "assertion function does not contain a propagation retry notice"
-grep -q "Shared skill sync source issue link delayed" "${tmp}/assertion.sh" \
-  || fail "assertion function does not contain delayed-link fallback warning"
 
 mkdir -p "${tmp}/bin"
 cat > "${tmp}/bin/gh" <<'SH'
@@ -38,11 +37,6 @@ set -euo pipefail
 state="${GH_STUB_STATE:?}"
 mode="${GH_STUB_MODE:?}"
 mkdir -p "${state}"
-
-if [ "$1" = "repo" ] && [ "$2" = "view" ]; then
-  echo "main"
-  exit 0
-fi
 
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   count_file="${state}/pr_view_count"
@@ -65,7 +59,7 @@ JSON
 JSON
       fi
       ;;
-    delayed)
+    body_only)
       cat <<'JSON'
 {"baseRefName":"main","body":"Closes kaizen-agents-org/.github#49","closingIssuesReferences":[],"isDraft":false}
 JSON
@@ -116,13 +110,15 @@ grep -q "source issue link pending" "${tmp}/retry.out" \
   || fail "retry mode should emit a pending-link notice before succeeding"
 echo "PASS: linked issue propagation is retried"
 
-run_assertion delayed > "${tmp}/delayed.out"
-delayed_count="$(cat "${tmp}/delayed-state/pr_view_count")"
-[ "${delayed_count}" -eq 5 ] \
-  || fail "delayed mode should exhaust the bounded retry window"
-grep -q "source issue link delayed" "${tmp}/delayed.out" \
-  || fail "delayed mode should warn instead of failing when body/base/draft checks pass"
-echo "PASS: exact closing keyword on a ready default-branch PR is accepted as delayed linkage"
+if ( run_assertion body_only ) > "${tmp}/body-only.out" 2>&1; then
+  fail "body-only mode should fail when closingIssuesReferences never contains the source issue"
+fi
+body_only_count="$(cat "${tmp}/body_only-state/pr_view_count")"
+[ "${body_only_count}" -eq 5 ] \
+  || fail "body-only mode should exhaust the bounded retry window"
+grep -q "body text alone is not accepted as proof" "${tmp}/body-only.out" \
+  || fail "body-only mode should explain that body text is not proof of linkage"
+echo "PASS: exact closing keyword without closingIssuesReferences still fails"
 
 if ( run_assertion invalid ) > "${tmp}/invalid.out" 2>&1; then
   fail "invalid mode should fail when closingIssuesReferences and exact body line are both missing"

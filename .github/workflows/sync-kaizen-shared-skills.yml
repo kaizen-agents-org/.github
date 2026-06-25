@@ -135,14 +135,11 @@ jobs:
           assert_pr_links_source_issue() {
             local repo="$1"
             local pr_url="$2"
-            local target_repo="kaizen-agents-org/${repo}"
-            local default_branch
             local pr_json=""
             local linked_issue
             local attempt
-            default_branch="$(gh repo view "${target_repo}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
             for attempt in 1 2 3 4 5; do
-              pr_json="$(gh pr view "${pr_url}" --json baseRefName,body,closingIssuesReferences,isDraft)"
+              pr_json="$(gh pr view "${pr_url}" --json closingIssuesReferences)"
               linked_issue="$(jq -r --arg source_issue "${source_issue}" '
                 .closingIssuesReferences[]?
                 | select((.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) == $source_issue)
@@ -156,19 +153,7 @@ jobs:
                 sleep 6
               fi
             done
-            local base_ref
-            local is_draft
-            local body
-            base_ref="$(jq -r '.baseRefName // ""' <<< "${pr_json}")"
-            is_draft="$(jq -r '.isDraft' <<< "${pr_json}")"
-            body="$(jq -r '.body // ""' <<< "${pr_json}")"
-            if [ "${base_ref}" = "${default_branch}" ] \
-              && [ "${is_draft}" = "false" ] \
-              && grep -Fqx "Closes ${source_issue}" <<< "${body}"; then
-              echo "::warning title=Shared skill sync source issue link delayed::${repo} PR ${pr_url} still did not report closingIssuesReferences for ${source_issue}, but its body contains the exact closing keyword, it targets ${default_branch}, and it is ready for review."
-              return
-            fi
-            echo "::error title=Shared skill sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after writing the closing keyword, and the PR body/default-branch/draft checks did not prove a valid delayed linkage."
+            echo "::error title=Shared skill sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after bounded retries; body text alone is not accepted as proof that GitHub can link or close the source issue."
             exit 1
           }
           ensure_existing_pr_links_source_issue() {
