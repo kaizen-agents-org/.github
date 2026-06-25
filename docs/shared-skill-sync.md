@@ -52,6 +52,8 @@ When shared skills change in `.github`:
 
 The sync workflow does not merge PRs automatically.
 
+Generated sync PRs follow the same issue-linking contract as other Kaizen implementation PRs. When a shared-skill sync resolves an issue-backed task, run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`. New sync PR bodies include `Closes <source_issue>`. If target changes require a new ready-for-review PR and no source issue is provided, the workflow fails instead of writing a "No source issue" PR body. If an open sync PR already exists, the workflow either adds the provided closing keyword to that PR body or fails when the PR has no closing issue reference and no source issue was supplied.
+
 ## Manual Sync
 
 For local or emergency syncs, run the script from a checkout where `.github`, `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config` are siblings:
