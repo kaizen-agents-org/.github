@@ -135,14 +135,26 @@ jobs:
           assert_pr_links_source_issue() {
             local repo="$1"
             local pr_url="$2"
+            local pr_json=""
             local linked_issue
-            linked_issue="$(gh pr view "${pr_url}" \
-              --json closingIssuesReferences \
-              --jq ".closingIssuesReferences[] | select((.repository.owner.login + \"/\" + .repository.name + \"#\" + (.number | tostring)) == \"${source_issue}\") | .url")"
-            if [ -z "${linked_issue}" ]; then
-              echo "::error title=Shared skill sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after writing the closing keyword."
-              exit 1
-            fi
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              pr_json="$(gh pr view "${pr_url}" --json closingIssuesReferences)"
+              linked_issue="$(jq -r --arg source_issue "${source_issue}" '
+                .closingIssuesReferences[]?
+                | select((.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) == $source_issue)
+                | .url
+              ' <<< "${pr_json}")"
+              if [ -n "${linked_issue}" ]; then
+                return
+              fi
+              if [ "${attempt}" -lt 5 ]; then
+                echo "::notice title=Shared skill sync source issue link pending::${repo} PR ${pr_url} has not reported closingIssuesReferences for ${source_issue}; retrying after GitHub linkage propagation delay."
+                sleep 6
+              fi
+            done
+            echo "::error title=Shared skill sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after bounded retries; body text alone is not accepted as proof that GitHub can link or close the source issue."
+            exit 1
           }
           ensure_existing_pr_links_source_issue() {
             local repo="$1"
