@@ -18,11 +18,28 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 
 awk '
-  /^          ensure_existing_pr_links_source_issue\(\) \{/ && capture { exit }
-  /^          assert_pr_links_source_issue\(\) \{/ { capture = 1 }
+  function trimmed(line) {
+    sub(/^[[:space:]]*/, "", line)
+    sub(/[[:space:]]*$/, "", line)
+    return line
+  }
+  !capture && trimmed($0) == "assert_pr_links_source_issue() {" {
+    capture = 1
+  }
   capture {
-    sub(/^          /, "")
-    print
+    line = $0
+    sub(/^[[:space:]]*/, "", line)
+    print line
+    if (trimmed($0) == "}") {
+      found = 1
+      exit
+    }
+  }
+  END {
+    if (!found) {
+      print "assert_pr_links_source_issue function not found" > "/dev/stderr"
+      exit 1
+    }
   }
 ' "${workflow}" > "${tmp}/assertion.sh"
 
