@@ -168,11 +168,28 @@ done < <(jq -r '.targets[].name' "${manifest}")
 # kaizen-loop scheduler contract.
 for repo in coderabbit kaizen-loop; do
   config=".github/dogfood-sync/targets/${repo}/.kaizen/config.yml"
-  grep -q "^scheduler:" "${config}"
-  grep -q "^  jobs:" "${config}"
-  grep -q "^    maintenance:" "${config}"
-  grep -q "^    maintenance-followup:" "${config}"
-  grep -q "^    issue-watch:" "${config}"
+  awk '
+    /^scheduler:$/ {
+      in_scheduler=1
+      next
+    }
+    in_scheduler && /^[^ ]/ {
+      in_scheduler=0
+      in_jobs=0
+    }
+    in_scheduler && /^  jobs:$/ {
+      in_jobs=1
+      found_jobs=1
+      next
+    }
+    in_jobs && /^  [^ ]/ {
+      in_jobs=0
+    }
+    in_jobs && /^    maintenance:$/ { maintenance=1 }
+    in_jobs && /^    maintenance-followup:$/ { maintenance_followup=1 }
+    in_jobs && /^    issue-watch:$/ { issue_watch=1 }
+    END { exit(found_jobs && maintenance && maintenance_followup && issue_watch ? 0 : 1) }
+  ' "${config}"
 
   if grep -Eq "^[[:space:]]{2}(nightly|afternoon|poll):" "${config}"; then
     echo "${repo} dogfood scheduler config must use scheduler.jobs, not legacy scheduler keys" >&2
