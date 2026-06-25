@@ -164,6 +164,22 @@ while IFS= read -r repo; do
   )
 done < <(jq -r '.targets[].name' "${manifest}")
 
+# Scheduler dogfood configs that have drifted before must stay on the current
+# kaizen-loop scheduler contract.
+for repo in coderabbit kaizen-loop; do
+  config=".github/dogfood-sync/targets/${repo}/.kaizen/config.yml"
+  grep -q "^[[:space:]]*scheduler:" "${config}"
+  grep -q "^[[:space:]]*jobs:" "${config}"
+  grep -q "^[[:space:]]*maintenance:" "${config}"
+  grep -q "^[[:space:]]*maintenance-followup:" "${config}"
+  grep -q "^[[:space:]]*issue-watch:" "${config}"
+
+  if grep -Eq "^[[:space:]]{2}(nightly|afternoon|poll):" "${config}"; then
+    echo "${repo} dogfood scheduler config must use scheduler.jobs, not legacy scheduler keys" >&2
+    exit 1
+  fi
+done
+
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"
