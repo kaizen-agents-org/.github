@@ -77,13 +77,10 @@ grep -Fq "base=\"\$(jq -r '.defaultBranch' \"\${manifest}\")\"" "${dogfood_workf
 grep -Fq -- "--base \"\${base}\"" "${dogfood_workflow}"
 grep -Fq "pr_head=\"\${branch}\"" "${dogfood_workflow}"
 grep -q "gh pr ready" "${dogfood_workflow}"
-grep -q "Dogfood sync source issue required" "${dogfood_workflow}"
 grep -q "closingIssuesReferences" "${dogfood_workflow}"
 grep -Fq "Closes \${source_issue}" "${dogfood_workflow}"
-if grep -q "No source issue" "${dogfood_workflow}"; then
-  echo "daily dogfood sync workflow must not create PR bodies without source issues" >&2
-  exit 1
-fi
+grep -q "Dogfood sync source issue not supplied" "${dogfood_workflow}"
+grep -q "Source issue: not supplied by this automated sync run." "${dogfood_workflow}"
 if grep -q -- "--draft" "${dogfood_workflow}"; then
   echo "daily dogfood sync workflow must create ready-for-review PRs, not drafts" >&2
   exit 1
@@ -110,13 +107,10 @@ grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
 grep -q "Report sync outcome" "${shared_skill_workflow}"
 grep -q -- "--base main" "${shared_skill_workflow}"
-grep -q "Shared skill sync source issue required" "${shared_skill_workflow}"
 grep -q "closingIssuesReferences" "${shared_skill_workflow}"
 grep -Fq "Closes \${source_issue}" "${shared_skill_workflow}"
-if grep -q "No source issue" "${shared_skill_workflow}"; then
-  echo "shared skill sync workflow must not create PR bodies without source issues" >&2
-  exit 1
-fi
+grep -q "Shared skill sync source issue not supplied" "${shared_skill_workflow}"
+grep -q "Source issue: not supplied by this automated sync run." "${shared_skill_workflow}"
 
 # Manifest is valid JSON and lists every target.
 jq -e . "${manifest}" >/dev/null
