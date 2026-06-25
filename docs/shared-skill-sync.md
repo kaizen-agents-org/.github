@@ -85,3 +85,9 @@ The shared skills are not the runtime loop by themselves. They support the MVP b
 - `kaizen-bug-router` turns observed Kaizen Agents bugs into routed GitHub issues.
 - `pr-guardian` monitors opened PRs until checks and review feedback are resolved or a real blocker is reported.
 - `.kaizen/config.yml` and `.github/ISSUE_TEMPLATE/kaizen.yml` remain the per-repository runtime contract for issue selection and PR creation.
+
+## Relationship To Daily Dogfood Sync
+
+This workflow is intentionally narrow: it updates shared skills only.
+
+[Daily Dogfood Sync](./daily-dogfood-sync.md) is the broader intended loop for keeping each repository's dogfooding contract aligned as Kaizen Agents components change. The daily loop should include this shared-skill sync behavior, but also handle deterministic contract files such as `.kaizen` configuration, issue templates, and managed agent guidance.

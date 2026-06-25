@@ -54,10 +54,12 @@ flowchart TB
 ## Documentation Map
 
 - [docs/README.md](./docs/README.md): documentation index.
+- [docs/documentation-sources.md](./docs/documentation-sources.md): source-of-truth order for documentation-backed issue creation.
 - [docs/architecture.md](./docs/architecture.md): system responsibilities and end-to-end flow.
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
+- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): planned daily sync for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
@@ -70,3 +72,7 @@ The `skills/` directory is the source of truth for shared Kaizen workflows:
 - `pr-guardian`: monitor an opened PR until it is mergeable or a real blocker remains.
 
 Core repositories vendor these skills so local agents can use the same workflows without depending on this repository at runtime.
+
+## Documentation Source Of Truth
+
+Organization coordination and automated monitor issues should use the organization profile, this README, and the architecture docs as their primary basis. When the monitor creates a follow-up issue, its body should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the monitor should report the drift instead of creating an implementation issue from an assumption.

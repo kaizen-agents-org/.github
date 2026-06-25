@@ -41,6 +41,8 @@ Automatic issue creation is intentionally conservative:
 - Limit automatic issue creation to at most two issues per run.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
+- Include a `Documentation basis` section that cites the Organization Profile, repository README, Architecture Notes, Issue-to-PR MVP, or project-local docs that justify the issue scope.
+- If the documentation basis is missing, stale, or contradictory, keep the finding in the report and file a documentation clarification issue only when that is the clear actionable next step.
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 
 Speculative ideas, low-confidence observations, duplicate work, and broad cleanup suggestions should stay in the report instead of becoming issues.
@@ -71,3 +73,34 @@ GitHub Issue
 ```
 
 The organization monitor sits outside that flow. Its job is to notice drift and create reviewable follow-up work so the core flow remains understandable and maintainable.
+
+## Local Kaizen Loop Schedule
+
+The local Kaizen Loop jobs for the Kaizen Agents repositories are staggered to avoid running every repository at the same time. Each repository has a nightly run and an afternoon run:
+
+| Nightly (JST) | Afternoon (JST) | Repository |
+| --- | --- | --- |
+| 01:30 | 13:30 | `kaizen-agents-org/.github` |
+| 01:45 | 13:45 | `kaizen-agents-org/coderabbit` |
+| 02:00 | 14:00 | `kaizen-agents-org/renovate-config` |
+| 02:15 | 14:15 | `kaizen-agents-org/builder-agent` |
+| 02:45 | 14:45 | `kaizen-agents-org/kaizen-loop` |
+| 03:00 | 15:00 | `kaizen-agents-org/verifier` |
+
+The nightly job runs `kaizen run --project <slug> --scheduled --trigger scheduled`. The afternoon job runs `kaizen run --project <slug> --scheduled --trigger afternoon`. Both process eligible open `kaizen` issues for that repository.
+
+## Why Open PR Count Stays Low
+
+The local Kaizen Loop scheduler intentionally applies backpressure before creating new work.
+
+For automatic scheduled runs, each repository has an open-PR limit from `run.maxOpenPullRequests` in `.kaizen/config.yml`. If the repository already has that many open PRs, eligible issues are left open and the run records `open pull request limit reached` instead of creating another branch. Explicit manual runs, such as `kaizen fix` or `kaizen run --issue <number>`, are not blocked by this automatic-run limit.
+
+Issues with `kaizen:needs-human` are also skipped by scheduled runs until a maintainer adds the missing context or otherwise resolves the blocker and removes that label.
+
+Daily sync workflows use fixed branch names and update existing open sync PRs instead of creating duplicate PRs on every run. As a result, a healthy organization can have only a small number of open PRs even while the scheduler and sync workflows are running regularly.
+
+## Relationship To Daily Dogfood Sync
+
+[Daily Dogfood Sync](./daily-dogfood-sync.md) is the intended GitHub Actions workflow for deterministic daily updates across repositories, including shared skills and managed dogfooding contract files.
+
+The organization monitor should check that the daily sync is working and report drift that cannot be fixed deterministically. It should not replace the daily sync or push cross-repository updates itself.
