@@ -2,7 +2,7 @@
 
 This repository is the organization-level home for Kaizen Agents documentation, shared skills, and profile content.
 
-It does not run the issue-to-PR pipeline itself. It explains the system, keeps shared workflow skills in one source of truth, and coordinates cross-repository documentation for the core projects.
+It does not run the issue-to-PR pipeline itself. It explains the system, keeps shared workflow skills and Codex automation prompts in one source of truth, and coordinates cross-repository documentation for the core projects.
 
 ## System At A Glance
 
@@ -32,6 +32,7 @@ flowchart TB
     Repo --> Profile["profile/README.md<br/>organization landing page"]
     Repo --> Docs["docs/<br/>architecture, MVP plan, status, decisions"]
     Repo --> Skills["skills/<br/>shared Codex workflows"]
+    Repo --> Automations["automations/<br/>Codex automation prompts"]
     Repo --> Sync["scripts/sync-kaizen-shared-skills.sh<br/>copy shared skills into core repos"]
 
     Skills --> BA["builder-agent/skills"]
@@ -72,6 +73,12 @@ The `skills/` directory is the source of truth for shared Kaizen workflows:
 - `pr-guardian`: monitor an opened PR until it is mergeable or a real blocker remains.
 
 Core repositories vendor these skills so local agents can use the same workflows without depending on this repository at runtime.
+
+## Codex Automations
+
+The `automations/` directory stores GitHub-managed source prompts for local Codex automations. Runtime automation copies live under `$CODEX_HOME/automations`, but those local files are not the source of truth.
+
+- [Kaizen Agents org monitor](./automations/kaizen-agents-org-monitor.prompt.md): cross-repository coordination monitor prompt.
 
 ## Documentation Source Of Truth
 

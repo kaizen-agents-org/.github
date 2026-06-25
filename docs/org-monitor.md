@@ -4,6 +4,8 @@ The Kaizen Agents organization uses a Codex automation named `Kaizen Agents org 
 
 The monitor is not part of the runtime `kaizen-loop` issue-to-PR pipeline. It is an operational review loop for keeping the organization documentation, repository state, and component responsibilities aligned while the system is changing.
 
+The GitHub-managed source prompt for the Codex automation lives at [`../automations/kaizen-agents-org-monitor.prompt.md`](../automations/kaizen-agents-org-monitor.prompt.md). The local Codex runtime copy under `$CODEX_HOME/automations/kaizen-agents-org-monitor/automation.toml` should be treated as a synced copy, not the source of truth.
+
 ## Scope
 
 The monitor reviews the core and support organization repositories:

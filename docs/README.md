@@ -42,6 +42,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
+   - Source prompt stored under `../automations/`
 
 8. [Implementation Status](./implementation-status.md)
    - What works today
@@ -80,7 +81,7 @@ Kaizen Agents repositories are also Kaizen Agents target repositories. When a co
 
 ## Organization Monitor
 
-The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, and responsibility alignment. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. See [Organization Monitor](./org-monitor.md).
+The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, and responsibility alignment. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. Its source prompt is stored at [automations/kaizen-agents-org-monitor.prompt.md](../automations/kaizen-agents-org-monitor.prompt.md). See [Organization Monitor](./org-monitor.md).
 
 ## Current Focus
 
