@@ -68,7 +68,8 @@ The organization monitor should check that:
 - `.github/workflows/daily-dogfood-sync.yml` exists.
 - The daily workflow has both `schedule` and `workflow_dispatch` triggers.
 - The daily workflow delegates to `.github/workflows/sync-daily-dogfood.yml`.
-- The called sync workflow remains callable through `workflow_call`, skips cleanly when `KAIZEN_SYNC_TOKEN` is missing, can fail closed when called with `require_token: true`, and runs on push to managed source contract paths after merges to `main`.
+- The called sync workflow remains callable through `workflow_call`, and scheduled or manual runs can skip cleanly when `KAIZEN_SYNC_TOKEN` is missing.
+- Push-triggered sync runs to managed source contract paths after merges to `main` are gated by `TOKEN_REQUIRED` and fail closed when `KAIZEN_SYNC_TOKEN` is absent; `workflow_call` runs also fail closed when called with `require_token: true`.
 - Push-triggered sync runs derive the source issue from the merged source PR when possible, and generated target PRs verify the issue linkage through `closingIssuesReferences`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
