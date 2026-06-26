@@ -60,7 +60,7 @@ flowchart TB
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
-- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): scheduled and post-merge sync for shared skills and dogfooding contracts.
+- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): deterministic daily sync contract for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
@@ -82,4 +82,4 @@ The `automations/` directory stores GitHub-managed source prompts for local Code
 
 ## Documentation Source Of Truth
 
-Organization coordination and automated monitor issues should use the organization profile, this README, and the architecture docs as their primary basis. When the monitor creates a follow-up issue, its body should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the monitor should report the drift instead of creating an implementation issue from an assumption.
+Organization coordination and automated monitor issues should follow the source order in `docs/documentation-sources.md`, starting with the organization profile, this README, and the architecture docs, then the Issue-to-PR MVP, Daily Dogfood Sync, and Organization Monitor docs as needed. When the monitor creates a follow-up issue, its body should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the monitor should report the drift instead of creating an implementation issue from an assumption.
