@@ -58,6 +58,7 @@ AGENTS.md
 skills/
   gh-link-issue-pr/
   kaizen-bug-router/
+  pr-guardian/
 .kaizen/
   config.yml
 .github/
@@ -70,11 +71,12 @@ skills/
 `AGENTS.md` should describe repository-specific working rules:
 
 - What commands to run before opening a PR.
+- What post-PR checks or review follow-up to monitor.
 - Which files or areas are high-risk.
 - Which changes require human confirmation.
 - Whether the repository has special branch, commit, or PR conventions.
 - That PRs should be ready-for-review by default, not draft.
-- Which vendored Kaizen skills under `skills/` should be used for issue-linked PRs and bug routing.
+- Which vendored Kaizen skills under `skills/` should be used for issue-linked PRs, bug routing, and PR guardian follow-up.
 
 ### `skills/`
 
@@ -82,6 +84,7 @@ Target repositories vendor shared skills from `kaizen-agents-org/.github/skills`
 
 - `gh-link-issue-pr`: keeps generated PRs linked to their source issues with GitHub closing keywords.
 - `kaizen-bug-router`: routes Kaizen Agents bug reports to the owning repository, or to `kaizen-loop` if ownership is unclear.
+- `pr-guardian`: monitors opened PRs until checks and review feedback are resolved or a real blocker remains.
 
 The source of truth remains `.github/skills`. Shared skill changes are propagated by the sync workflow described in [Shared Skill Sync](./shared-skill-sync.md).
 

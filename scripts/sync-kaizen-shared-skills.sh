@@ -13,7 +13,9 @@ if [[ "$#" -eq 0 ]]; then
   set -- \
     "${source_root}/../builder-agent" \
     "${source_root}/../verifier" \
-    "${source_root}/../kaizen-loop"
+    "${source_root}/../kaizen-loop" \
+    "${source_root}/../coderabbit" \
+    "${source_root}/../renovate-config"
 fi
 
 skills=(
@@ -38,6 +40,7 @@ for target_root in "$@"; do
 
     rm -rf "${target_root}/skills/${skill}"
     cp -R "${source_root}/skills/${skill}" "${target_root}/skills/${skill}"
+    diff -qr "${source_root}/skills/${skill}" "${target_root}/skills/${skill}" >/dev/null
   done
 
   echo "Synced ${#skills[@]} skills into ${target_root}"

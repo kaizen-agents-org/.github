@@ -1,7 +1,27 @@
 name: Sync Kaizen Shared Skills
 
 on:
+  workflow_call:
+    inputs:
+      require_token:
+        description: "Fail when KAIZEN_SYNC_TOKEN is unavailable."
+        required: false
+        type: boolean
+        default: true
+      source_issue:
+        description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
+        required: false
+        type: string
+        default: ""
+    secrets:
+      KAIZEN_SYNC_TOKEN:
+        required: true
   workflow_dispatch:
+    inputs:
+      source_issue:
+        description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
+        required: false
+        type: string
   push:
     branches:
       - main
@@ -23,11 +43,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
+      TOKEN_REQUIRED: ${{ inputs.require_token == true }}
+      SOURCE_ISSUE: ${{ inputs.source_issue || '' }}
     steps:
       - name: Check token
         id: check_token
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
+            if [ "${TOKEN_REQUIRED}" = "true" ]; then
+              echo "::error title=Shared skill sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
+              exit 1
+            fi
             echo "available=false" >> "${GITHUB_OUTPUT}"
             echo "::notice title=Shared skill sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
             exit 0
@@ -62,14 +88,107 @@ jobs:
             "${PWD}/coderabbit" \
             "${PWD}/renovate-config"
 
-      - name: Create target PRs
+      - name: Verify synced skill copies
         if: ${{ steps.check_token.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
+            for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
+              diff -qr "source/skills/${skill}" "${repo}/skills/${skill}" >/dev/null
+            done
+            echo "Verified synced skill copies for ${repo}"
+          done
+
+      - name: Create target PRs
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          source_issue="${SOURCE_ISSUE:-}"
+          if [[ -n "${source_issue}" && ! "${source_issue}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]]; then
+            echo "::error title=Invalid shared skill sync source issue::source_issue must use owner/repo#number format."
+            exit 1
+          fi
+          derive_source_issue_from_push() {
+            if [ -n "${source_issue}" ] || [ "${GITHUB_EVENT_NAME:-}" != "push" ]; then
+              return
+            fi
+            local merged_pr
+            merged_pr="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+              --jq '.[0].number // ""')"
+            if [ -z "${merged_pr}" ]; then
+              echo "::notice title=Shared skill sync source issue not found::Push commit ${GITHUB_SHA} has no associated pull request; generated target PRs will record that no source issue was supplied."
+              return
+            fi
+            source_issue="$(gh pr view "${merged_pr}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json closingIssuesReferences \
+              --jq '.closingIssuesReferences[0] | if . == null then "" else (.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) end')"
+            if [ -n "${source_issue}" ]; then
+              echo "::notice title=Shared skill sync source issue derived::Using ${source_issue} from ${GITHUB_REPOSITORY}#${merged_pr}."
+            else
+              echo "::notice title=Shared skill sync source issue not found::${GITHUB_REPOSITORY}#${merged_pr} has no closing issue reference; generated target PRs will record that no source issue was supplied."
+            fi
+          }
+          derive_source_issue_from_push
+          assert_pr_links_source_issue() {
+            local repo="$1"
+            local pr_url="$2"
+            local pr_json=""
+            local linked_issue
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              pr_json="$(gh pr view "${pr_url}" --json closingIssuesReferences)"
+              linked_issue="$(jq -r --arg source_issue "${source_issue}" '
+                .closingIssuesReferences[]?
+                | select((.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) == $source_issue)
+                | .url
+              ' <<< "${pr_json}")"
+              if [ -n "${linked_issue}" ]; then
+                return
+              fi
+              if [ "${attempt}" -lt 5 ]; then
+                echo "::notice title=Shared skill sync source issue link pending::${repo} PR ${pr_url} has not reported closingIssuesReferences for ${source_issue}; retrying after GitHub linkage propagation delay."
+                sleep 6
+              fi
+            done
+            echo "::error title=Shared skill sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after bounded retries; body text alone is not accepted as proof that GitHub can link or close the source issue."
+            exit 1
+          }
+          ensure_existing_pr_links_source_issue() {
+            local repo="$1"
+            local pr_url="$2"
+            if [ -n "${source_issue}" ]; then
+              local existing_body
+              existing_body="$(mktemp)"
+              gh pr view "${pr_url}" --json body --jq '.body // ""' > "${existing_body}"
+              if ! grep -Fqx "Closes ${source_issue}" "${existing_body}"; then
+                {
+                  echo
+                  echo "Closes ${source_issue}"
+                } >> "${existing_body}"
+                gh pr edit "${pr_url}" --body-file "${existing_body}"
+              fi
+              assert_pr_links_source_issue "${repo}" "${pr_url}"
+              return
+            fi
+            local closing_count
+            closing_count="$(gh pr view "${pr_url}" --json closingIssuesReferences --jq '.closingIssuesReferences | length')"
+            if [ "${closing_count}" -eq 0 ]; then
+              echo "::notice title=Shared skill sync source issue not supplied::${repo} already has an open shared-skill sync PR without a closing issue reference. Re-run with source_issue formatted as owner/repo#number to add a GitHub closing keyword."
+            fi
+          }
+          report="${PWD}/shared-skill-sync-report.md"
+          {
+            echo "## Shared skill sync report"
+            echo
+          } > "${report}"
+          for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
             cd "${repo}"
             if [ -z "$(git status --porcelain -- skills)" ]; then
               echo "No skill changes for ${repo}"
+              echo "- ${repo}: no skill changes" >> "${report}"
               cd ..
               continue
             fi
@@ -77,6 +196,7 @@ jobs:
             branch="codex/sync-kaizen-shared-skills"
             existing_pr="$(gh pr list \
               --repo "kaizen-agents-org/${repo}" \
+              --base main \
               --head "${branch}" \
               --state open \
               --json url \
@@ -93,12 +213,14 @@ jobs:
               git push -u origin "HEAD:${branch}"
             fi
             if [ -n "${existing_pr}" ]; then
+              ensure_existing_pr_links_source_issue "${repo}" "${existing_pr}"
               echo "Updated existing PR for ${repo}: ${existing_pr}"
+              echo "- ${repo}: updated ${existing_pr}" >> "${report}"
               cd ..
               continue
             fi
             body_file="$(mktemp)"
-            cat > "${body_file}" <<'EOF'
+            cat > "${body_file}" <<EOF
           ## Summary
           - Sync shared Kaizen Agents skills from kaizen-agents-org/.github.
           - Keep issue-linked PR and bug-routing workflows available in this repository.
@@ -106,13 +228,90 @@ jobs:
           ## Verification
           - Automated sync copied the shared skill directories.
 
-          No source issue; this PR is generated by the shared-skill sync workflow.
+          Generated by the shared-skill sync workflow.
           EOF
+            if [ -n "${source_issue}" ]; then
+              echo "Closes ${source_issue}" >> "${body_file}"
+            else
+              echo "Source issue: not supplied by this automated sync run." >> "${body_file}"
+            fi
             gh pr create \
               --repo "kaizen-agents-org/${repo}" \
               --base main \
               --head "${branch}" \
               --title "Sync Kaizen shared skills" \
               --body-file "${body_file}"
+            open_pr="$(gh pr list \
+              --repo "kaizen-agents-org/${repo}" \
+              --base main \
+              --head "${branch}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Sync PR assertion failed::${repo} has skill changes but no open shared-skill sync PR."
+              exit 1
+            fi
+            if [ -n "${source_issue}" ]; then
+              assert_pr_links_source_issue "${repo}" "${open_pr}"
+            fi
+            echo "- ${repo}: opened ${open_pr}" >> "${report}"
             cd ..
           done
+
+      - name: Assert no target drifts silently
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          branch="codex/sync-kaizen-shared-skills"
+          drifted=0
+          for repo in builder-agent verifier kaizen-loop coderabbit renovate-config; do
+            # Compare the source skills against the target's committed origin/main,
+            # not the working copy the sync script just overwrote, so a successful
+            # run cannot silently leave a target's main branch drifted.
+            git -C "${repo}" fetch --quiet origin main
+            origin_skills="$(mktemp -d)"
+            target_drift=0
+            for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
+              mkdir -p "${origin_skills}/${skill}"
+              if git -C "${repo}" archive "origin/main" "skills/${skill}" 2>/dev/null \
+                | tar -x -C "${origin_skills}" --strip-components=1 2>/dev/null; then
+                if ! diff -qr "source/skills/${skill}" "${origin_skills}/${skill}" >/dev/null 2>&1; then
+                  target_drift=1
+                fi
+              else
+                # Skill directory absent on origin/main is itself drift.
+                target_drift=1
+              fi
+            done
+            rm -rf "${origin_skills}"
+            if [ "${target_drift}" -eq 0 ]; then
+              echo "${repo}: origin/main matches source shared skills"
+              continue
+            fi
+            open_pr="$(gh pr list \
+              --repo "kaizen-agents-org/${repo}" \
+              --base main \
+              --head "${branch}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Shared skill drift unresolved::${repo} origin/main still differs from the source shared skills and has no open sync PR."
+              echo "- ${repo}: DRIFTED with no open sync PR" >> "${PWD}/shared-skill-sync-report.md"
+              drifted=1
+            else
+              echo "${repo}: origin/main drifts but open sync PR exists (${open_pr})"
+            fi
+          done
+          if [ "${drifted}" -ne 0 ]; then
+            echo "::error title=Shared skill sync incomplete::One or more target repositories remain drifted with no open sync PR after the sync run."
+            exit 1
+          fi
+
+      - name: Report sync outcome
+        if: ${{ always() && steps.check_token.outputs.available == 'true' }}
+        run: |
+          if [ -f shared-skill-sync-report.md ]; then
+            cat shared-skill-sync-report.md >> "${GITHUB_STEP_SUMMARY}"
+          fi

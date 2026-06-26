@@ -22,9 +22,9 @@ See [Issue-to-PR MVP](./issue-to-pr-mvp.md) for the organization-level contract 
 
 ## Current State
 
-- **`kaizen-loop`** already has the strongest implementation base. It is a TypeScript CLI with commands such as `kaizen run`, `kaizen fix`, `kaizen doctor`, `kaizen report`, verification retries, agent selection, and PR-oriented workflow pieces.
+- **`kaizen-loop`** has Phase 2 integration support in its TypeScript CLI, including builder-agent-based fixes, verifier review, isolated per-issue worktrees, PR creation followed by `pr-guardian`, scheduler registration, opt-in queueing, operational commands, verification retries, and agent selection.
 - **`builder-agent`** has a shipped MVP CLI, local skill, schemas, tests, and a Kaizen integration payload for the build phase.
-- **`verifier`** has a shipped MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context`. The fuller staged verifier remains future work.
+- **`verifier`** has a shipped `verifier check` MVP CLI that returns `open_pr`, `open_pr_with_warning`, `block_pr`, or `needs_context` and writes Kaizen Loop verdict payloads through `KAIZEN_VERIFIER_RESULT_PATH`. The fuller staged verifier remains future work.
 - **`.github`** contains the Organization profile and architecture docs that describe the intended responsibility boundaries.
 
 ## Phase 0: Repository Baseline
@@ -129,6 +129,8 @@ Done when:
 
 Goal: prove that the vertical slice works in a controlled repo.
 
+Status: `kaizen-loop` now has the Phase 2 orchestration features needed for this path. The remaining work is repeated smoke testing, evidence capture, and contract hardening rather than first-time wiring of builder or verifier execution.
+
 1. Create or choose a small test repository.
 2. Create a GitHub Issue with a `kaizen` label.
 3. Run `kaizen run --dry-run` to verify task selection and planned actions.
@@ -180,8 +182,8 @@ Done when:
 
 ## Immediate Next Actions
 
-1. Review and merge the Organization documentation PR.
-2. Keep the `builder-agent` MVP contract stable as `kaizen-loop` integration matures.
+1. Keep the `builder-agent` MVP contract stable as `kaizen-loop` integration matures.
+2. Keep the `verifier check` result contract stable, including `KAIZEN_VERIFIER_RESULT_PATH` integration.
 3. Expand verifier behavior beyond the minimal verdict CLI while preserving the MVP status vocabulary.
 4. Harden `kaizen-loop` feedback loops for `block_pr` and `needs_context`.
 5. Run repeated end-to-end smoke tests and capture the results.

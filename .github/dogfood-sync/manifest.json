@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "owner": "kaizen-agents-org",
+  "defaultBranch": "main",
+  "syncBranch": "codex/daily-dogfood-sync",
+  "targets": [
+    {
+      "name": "builder-agent"
+    },
+    {
+      "name": "kaizen-loop"
+    },
+    {
+      "name": "verifier"
+    },
+    {
+      "name": "coderabbit"
+    },
+    {
+      "name": "renovate-config"
+    }
+  ],
+  "managedPaths": [
+    {
+      "kind": "shared-skill",
+      "type": "directory",
+      "source": "skills/gh-link-issue-pr",
+      "target": "skills/gh-link-issue-pr"
+    },
+    {
+      "kind": "shared-skill",
+      "type": "directory",
+      "source": "skills/kaizen-bug-router",
+      "target": "skills/kaizen-bug-router"
+    },
+    {
+      "kind": "shared-skill",
+      "type": "directory",
+      "source": "skills/pr-guardian",
+      "target": "skills/pr-guardian"
+    },
+    {
+      "kind": "dogfood-contract",
+      "type": "file",
+      "source": ".github/ISSUE_TEMPLATE/kaizen.yml",
+      "target": ".github/ISSUE_TEMPLATE/kaizen.yml"
+    },
+    {
+      "kind": "dogfood-contract",
+      "type": "file",
+      "sourcePattern": ".github/dogfood-sync/targets/{repo}/.kaizen/config.yml",
+      "target": ".kaizen/config.yml"
+    },
+    {
+      "kind": "dogfood-contract",
+      "type": "file",
+      "sourcePattern": ".github/dogfood-sync/targets/{repo}/AGENTS.md",
+      "target": "AGENTS.md"
+    }
+  ]
+}

@@ -1,227 +1,75 @@
 # Daily Dogfood Sync
 
-This document defines the intended daily update loop that keeps Kaizen Agents dogfooding current across the organization repositories.
+This document defines the deterministic daily sync contract for the Kaizen Agents repositories.
 
 ## Goal
 
-Each core repository is both:
+The daily dogfood sync keeps shared, reviewable agent contracts aligned across the core repositories without granting automation authority to merge changes.
 
-- a component of Kaizen Agents, and
-- a target repository that Kaizen Agents should be able to operate on.
+The synced contract covers the dogfooding files the monitored repositories depend on staying aligned:
 
-When a component changes, the repository's dogfooding contract must stay aligned so the organization can keep using Kaizen Agents on itself. The daily sync should keep shared skills, repository contracts, and generated dogfooding assets current enough that the normal issue-to-PR flow remains usable.
+- Source repository: `kaizen-agents-org/.github`
+- Target repositories: `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`
+- Deterministic source of truth: `.github/dogfood-sync/manifest.json`
 
-The target experience is:
+The manifest enumerates every managed path. Three kinds of paths are managed today:
 
-```text
-component update
-  -> daily dogfood sync detects required contract updates
-  -> ready-for-review PR in the affected repository
-  -> human review and merge
-```
+- **Shared skills** copied identically into each target's `skills/` directory:
+  `skills/gh-link-issue-pr`, `skills/kaizen-bug-router`, and `skills/pr-guardian`.
+- **Dogfooding contract files** that may differ per target and live under
+  `.github/dogfood-sync/targets/<repo>/`:
+  - `.kaizen/config.yml` — the per-repository runtime contract.
+  - `AGENTS.md` — agent guidance.
+- **Global identical files** that live outside the per-repository target tree:
+  - `.github/ISSUE_TEMPLATE/kaizen.yml` — the shared issue template.
 
-The sync must not merge automatically.
+## Workflow
 
-## Scope
+`.github/workflows/daily-dogfood-sync.yml` runs once per day and can also be run manually. It delegates to `.github/workflows/sync-daily-dogfood.yml`, which owns the deterministic manifest-driven copy behavior.
 
-The daily sync covers the same core and support repositories as the organization monitor:
+The called workflow:
 
-| Area | Repository |
-| --- | --- |
-| Organization docs and shared assets | `kaizen-agents-org/.github` |
-| Builder component | `kaizen-agents-org/builder-agent` |
-| Orchestrator component | `kaizen-agents-org/kaizen-loop` |
-| Independent verifier component | `kaizen-agents-org/verifier` |
-| Code review configuration | `kaizen-agents-org/coderabbit` |
-| Renovate configuration | `kaizen-agents-org/renovate-config` |
+1. Checks for `KAIZEN_SYNC_TOKEN` and skips successfully when it is missing, unless a reusable caller explicitly sets `require_token: true`.
+2. Requires `jq` after token validation succeeds, failing with an explicit error when `jq` is missing.
+3. Clones the target repositories listed in the manifest when the token is available.
+4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
+5. Verifies that each target checkout now matches the manifest-managed sources.
+6. Opens or updates ready-for-review sync PRs on the fixed branch `codex/daily-dogfood-sync` targeting `main` in target repositories when managed files changed.
+7. Asserts that no target repository's `origin/main` still drifts from the managed contracts without an open sync PR targeting `main`, failing the run if it does.
+8. Reports the per-repository outcome in the workflow summary.
 
-The first implementation should update `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`. The `.github` repository remains the source for organization-level shared assets and the workflow implementation.
+The workflow must not merge PRs automatically.
 
-## What Gets Updated
+Generated dogfood sync PRs can be linked to a source issue when the sync resolves an issue-backed task. Run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`, and new sync PR bodies include `Closes <source_issue>`. If an open sync PR already exists, the workflow adds the provided closing keyword to that PR body. After writing a closing keyword, the workflow checks `closingIssuesReferences` and fails if GitHub did not link the expected issue. Scheduled runs without `source_issue` still create or update ready-for-review sync PRs, but the PR body or workflow notice explicitly records that the source issue was not supplied.
 
-The daily sync should update deterministic, reviewable files only.
+`.github/workflows/sync-kaizen-shared-skills.yml` remains the dedicated, push-triggered fast path for shared-skill-only propagation and stays callable through `workflow_call`. The daily dogfood sync is the broader scheduled contract.
 
-### Shared Skills
+## Deterministic Files
 
-Shared skills continue to come from `.github/skills`:
-
-```text
-skills/
-  gh-link-issue-pr/
-  kaizen-bug-router/
-  pr-guardian/
-```
-
-The daily sync should include the existing shared-skill sync behavior so skill drift and dogfooding contract drift are handled in one scheduled PR loop.
-
-### Dogfooding Contract
-
-Each target repository should keep a small machine-readable and agent-readable contract:
+The daily workflow is limited to the deterministic paths enumerated in `.github/dogfood-sync/manifest.json`. Each managed path has a repository-owned source of truth:
 
 ```text
-AGENTS.md
-skills/
-.kaizen/
-  config.yml
-  dogfood.yml
-.github/
-  ISSUE_TEMPLATE/
-    kaizen.yml
+skills/gh-link-issue-pr/          (identical to every target)
+skills/kaizen-bug-router/         (identical to every target)
+skills/pr-guardian/               (identical to every target)
+.github/ISSUE_TEMPLATE/kaizen.yml (identical to every target)
+.github/dogfood-sync/targets/<repo>/.kaizen/config.yml -> <repo>/.kaizen/config.yml
+.github/dogfood-sync/targets/<repo>/AGENTS.md          -> <repo>/AGENTS.md
 ```
 
-The exact file set may vary by repository, but the daily sync should keep these categories aligned:
+Do not add generated reports, logs, transient state, or undocumented runtime configuration to the daily sync contract. Add a new entry to the manifest (and to the per-target source files when the value differs per repository) before expanding the workflow.
 
-- verification commands used by `kaizen-loop`
-- protected paths and PR-only policy defaults
-- issue label and issue template conventions
-- local shared skill copies
-- adapter, CLI, schema, or prompt references needed for the repository to dogfood the latest component behavior
-- generated examples or docs that describe how this repository participates in the issue-to-PR loop
+## Monitor Contract
 
-Repository-specific implementation code, handwritten design docs, and broad refactors are out of scope for automatic sync.
+The organization monitor should check that:
 
-## Source Of Truth
+- `.github/workflows/daily-dogfood-sync.yml` exists.
+- The daily workflow has both `schedule` and `workflow_dispatch` triggers.
+- The daily workflow delegates to `.github/workflows/sync-daily-dogfood.yml`.
+- The called sync workflow remains callable through `workflow_call`, skips cleanly when `KAIZEN_SYNC_TOKEN` is missing, and can fail closed when called with `require_token: true`.
+- The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
+- Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
-Use `.github` for organization-wide shared assets and target repository metadata.
+`scripts/check-daily-dogfood-sync-contract.sh` encodes these checks as a regression test.
 
-Recommended layout:
-
-```text
-.github/
-  skills/
-  templates/
-    dogfood/
-      AGENTS.md
-      ISSUE_TEMPLATE/
-        kaizen.yml
-  dogfood/
-    repositories.yml
-  scripts/
-    sync-kaizen-shared-skills.sh
-    sync-dogfood-contracts.sh
-```
-
-`dogfood/repositories.yml` should describe each target repository's stable settings, such as verification commands, protected paths, issue label, and any component-specific adapter notes. Generated files should be derived from this data and the templates.
-
-Avoid treating free-form `AGENTS.md` content as an unbounded overwrite target. Prefer one of these patterns:
-
-- generate a clearly marked managed section inside `AGENTS.md`
-- generate `.kaizen/dogfood.yml` and keep `AGENTS.md` as concise human guidance
-- update whole files only when the file is explicitly owned by the dogfood sync
-
-## Automation Choice
-
-The daily sync should run in GitHub Actions, not Codex automations.
-
-GitHub Actions is the better fit for the main sync because it can:
-
-- run on a predictable daily schedule and through `workflow_dispatch`
-- clone multiple repositories with an auditable token
-- generate deterministic file changes
-- push fixed sync branches
-- create or update ready-for-review pull requests
-- leave a durable run log in GitHub
-
-Codex automations remain useful for review and coordination work:
-
-- detecting ambiguous drift that cannot be fixed deterministically
-- writing organization monitor reports
-- filing focused `[monitor]` issues
-- identifying ownership questions across components
-
-Codex automations should not be the primary mechanism for daily cross-repository file updates.
-
-## GitHub Actions Flow
-
-The intended daily workflow is:
-
-1. Run on a daily cron and on `workflow_dispatch`.
-2. Check for `KAIZEN_SYNC_TOKEN`.
-3. Check out `.github`.
-4. Clone each target repository.
-5. Apply shared skill updates.
-6. Apply dogfooding contract updates from templates and repository metadata.
-7. For each target repository, inspect only the managed paths.
-8. If no managed paths changed, report `No dogfood sync changes`.
-9. If managed paths changed, commit to a fixed branch.
-10. Create or update a ready-for-review PR.
-
-Use fixed branch names so reruns update existing PRs instead of creating duplicates:
-
-```text
-codex/sync-kaizen-dogfood
-```
-
-If shared skills and dogfooding contract updates stay in separate workflows, use separate branches:
-
-```text
-codex/sync-kaizen-shared-skills
-codex/sync-kaizen-dogfood
-```
-
-The preferred long-term shape is one daily dogfood sync that includes skill synchronization.
-
-Because the workflow reuses fixed branch names, repeated successful runs should normally update the existing sync PR for each target repository instead of accumulating a new PR every day.
-
-## PR Requirements
-
-Generated PRs must be normal ready-for-review pull requests.
-
-Each PR should include:
-
-- a summary of the managed files updated
-- whether shared skills changed
-- whether dogfooding contract files changed
-- verification performed by the sync job
-- a note that the PR was generated by the daily dogfood sync
-
-Generated PRs must not:
-
-- be drafts unless a human explicitly requests a draft
-- merge themselves
-- modify unmanaged application code
-- overwrite repository-specific guidance outside managed sections
-
-## Safety Boundaries
-
-The sync should fail closed when ownership is unclear.
-
-Do not automatically update:
-
-- secrets or credentials
-- production infrastructure
-- dependency lockfiles unrelated to the contract
-- arbitrary workflow files outside explicitly managed templates
-- large free-form documentation pages
-- files with local uncommitted changes in a manual run
-
-If the sync detects a needed update that cannot be made deterministically, it should leave the repository unchanged and report a follow-up item. The organization monitor can turn that follow-up into a focused issue.
-
-## Relationship To Existing Flows
-
-### Shared Skill Sync
-
-[Shared Skill Sync](./shared-skill-sync.md) is the current narrow implementation. It updates only `skills/`.
-
-Daily dogfood sync should absorb or call the shared skill sync so the same daily loop keeps both shared skills and repository dogfooding contracts current.
-
-### Organization Monitor
-
-[Organization Monitor](./org-monitor.md) remains a read-mostly coordination loop. It should check whether daily dogfood sync is working, surface missed drift, and file issues for non-deterministic follow-up work.
-
-The monitor should not replace the deterministic GitHub Actions sync.
-
-### Issue-to-PR MVP
-
-[Issue-to-PR MVP](./issue-to-pr-mvp.md) defines the runtime contract each target repository needs. Daily dogfood sync keeps that contract aligned as the components evolve.
-
-## Initial Implementation Plan
-
-1. Add `dogfood/repositories.yml` in `.github` with target repository metadata.
-2. Add dogfood templates for managed files or managed sections.
-3. Add `scripts/sync-dogfood-contracts.sh`.
-4. Extend or replace the existing shared skill sync workflow with a daily scheduled workflow.
-5. Keep the existing shared skill sync behavior available for manual emergency syncs.
-6. Open generated PRs in target repositories and let humans review and merge them.
-
-The first implementation should be conservative: update shared skills and a minimal `.kaizen/dogfood.yml` or managed `AGENTS.md` section before attempting broader generated files.
+If the daily workflow is missing, failing, or no longer limited to the manifest-managed files, the monitor should file or update a focused `[monitor]` issue.

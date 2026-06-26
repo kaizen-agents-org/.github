@@ -1,28 +1,24 @@
 version: 1
-
 agent:
   default: codex
   fallback: true
   model:
     claude: null
     codex: null
-
 run:
   maxIssuesPerNight: 2
   issueTimeoutMinutes: 30
   runTimeoutMinutes: 180
   maxVerifyRetries: 1
   maxAttemptsPerIssue: 3
-  maxOpenPullRequests: 3
   latestStartHour: 7
-
 scheduler:
   jobs:
     maintenance:
       enabled: true
       schedule:
         type: daily
-        time: "01:30"
+        time: "01:45"
       run:
         mode: maintenance
         lateStartGuard: true
@@ -30,7 +26,7 @@ scheduler:
       enabled: true
       schedule:
         type: daily
-        time: "13:30"
+        time: "13:45"
       run:
         mode: maintenance
         lateStartGuard: false
@@ -42,60 +38,54 @@ scheduler:
       run:
         mode: watch
         skipIfRunning: true
-
 commands:
   setup: null
   verify:
-    - "test -f docs/README.md && test -f docs/issue-to-pr-mvp.md && test -f profile/README.md"
-    - "test -f skills/gh-link-issue-pr/SKILL.md && test -f skills/kaizen-bug-router/SKILL.md && test -f skills/pr-guardian/SKILL.md"
+    - "test -s README.md && test -s .coderabbit.yaml"
+    - "grep -q '^reviews:' .coderabbit.yaml && grep -q '^knowledge_base:' .coderabbit.yaml"
+    - "test -f skills/gh-link-issue-pr/SKILL.md && test -f skills/gh-link-issue-pr/agents/openai.yaml && test -f skills/kaizen-bug-router/SKILL.md && test -f skills/kaizen-bug-router/agents/openai.yaml && test -f skills/pr-guardian/SKILL.md"
   verifyTimeoutMinutes: 15
-
 builder:
-  command: "builder-agent"
-  resultPath: ".kaizen/builder/build-result.json"
-
+  command: builder-agent
+  resultPath: .kaizen/builder/build-result.json
 verifier:
   enabled: true
-  command: "verifier"
-  resultPath: ".kaizen/verifier/verify-result.json"
+  command: verifier
+  resultPath: .kaizen/verifier/verify-result.json
   timeoutMinutes: 15
-
 guardian:
   enabled: true
-  command: "codex"
+  command: codex
   timeoutMinutes: 60
   maxAttempts: 5
-
 policy:
   mode: pr-only
   directCommit:
     maxChangedLines: 0
     maxChangedFiles: 0
   protectedPaths:
-    - ".github/**"
+    - .github/**
     - "**/.env*"
     - "**/secrets/**"
     - "**/*migration*/**"
-    - ".kaizen/**"
-    - "skills/**"
+    - Dockerfile
+    - .kaizen/**
+    - .coderabbit.yaml
+    - skills/**
   forbiddenPaths:
     - "**/.git/**"
-
 git:
   defaultBranch: main
-  branchPrefix: "kaizen/"
+  branchPrefix: kaizen/
   commitMessageFormat: "kaizen: {summary} (#{issue})"
-
 instant:
   unattendedMode: pr
-
 report:
   notification: true
   issueComments: true
-
 issues:
-  label: "kaizen"
+  label: kaizen
   priorityOrder:
-    - "kaizen:P0"
-    - "kaizen:P1"
-    - "kaizen:P2"
+    - kaizen:P0
+    - kaizen:P1
+    - kaizen:P2

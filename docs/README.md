@@ -34,9 +34,9 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Update propagation workflow
 
 6. [Daily Dogfood Sync](./daily-dogfood-sync.md)
-   - Daily cross-repository update loop
-   - Dogfooding contract scope
-   - GitHub Actions and Codex automation responsibilities
+   - Daily deterministic sync workflow
+   - Shared skill sync delegation
+   - Organization monitor contract
 
 7. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
@@ -75,17 +75,15 @@ This directory contains the organization-level documentation for Kaizen Agents.
 
 Shared skills are synchronized into `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`; see [Shared Skill Sync](./shared-skill-sync.md).
 
-## Daily Dogfood Sync
-
-Kaizen Agents repositories are also Kaizen Agents target repositories. When a component changes, the repository's dogfooding contract should stay aligned so the organization can keep using the issue-to-PR flow on itself. The intended daily update loop is a GitHub Actions workflow that syncs shared skills and deterministic dogfooding contract files into target repositories, then opens or updates ready-for-review PRs. See [Daily Dogfood Sync](./daily-dogfood-sync.md).
+The daily dogfood sync runs the deterministic shared skill sync contract on a schedule; see [Daily Dogfood Sync](./daily-dogfood-sync.md).
 
 ## Organization Monitor
 
-The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, and responsibility alignment. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. Its source prompt is stored at [automations/kaizen-agents-org-monitor.prompt.md](../automations/kaizen-agents-org-monitor.prompt.md). See [Organization Monitor](./org-monitor.md).
+The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, responsibility alignment, and daily dogfood sync health. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. Its source prompt is stored at [automations/kaizen-agents-org-monitor.prompt.md](../automations/kaizen-agents-org-monitor.prompt.md). See [Organization Monitor](./org-monitor.md).
 
 ## Current Focus
 
-The current focus is the first usable vertical slice:
+The first usable vertical slice is now wired together as an MVP:
 
 ```text
 GitHub Issue
@@ -96,4 +94,6 @@ GitHub Issue
   -> human merge
 ```
 
-The system should optimize for reviewable PRs, not unreviewed autonomy.
+`kaizen-loop` has Phase 2 support for builder-agent-based fixes, verifier review, isolated per-issue worktrees, scheduler registration, opt-in queueing, PR creation, and `pr-guardian` follow-up. `verifier` has a runnable `verifier check` CLI and writes Kaizen Loop verdict payloads through `KAIZEN_VERIFIER_RESULT_PATH`.
+
+The current focus is hardening contracts, evidence quality, and operational behavior while keeping the system optimized for reviewable PRs, not unreviewed autonomy.

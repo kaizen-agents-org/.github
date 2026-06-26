@@ -1,0 +1,338 @@
+name: Sync Daily Dogfood Contracts
+
+on:
+  workflow_call:
+    inputs:
+      require_token:
+        description: "Fail when KAIZEN_SYNC_TOKEN is unavailable."
+        required: false
+        type: boolean
+        default: false
+      source_issue:
+        description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
+        required: false
+        type: string
+        default: ""
+    secrets:
+      KAIZEN_SYNC_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      source_issue:
+        description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-daily-dogfood-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync dogfood contracts to target repositories
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
+      TOKEN_REQUIRED: ${{ inputs.require_token == true }}
+      SOURCE_ISSUE: ${{ inputs.source_issue || '' }}
+    steps:
+      - name: Check token and tools
+        id: check_token
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            if [ "${TOKEN_REQUIRED}" = "true" ]; then
+              echo "::error title=Daily dogfood sync blocked::KAIZEN_SYNC_TOKEN is required to clone targets, push sync branches, and open target PRs."
+              exit 1
+            fi
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice title=Daily dogfood sync skipped::KAIZEN_SYNC_TOKEN is not configured; skipping cross-repository sync."
+            exit 0
+          fi
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "::error title=Daily dogfood sync blocked::jq is required to read the deterministic sync manifest."
+            exit 1
+          fi
+          echo "available=true" >> "${GITHUB_OUTPUT}"
+          gh auth setup-git
+
+      - name: Checkout source
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Clone target repositories
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          manifest="source/.github/dogfood-sync/manifest.json"
+          owner="$(jq -r '.owner' "${manifest}")"
+          while IFS= read -r repo; do
+            gh repo clone "${owner}/${repo}" "${repo}"
+          done < <(jq -r '.targets[].name' "${manifest}")
+
+      - name: Sync managed dogfood paths
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          bash source/scripts/sync-daily-dogfood.sh "${PWD}/source" "${PWD}"
+
+      - name: Verify managed copies
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          manifest="source/.github/dogfood-sync/manifest.json"
+          while IFS= read -r repo; do
+            while IFS=$'\t' read -r type source_path target_path; do
+              case "${type}" in
+                directory)
+                  diff -qr "source/${source_path}" "${repo}/${target_path}" >/dev/null
+                  ;;
+                file)
+                  diff -q "source/${source_path}" "${repo}/${target_path}" >/dev/null
+                  ;;
+                *)
+                  echo "::error title=Invalid dogfood manifest::Unsupported managed path type ${type}."
+                  exit 1
+                  ;;
+              esac
+            done < <(
+              jq -r --arg repo "${repo}" '
+                .managedPaths[]
+                | [
+                    .type,
+                    (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo))),
+                    .target
+                  ]
+                | @tsv
+              ' "${manifest}"
+            )
+            echo "Verified managed dogfood copies for ${repo}"
+          done < <(jq -r '.targets[].name' "${manifest}")
+
+      - name: Create target PRs
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          source_issue="${SOURCE_ISSUE:-}"
+          if [[ -n "${source_issue}" && ! "${source_issue}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]]; then
+            echo "::error title=Invalid daily dogfood sync source issue::source_issue must use owner/repo#number format."
+            exit 1
+          fi
+          assert_pr_links_source_issue() {
+            local repo="$1"
+            local pr_url="$2"
+            local linked_issue
+            linked_issue="$(gh pr view "${pr_url}" \
+              --json closingIssuesReferences \
+              --jq ".closingIssuesReferences[] | select((.repository.owner.login + \"/\" + .repository.name + \"#\" + (.number | tostring)) == \"${source_issue}\") | .url")"
+            if [ -z "${linked_issue}" ]; then
+              echo "::error title=Dogfood sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after writing the closing keyword."
+              exit 1
+            fi
+          }
+          ensure_existing_pr_links_source_issue() {
+            local repo="$1"
+            local pr_url="$2"
+            if [ -n "${source_issue}" ]; then
+              local existing_body
+              existing_body="$(mktemp)"
+              gh pr view "${pr_url}" --json body --jq '.body // ""' > "${existing_body}"
+              if ! grep -Fqx "Closes ${source_issue}" "${existing_body}"; then
+                {
+                  echo
+                  echo "Closes ${source_issue}"
+                } >> "${existing_body}"
+                gh pr edit "${pr_url}" --body-file "${existing_body}"
+              fi
+              assert_pr_links_source_issue "${repo}" "${pr_url}"
+              return
+            fi
+            local closing_count
+            closing_count="$(gh pr view "${pr_url}" --json closingIssuesReferences --jq '.closingIssuesReferences | length')"
+            if [ "${closing_count}" -eq 0 ]; then
+              echo "::notice title=Dogfood sync source issue not supplied::${repo} already has an open dogfood sync PR without a closing issue reference. Re-run with source_issue formatted as owner/repo#number to add a GitHub closing keyword."
+            fi
+          }
+          manifest="${PWD}/source/.github/dogfood-sync/manifest.json"
+          owner="$(jq -r '.owner' "${manifest}")"
+          base="$(jq -r '.defaultBranch' "${manifest}")"
+          branch="$(jq -r '.syncBranch' "${manifest}")"
+          pr_head="${branch}"
+          report="${PWD}/daily-dogfood-sync-report.md"
+          {
+            echo "## Daily dogfood sync report"
+            echo
+          } > "${report}"
+
+          while IFS= read -r repo; do
+            cd "${repo}"
+            if [ -z "$(git status --porcelain)" ]; then
+              echo "No dogfood contract changes for ${repo}"
+              echo "- ${repo}: no dogfood contract changes" >> "${report}"
+              cd ..
+              continue
+            fi
+
+            existing_pr="$(gh pr list \
+              --repo "${owner}/${repo}" \
+              --base "${base}" \
+              --head "${pr_head}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            existing_is_draft="$(gh pr list \
+              --repo "${owner}/${repo}" \
+              --base "${base}" \
+              --head "${pr_head}" \
+              --state open \
+              --json isDraft \
+              --jq '.[0].isDraft // false')"
+
+            git config user.name "kaizen-agents-sync"
+            git config user.email "actions@github.com"
+            git switch -c "${branch}"
+            while IFS= read -r target_path; do
+              git add -A -- "${target_path}"
+            done < <(jq -r '.managedPaths[].target' "${manifest}" | sort -u)
+            git commit -m "Sync Kaizen dogfood contracts"
+
+            remote_sha="$(git ls-remote --heads origin "${branch}" | awk '{print $1}')"
+            if [ -n "${remote_sha}" ]; then
+              git push --force-with-lease="refs/heads/${branch}:${remote_sha}" -u origin "HEAD:${branch}"
+            else
+              git push -u origin "HEAD:${branch}"
+            fi
+
+            if [ -n "${existing_pr}" ]; then
+              ensure_existing_pr_links_source_issue "${repo}" "${existing_pr}"
+              if [ "${existing_is_draft}" = "true" ]; then
+                gh pr ready "${existing_pr}"
+              fi
+              echo "Updated existing PR for ${repo}: ${existing_pr}"
+              echo "- ${repo}: updated ${existing_pr}" >> "${report}"
+              cd ..
+              continue
+            fi
+
+            body_file="$(mktemp)"
+            cat > "${body_file}" <<EOF
+          ## Summary
+          - Sync deterministic Kaizen dogfood contracts from kaizen-agents-org/.github.
+          - Update only the manifest-managed shared skills, issue template, Kaizen config, and agent guidance.
+
+          ## Verification
+          - Automated sync copied and compared every manifest-managed path.
+
+          Generated by the daily dogfood sync workflow.
+          EOF
+            if [ -n "${source_issue}" ]; then
+              echo "Closes ${source_issue}" >> "${body_file}"
+            else
+              echo "Source issue: not supplied by this automated sync run." >> "${body_file}"
+            fi
+            gh pr create \
+              --repo "${owner}/${repo}" \
+              --base "${base}" \
+              --head "${branch}" \
+              --title "Sync Kaizen dogfood contracts" \
+              --body-file "${body_file}"
+            open_pr="$(gh pr list \
+              --repo "${owner}/${repo}" \
+              --base "${base}" \
+              --head "${pr_head}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Dogfood sync PR assertion failed::${repo} has managed dogfood changes but no open sync PR."
+              exit 1
+            fi
+            if [ -n "${source_issue}" ]; then
+              assert_pr_links_source_issue "${repo}" "${open_pr}"
+            fi
+            echo "- ${repo}: opened ${open_pr}" >> "${report}"
+            cd ..
+          done < <(jq -r '.targets[].name' "${manifest}")
+
+      - name: Assert no target drifts silently
+        if: ${{ steps.check_token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          manifest="${PWD}/source/.github/dogfood-sync/manifest.json"
+          owner="$(jq -r '.owner' "${manifest}")"
+          base="$(jq -r '.defaultBranch' "${manifest}")"
+          branch="$(jq -r '.syncBranch' "${manifest}")"
+          pr_head="${branch}"
+          drifted=0
+
+          while IFS= read -r repo; do
+            git -C "${repo}" fetch --quiet origin "${base}"
+            target_drift=0
+            while IFS=$'\t' read -r type source_path target_path; do
+              origin_copy="$(mktemp -d)"
+              if git -C "${repo}" archive "origin/${base}" "${target_path}" 2>/dev/null \
+                | tar -x -C "${origin_copy}" 2>/dev/null; then
+                case "${type}" in
+                  directory)
+                    diff -qr "source/${source_path}" "${origin_copy}/${target_path}" >/dev/null 2>&1 || target_drift=1
+                    ;;
+                  file)
+                    diff -q "source/${source_path}" "${origin_copy}/${target_path}" >/dev/null 2>&1 || target_drift=1
+                    ;;
+                  *)
+                    echo "::error title=Invalid dogfood manifest::Unsupported managed path type ${type}."
+                    exit 1
+                    ;;
+                esac
+              else
+                target_drift=1
+              fi
+              rm -rf "${origin_copy}"
+            done < <(
+              jq -r --arg repo "${repo}" '
+                .managedPaths[]
+                | [
+                    .type,
+                    (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo))),
+                    .target
+                  ]
+                | @tsv
+              ' "${manifest}"
+            )
+
+            if [ "${target_drift}" -eq 0 ]; then
+              echo "${repo}: origin/${base} matches managed dogfood contracts"
+              continue
+            fi
+
+            open_pr="$(gh pr list \
+              --repo "${owner}/${repo}" \
+              --base "${base}" \
+              --head "${pr_head}" \
+              --state open \
+              --json url \
+              --jq '.[0].url // ""')"
+            if [ -z "${open_pr}" ]; then
+              echo "::error title=Dogfood drift unresolved::${repo} origin/${base} differs from the manifest-managed dogfood contracts and has no open sync PR."
+              echo "- ${repo}: DRIFTED with no open sync PR" >> "${PWD}/daily-dogfood-sync-report.md"
+              drifted=1
+            else
+              echo "${repo}: origin/${base} drifts but open sync PR exists (${open_pr})"
+            fi
+          done < <(jq -r '.targets[].name' "${manifest}")
+
+          if [ "${drifted}" -ne 0 ]; then
+            echo "::error title=Daily dogfood sync incomplete::One or more target repositories remain drifted with no open sync PR after the sync run."
+            exit 1
+          fi
+
+      - name: Report sync outcome
+        if: ${{ always() && steps.check_token.outputs.available == 'true' }}
+        run: |
+          if [ -f daily-dogfood-sync-report.md ]; then
+            cat daily-dogfood-sync-report.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
