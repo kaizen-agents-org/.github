@@ -48,7 +48,8 @@ Each run produces a concise coordination report covering:
 - CI and check status where available.
 - Documentation and implementation drift across the core and support components.
 - Whether local Kaizen Loop scheduler documentation and repository configs use the current `scheduler.jobs` model instead of stale fixed job fields.
-- Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, and stays limited to deterministic files it can update safely.
+- Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, runs after managed source contract changes land on `main`, and stays limited to deterministic files it can update safely.
+- Whether local runner state can be refreshed after dogfood changes with `kaizen fleet --root .. --owner kaizen-agents-org --prune --verify`.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
 
@@ -125,6 +126,8 @@ Daily sync workflows use fixed branch names and update existing open sync PRs in
 
 ## Relationship To Daily Dogfood Sync
 
-[Daily Dogfood Sync](./daily-dogfood-sync.md) is the intended GitHub Actions workflow for deterministic daily updates across repositories, including shared skills and managed dogfooding contract files.
+[Daily Dogfood Sync](./daily-dogfood-sync.md) is the intended GitHub Actions workflow for deterministic scheduled and post-merge updates across repositories, including shared skills and managed dogfooding contract files.
 
 The organization monitor should check that the daily sync is working and report drift that cannot be fixed deterministically. It should not replace the daily sync or push cross-repository updates itself.
+
+The local runtime side of the same loop is refreshed with `kaizen fleet --root .. --owner kaizen-agents-org --prune --verify`, which rebuilds registry/workspace/scheduler state and runs configured setup and verify commands in synced workspaces. The monitor may report fleet refresh failures as local observations, but issue creation still requires default-branch documentation support and duplicate checks.

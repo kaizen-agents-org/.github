@@ -27,6 +27,8 @@ The manifest enumerates every managed path. Three kinds of paths are managed tod
 
 `.github/workflows/daily-dogfood-sync.yml` runs once per day and can also be run manually. It delegates to `.github/workflows/sync-daily-dogfood.yml`, which owns the deterministic manifest-driven copy behavior.
 
+`.github/workflows/sync-daily-dogfood.yml` also runs immediately after managed source contract changes land on `main`. The push trigger is limited to `.github/dogfood-sync/**`, `.github/ISSUE_TEMPLATE/kaizen.yml`, `scripts/sync-daily-dogfood.sh`, and the sync workflow itself. Shared-skill-only changes keep using the narrower `sync-kaizen-shared-skills.yml` fast path.
+
 The called workflow:
 
 1. Checks for `KAIZEN_SYNC_TOKEN` and skips successfully when it is missing, unless a reusable caller explicitly sets `require_token: true`.
@@ -40,7 +42,7 @@ The called workflow:
 
 The workflow must not merge PRs automatically.
 
-Generated dogfood sync PRs can be linked to a source issue when the sync resolves an issue-backed task. Run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`, and new sync PR bodies include `Closes <source_issue>`. If an open sync PR already exists, the workflow adds the provided closing keyword to that PR body. After writing a closing keyword, the workflow checks `closingIssuesReferences` and fails if GitHub did not link the expected issue. Scheduled runs without `source_issue` still create or update ready-for-review sync PRs, but the PR body or workflow notice explicitly records that the source issue was not supplied.
+Generated dogfood sync PRs can be linked to a source issue when the sync resolves an issue-backed task. Run the workflow with `source_issue` set to the canonical issue reference, for example `kaizen-agents-org/.github#49`, and new sync PR bodies include `Closes <source_issue>`. On push-triggered runs, the workflow derives `source_issue` from the pull request associated with the pushed commit when that PR has a closing issue reference. If an open sync PR already exists, the workflow adds the provided or derived closing keyword to that PR body. After writing a closing keyword, the workflow checks `closingIssuesReferences` with bounded retries and fails if GitHub did not link the expected issue; body text alone is not treated as proof that GitHub can link or close the source issue. Scheduled runs without `source_issue` still create or update ready-for-review sync PRs, but the PR body or workflow notice explicitly records that the source issue was not supplied.
 
 `.github/workflows/sync-kaizen-shared-skills.yml` remains the dedicated, push-triggered fast path for shared-skill-only propagation and stays callable through `workflow_call`. The daily dogfood sync is the broader scheduled contract.
 
@@ -66,7 +68,8 @@ The organization monitor should check that:
 - `.github/workflows/daily-dogfood-sync.yml` exists.
 - The daily workflow has both `schedule` and `workflow_dispatch` triggers.
 - The daily workflow delegates to `.github/workflows/sync-daily-dogfood.yml`.
-- The called sync workflow remains callable through `workflow_call`, skips cleanly when `KAIZEN_SYNC_TOKEN` is missing, and can fail closed when called with `require_token: true`.
+- The called sync workflow remains callable through `workflow_call`, skips cleanly when `KAIZEN_SYNC_TOKEN` is missing, can fail closed when called with `require_token: true`, and runs on push to managed source contract paths after merges to `main`.
+- Push-triggered sync runs derive the source issue from the merged source PR when possible, and generated target PRs verify the issue linkage through `closingIssuesReferences`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 

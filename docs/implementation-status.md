@@ -1,6 +1,6 @@
 # Implementation Status
 
-Date: 2026-06-17
+Date: 2026-06-26
 
 This document tracks how close the current implementation is to the intended Kaizen Agents flow.
 
@@ -14,9 +14,12 @@ GitHub Issue
   -> verifier
   -> pull request
   -> human merge
+  -> post-merge dogfood/shared-skill sync PRs when shared contracts changed
+  -> local fleet refresh through kaizen fleet on runner machines
+  -> next scheduled monitor / maintenance run
 ```
 
-The intended product outcome is a high-quality PR that a human maintainer can review and merge to resolve the original issue.
+The intended product outcome is a high-quality PR that a human maintainer can review and merge to resolve the original issue, followed by deterministic propagation and the next scheduled check.
 
 ## Summary
 
@@ -24,7 +27,7 @@ The first usable target flow is now wired together, but it is still an MVP. The 
 
 | Component | Current state | What works | Main gap |
 | --- | --- | --- | --- |
-| `kaizen-loop` | Phase 2 TypeScript CLI exists. | Issue selection, isolated per-issue worktrees, builder-agent-based fixes, configured verification, verifier review, scheduler registration, opt-in queueing, PR creation, `pr-guardian` follow-up, and operational commands. | Continue hardening retry behavior, observability, and final contract edges. |
+| `kaizen-loop` | Phase 2 TypeScript CLI exists. | Issue selection, isolated per-issue worktrees, builder-agent-based fixes, configured verification, verifier review, scheduler registration, opt-in queueing, PR creation, `pr-guardian` follow-up, `fleet` refresh, and operational commands. | Continue hardening retry behavior, observability, and final contract edges. |
 | `builder-agent` | MVP CLI and Codex skill are shipped on `main`. | Adapter-based `analyze -> plan -> implement -> selfReview -> improve` loop, schemas, CLI, tests, and Kaizen integration payloads. | Continue improving adapter behavior and the quality of artifacts consumed by `kaizen-loop` and `verifier`. |
 | `verifier` | MVP `verifier check` CLI is shipped on `main`. | Kaizen integration payloads with `open_pr`, `open_pr_with_warning`, `block_pr`, and `needs_context`. | The fuller staged verifier from the design docs is future work. |
 
@@ -45,6 +48,7 @@ Implemented capabilities include:
 - scheduler registration
 - PR creation
 - `pr-guardian` follow-up after PR creation
+- fleet refresh for registry, workspaces, labels, scheduler jobs, and stale locks after dogfood changes
 - opt-in issue queueing with repository-configured execution authorization labels when available
 - policy-based direct commit decision logic
 - operational commands such as `doctor`, `status`, `logs`, and `report`
@@ -53,7 +57,18 @@ Current limitation:
 
 - The builder and verifier contracts are MVP contracts and still need hardening.
 - The verifier step is a minimal verdict gate, not the full staged verifier described in the product design.
-- `kaizen watch` remains a later-phase capability.
+- `kaizen watch` remains a later-phase capability; current automatic issue processing is handled by named scheduler jobs.
+
+### closed loop
+
+Implemented loop edges include:
+
+- the organization monitor creates focused `[monitor]` issues with the `kaizen` label
+- target repository maintenance jobs select those issues and open ready-for-review PRs
+- source contract changes merged into `.github/main` trigger deterministic target sync PRs for managed dogfood files
+- shared-skill-only changes merged into `.github/main` trigger the narrower shared-skill sync PRs
+- local runners can refresh post-merge runtime state with `kaizen fleet --root .. --owner kaizen-agents-org --prune --verify`, which rebuilds registry entries, ensures workspaces, creates labels, syncs scheduler jobs, repairs stale locks when requested, and runs each repo's configured setup/verify commands against synced workspaces
+- the next Codex monitor and `kaizen-loop` maintenance schedules re-check the updated repositories
 
 ### builder-agent
 

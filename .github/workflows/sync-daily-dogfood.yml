@@ -22,6 +22,14 @@ on:
         description: "Source issue closed by generated sync PRs, formatted as owner/repo#number."
         required: false
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/dogfood-sync/**"
+      - ".github/ISSUE_TEMPLATE/kaizen.yml"
+      - "scripts/sync-daily-dogfood.sh"
+      - ".github/workflows/sync-daily-dogfood.yml"
 
 permissions:
   contents: read
@@ -36,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.KAIZEN_SYNC_TOKEN }}
-      TOKEN_REQUIRED: ${{ inputs.require_token == true }}
+      TOKEN_REQUIRED: ${{ github.event_name == 'push' || inputs.require_token == true }}
       SOURCE_ISSUE: ${{ inputs.source_issue || '' }}
     steps:
       - name: Check token and tools
@@ -122,17 +130,53 @@ jobs:
             echo "::error title=Invalid daily dogfood sync source issue::source_issue must use owner/repo#number format."
             exit 1
           fi
+          derive_source_issue_from_push() {
+            if [ -n "${source_issue}" ] || [ "${GITHUB_EVENT_NAME:-}" != "push" ]; then
+              return
+            fi
+            local merged_pr
+            merged_pr="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+              --jq '.[0].number // ""')"
+            if [ -z "${merged_pr}" ]; then
+              echo "::notice title=Dogfood sync source issue not found::Push commit ${GITHUB_SHA} has no associated pull request; generated target PRs will record that no source issue was supplied."
+              return
+            fi
+            source_issue="$(gh pr view "${merged_pr}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json closingIssuesReferences \
+              --jq '.closingIssuesReferences[0] | if . == null then "" else (.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) end')"
+            if [ -n "${source_issue}" ]; then
+              echo "::notice title=Dogfood sync source issue derived::Using ${source_issue} from ${GITHUB_REPOSITORY}#${merged_pr}."
+            else
+              echo "::notice title=Dogfood sync source issue not found::${GITHUB_REPOSITORY}#${merged_pr} has no closing issue reference; generated target PRs will record that no source issue was supplied."
+            fi
+          }
+          derive_source_issue_from_push
           assert_pr_links_source_issue() {
             local repo="$1"
             local pr_url="$2"
+            local pr_json=""
             local linked_issue
-            linked_issue="$(gh pr view "${pr_url}" \
-              --json closingIssuesReferences \
-              --jq ".closingIssuesReferences[] | select((.repository.owner.login + \"/\" + .repository.name + \"#\" + (.number | tostring)) == \"${source_issue}\") | .url")"
-            if [ -z "${linked_issue}" ]; then
-              echo "::error title=Dogfood sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after writing the closing keyword."
-              exit 1
-            fi
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              pr_json="$(gh pr view "${pr_url}" --json closingIssuesReferences)"
+              linked_issue="$(jq -r --arg source_issue "${source_issue}" '
+                .closingIssuesReferences[]?
+                | select((.repository.owner.login + "/" + .repository.name + "#" + (.number | tostring)) == $source_issue)
+                | .url
+              ' <<< "${pr_json}")"
+              if [ -n "${linked_issue}" ]; then
+                return
+              fi
+              if [ "${attempt}" -lt 5 ]; then
+                echo "::notice title=Dogfood sync source issue link pending::${repo} PR ${pr_url} has not reported closingIssuesReferences for ${source_issue}; retrying after GitHub linkage propagation delay."
+                sleep 6
+              fi
+            done
+            echo "::error title=Dogfood sync source issue not linked::${repo} PR ${pr_url} did not report closingIssuesReferences for ${source_issue} after bounded retries; body text alone is not accepted as proof that GitHub can link or close the source issue."
+            exit 1
           }
           ensure_existing_pr_links_source_issue() {
             local repo="$1"

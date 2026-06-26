@@ -52,8 +52,14 @@ if awk '
   exit 1
 fi
 
-# Dogfood sync workflow: reusable, token-aware, deterministic, drift-aware, no auto-merge.
+# Dogfood sync workflow: reusable, push-triggered for source contract merges,
+# token-aware, deterministic, drift-aware, no auto-merge.
 grep -q "workflow_call:" "${dogfood_workflow}"
+grep -q "push:" "${dogfood_workflow}"
+grep -q "branches:" "${dogfood_workflow}"
+grep -q -- "- main" "${dogfood_workflow}"
+grep -q '".github/dogfood-sync/\*\*"' "${dogfood_workflow}"
+grep -q '".github/ISSUE_TEMPLATE/kaizen.yml"' "${dogfood_workflow}"
 grep -q "require_token:" "${dogfood_workflow}"
 grep -q "source_issue:" "${dogfood_workflow}"
 grep -Fq "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}"
@@ -62,8 +68,11 @@ if ! grep -A2 "KAIZEN_SYNC_TOKEN:" "${dogfood_workflow}" | grep -q "required: fa
   exit 1
 fi
 grep -Fq "GH_TOKEN: \${{ secrets.KAIZEN_SYNC_TOKEN }}" "${dogfood_workflow}"
-grep -Fq 'TOKEN_REQUIRED: ${{ inputs.require_token == true }}' "${dogfood_workflow}"
+grep -Fq "github.event_name == 'push' || inputs.require_token == true" "${dogfood_workflow}"
 grep -Fq "SOURCE_ISSUE: \${{ inputs.source_issue || '' }}" "${dogfood_workflow}"
+grep -q "derive_source_issue_from_push" "${dogfood_workflow}"
+grep -q "commits/\${GITHUB_SHA}/pulls" "${dogfood_workflow}"
+grep -q "Dogfood sync source issue derived" "${dogfood_workflow}"
 grep -Fq 'if [ "${TOKEN_REQUIRED}" = "true" ]; then' "${dogfood_workflow}"
 grep -q "Daily dogfood sync blocked" "${dogfood_workflow}"
 grep -q "available=false" "${dogfood_workflow}"
@@ -80,6 +89,8 @@ grep -q "gh pr ready" "${dogfood_workflow}"
 grep -q "closingIssuesReferences" "${dogfood_workflow}"
 grep -Fq "Closes \${source_issue}" "${dogfood_workflow}"
 grep -q "Dogfood sync source issue not linked" "${dogfood_workflow}"
+grep -q "Dogfood sync source issue link pending" "${dogfood_workflow}"
+grep -q "body text alone is not accepted as proof" "${dogfood_workflow}"
 grep -q "assert_pr_links_source_issue" "${dogfood_workflow}"
 grep -q "Dogfood sync source issue not supplied" "${dogfood_workflow}"
 grep -q "Source issue: not supplied by this automated sync run." "${dogfood_workflow}"

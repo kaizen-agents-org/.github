@@ -60,7 +60,7 @@ flowchart TB
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
-- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): planned daily sync for shared skills and dogfooding contracts.
+- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): scheduled and post-merge sync for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
