@@ -58,10 +58,10 @@ flowchart TB
 - [docs/documentation-sources.md](./docs/documentation-sources.md): source-of-truth order for documentation-backed issue creation.
 - [docs/architecture.md](./docs/architecture.md): system responsibilities and end-to-end flow.
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
-- [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
 - [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): deterministic daily sync contract for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
+- [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
 ## Shared Skills
