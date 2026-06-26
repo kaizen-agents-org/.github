@@ -317,6 +317,18 @@ flowchart TB
     Risk --> Output["Ready-for-review PR"]
 ```
 
+## Documentation And Issue Intake
+
+The organization documentation is part of the coordination contract. Automated monitor issues and cross-repository follow-up work should be grounded in the closest relevant source:
+
+1. Organization Profile for public product framing and current project status.
+2. Repository README for shared assets and local repository responsibilities.
+3. Architecture Notes for component boundaries, workflow shape, and quality gates.
+4. Issue-to-PR MVP for target repository runtime contracts.
+5. Project-local README/docs for repository-specific commands and behavior.
+
+If those sources do not support a proposed issue, the correct output is a documentation drift report or clarification request, not a speculative implementation issue. When an issue is created, include a concise `Documentation basis` section with the cited document paths or URLs and the reason they apply.
+
 ## Final Quality Gate
 
 The final quality gate is deliberately layered:

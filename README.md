@@ -2,7 +2,7 @@
 
 This repository is the organization-level home for Kaizen Agents documentation, shared skills, and profile content.
 
-It does not run the issue-to-PR pipeline itself. It explains the system, keeps shared workflow skills in one source of truth, and coordinates cross-repository documentation for the core projects.
+It does not run the issue-to-PR pipeline itself. It explains the system, keeps shared workflow skills and Codex automation prompts in one source of truth, and coordinates cross-repository documentation for the core projects.
 
 ## System At A Glance
 
@@ -32,6 +32,7 @@ flowchart TB
     Repo --> Profile["profile/README.md<br/>organization landing page"]
     Repo --> Docs["docs/<br/>architecture, MVP plan, status, decisions"]
     Repo --> Skills["skills/<br/>shared Codex workflows"]
+    Repo --> Automations["automations/<br/>Codex automation prompts"]
     Repo --> Sync["scripts/sync-kaizen-shared-skills.sh<br/>copy shared skills into core repos"]
 
     Skills --> BA["builder-agent/skills"]
@@ -54,11 +55,13 @@ flowchart TB
 ## Documentation Map
 
 - [docs/README.md](./docs/README.md): documentation index.
+- [docs/documentation-sources.md](./docs/documentation-sources.md): source-of-truth order for documentation-backed issue creation.
 - [docs/architecture.md](./docs/architecture.md): system responsibilities and end-to-end flow.
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
-- [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
+- [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): deterministic daily sync contract for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
+- [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
 ## Shared Skills
@@ -70,3 +73,13 @@ The `skills/` directory is the source of truth for shared Kaizen workflows:
 - `pr-guardian`: monitor an opened PR until it is mergeable or a real blocker remains.
 
 Core repositories vendor these skills so local agents can use the same workflows without depending on this repository at runtime.
+
+## Codex Automations
+
+The `automations/` directory stores GitHub-managed source prompts for local Codex automations. Runtime automation copies live under `$CODEX_HOME/automations`, but those local files are not the source of truth.
+
+- [Kaizen Agents org monitor](./automations/kaizen-agents-org-monitor.prompt.md): cross-repository coordination monitor prompt.
+
+## Documentation Source Of Truth
+
+Organization coordination and automated monitor issues should follow the source order in `docs/documentation-sources.md`, starting with the organization profile, this README, and the architecture docs, then the Issue-to-PR MVP, Daily Dogfood Sync, Shared Skill Sync, and Organization Monitor docs as needed. When the monitor creates a follow-up issue, its body should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the monitor should report the drift instead of creating an implementation issue from an assumption.

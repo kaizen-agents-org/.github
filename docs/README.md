@@ -11,39 +11,45 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - End-to-end workflow
    - Quality gate model
 
-2. [MVP Plan](./mvp-plan.md)
+2. [Documentation Sources](./documentation-sources.md)
+   - Source-of-truth order
+   - Documentation-backed issue evidence
+   - Maintenance expectations for profile, README, architecture, and project docs
+
+3. [MVP Plan](./mvp-plan.md)
    - Phased plan for making the system usable
    - Minimal vertical slice
    - Gate contracts
    - Operational readiness
 
-3. [Issue-to-PR MVP](./issue-to-pr-mvp.md)
+4. [Issue-to-PR MVP](./issue-to-pr-mvp.md)
    - Organization-level MVP goal
    - Per-repository contract
    - Ready-for-review PR requirements
    - Failure behavior
 
-4. [Shared Skill Sync](./shared-skill-sync.md)
+5. [Shared Skill Sync](./shared-skill-sync.md)
    - Shared skill source of truth
    - Per-project vendoring
    - Update propagation workflow
 
-5. [Daily Dogfood Sync](./daily-dogfood-sync.md)
+6. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
    - Organization monitor contract
 
-6. [Organization Monitor](./org-monitor.md)
+7. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
+   - Source prompt stored under `../automations/`
 
-7. [Implementation Status](./implementation-status.md)
+8. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-8. [Design Decisions](./design-decisions.md)
+9. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -59,6 +65,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
 - **Standalone principle**: `builder-agent`, `verifier`, and `kaizen-loop` should each be useful independently.
 - **MVP posture**: automate up to ready-for-review PR creation; keep merge under human control.
 - **Issue linkage**: implementation PRs must include a closing keyword such as `Closes #123` in the PR body.
+- **Documentation-backed issue creation**: automated coordination issues should cite the profile, README, architecture notes, or project docs that justify the scope.
 
 ## Project Skills
 
@@ -72,7 +79,7 @@ The daily dogfood sync runs the deterministic shared skill sync contract on a sc
 
 ## Organization Monitor
 
-The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, responsibility alignment, and daily dogfood sync health. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. See [Organization Monitor](./org-monitor.md).
+The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, responsibility alignment, and daily dogfood sync health. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. Its source prompt is stored at [automations/kaizen-agents-org-monitor.prompt.md](../automations/kaizen-agents-org-monitor.prompt.md). See [Organization Monitor](./org-monitor.md).
 
 ## Current Focus
 

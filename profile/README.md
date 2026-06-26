@@ -90,12 +90,15 @@ The current practical milestone is hardening this path:
 Start here:
 
 - [Docs Index](https://github.com/kaizen-agents-org/.github/blob/main/docs/README.md): map of the documentation set.
+- [Documentation Sources](https://github.com/kaizen-agents-org/.github/blob/main/docs/documentation-sources.md): source-of-truth order for documentation-backed issue creation.
 - [Architecture Notes](https://github.com/kaizen-agents-org/.github/blob/main/docs/architecture.md): system responsibilities and flow diagrams.
 - [Issue-to-PR MVP](https://github.com/kaizen-agents-org/.github/blob/main/docs/issue-to-pr-mvp.md): organization-level contract for turning issues into ready-for-review PRs.
 - [Implementation Status](https://github.com/kaizen-agents-org/.github/blob/main/docs/implementation-status.md): what works today and what is missing.
 - [Shared Skill Sync](https://github.com/kaizen-agents-org/.github/blob/main/docs/shared-skill-sync.md): how shared Kaizen skills are distributed to the core projects.
 - [Organization Monitor](https://github.com/kaizen-agents-org/.github/blob/main/docs/org-monitor.md): how the cross-repository coordination monitor reports drift and files focused follow-up issues.
 - [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md): rationale behind the current direction.
+
+For automated coordination work, issues should be grounded in the Organization Profile, repository README, Architecture Notes, or the relevant project-local README/docs. If those sources conflict or do not support the proposed work, the automation should report the documentation gap instead of filing a speculative issue.
 
 ## Shared Project Skills
 
