@@ -63,7 +63,7 @@ flowchart TB
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/production-readiness-log.md](./docs/production-readiness-log.md): dated readiness findings and operational gaps.
-- [docs/production-readiness/README.md](./docs/production-readiness/README.md): monthly readiness review process, checklist, metrics, and template.
+- [docs/production-readiness/README.md](./docs/production-readiness/README.md): weekly readiness review process, checklist, metrics, and template.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.
 
 ## Shared Skills
@@ -81,7 +81,7 @@ Core repositories vendor these skills so local agents can use the same workflows
 The `automations/` directory stores GitHub-managed source prompts for local Codex automations. Runtime automation copies live under `$CODEX_HOME/automations`, but those local files are not the source of truth.
 
 - [Kaizen Agents org monitor](./automations/kaizen-agents-org-monitor.prompt.md): cross-repository coordination monitor prompt.
-- [Kaizen Agents monthly readiness review](./automations/kaizen-agents-monthly-readiness-review.prompt.md): monthly production-readiness review prompt.
+- [Kaizen Agents weekly readiness review](./automations/kaizen-agents-weekly-readiness-review.prompt.md): weekly production-readiness review prompt.
 
 ## Documentation Source Of Truth
 

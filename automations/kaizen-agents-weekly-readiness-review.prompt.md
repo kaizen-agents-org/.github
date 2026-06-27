@@ -1,6 +1,6 @@
-Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-monthly-readiness-review.prompt.md`.
+Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-readiness-review.prompt.md`.
 
-Run the monthly Kaizen Agents production-readiness review across the local
+Run the weekly Kaizen Agents production-readiness review across the local
 repositories and GitHub remotes.
 
 Repositories in scope:
@@ -25,10 +25,12 @@ Read these source-managed readiness docs first:
 - `.github/docs/production-readiness/template.md`
 - `.github/docs/production-readiness-log.md`
 
-Use the latest entry in `.github/docs/production-readiness-log.md` as the
-baseline for the monthly delta. Separate default-branch documentation facts from
-local-only observations. Before citing a document as issue basis, verify it
-exists on the repository default branch when practical.
+Use `.github/docs/production-readiness-log.md` as the readiness index. Read the
+latest dated review file linked from that index, normally under
+`.github/docs/production-readiness/logs/YYYY-MM-DD.md`, as the baseline for the
+weekly delta. Separate default-branch documentation facts from local-only
+observations. Before citing a document as issue basis, verify it exists on the
+repository default branch when practical.
 
 Collect evidence for:
 
@@ -48,7 +50,7 @@ Collect evidence for:
   `closingIssuesReferences`;
 - dogfood sync, shared-skill sync, and fleet refresh readiness.
 
-Produce a concise monthly readiness report with:
+Produce a concise weekly readiness report with:
 
 1. Review date.
 2. Repositories reviewed.
@@ -56,13 +58,16 @@ Produce a concise monthly readiness report with:
 4. Metrics observed, explicitly marking unavailable metrics.
 5. Delta since the previous readiness log entry.
 6. Current findings ordered by production-readiness risk.
-7. Recommended priority for the next month.
-8. A proposed Markdown entry for `.github/docs/production-readiness-log.md`
-   using `.github/docs/production-readiness/template.md`.
+7. Recommended priority for the next week.
+8. A proposed Markdown file for
+   `.github/docs/production-readiness/logs/YYYY-MM-DD.md` using
+   `.github/docs/production-readiness/template.md`.
+9. A proposed index update for `.github/docs/production-readiness-log.md`.
 
 Do not edit files, push branches, merge PRs, or create broad implementation
-changes automatically. If the proposed log entry should be committed, leave it
-as report text for a human or a normal ready-for-review PR.
+changes automatically. If the proposed dated review file and index update should
+be committed, leave them as report text for a human or a normal
+ready-for-review PR.
 
 Create GitHub issues only when all of these are true:
 
@@ -70,7 +75,9 @@ Create GitHub issues only when all of these are true:
 - the target repository is clear;
 - the finding is not already covered by an open issue or PR across the monitored
   repository set;
-- the issue is supported by observed evidence or source-managed documentation;
+- the issue is supported by observed evidence or by source-managed
+  documentation in the canonical source order defined by
+  `.github/docs/documentation-sources.md`;
 - the work is small enough for the normal Kaizen issue-to-PR flow;
 - the issue body includes evidence, affected repository, recommended action,
   and documentation basis when applicable.
@@ -78,6 +85,6 @@ Create GitHub issues only when all of these are true:
 Limit issue creation to at most three issues per run. Use the `kaizen` label and
 prefix issue titles with `[readiness]`. If no issues are created, say why.
 
-Do not treat this monthly review as approval for production-grade autonomous
+Do not treat this weekly review as approval for production-grade autonomous
 maintenance. The review records readiness evidence and gaps; human review still
 controls merge and production-readiness claims.

@@ -55,9 +55,9 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Priority hardening work before broader production use
 
 10. [Production Readiness Reviews](./production-readiness/README.md)
-   - Monthly review process
+   - Weekly review process
    - Checklist, metrics, and log template
-   - Source-managed monthly automation prompt
+   - Source-managed weekly automation prompt
 
 11. [Design Decisions](./design-decisions.md)
    - Product goal
@@ -111,4 +111,4 @@ The current focus is hardening contracts, evidence quality, and operational beha
 See [Production Readiness Log](./production-readiness-log.md) for dated
 readiness reviews and the current list of operational gaps. See
 [Production Readiness Reviews](./production-readiness/README.md) for the
-monthly checklist, metrics, and log template.
+weekly checklist, metrics, and log template.

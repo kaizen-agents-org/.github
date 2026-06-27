@@ -1,6 +1,6 @@
-# Monthly Readiness Checklist
+# Weekly Readiness Checklist
 
-Use this checklist for each monthly readiness review.
+Use this checklist for each weekly readiness review.
 
 ## Repository State
 
@@ -57,7 +57,8 @@ Use this checklist for each monthly readiness review.
 ## Output
 
 - Write a dated readiness report.
-- Prepare a proposed entry for
+- Prepare a proposed `logs/YYYY-MM-DD.md` review file.
+- Prepare a proposed index update for
   [Production Readiness Log](../production-readiness-log.md).
 - Create at most three focused issues for concrete, duplicate-free follow-up
   work.

@@ -1,6 +1,6 @@
 # Production Readiness Metrics
 
-These metrics define what the monthly review should try to collect. Missing
+These metrics define what the weekly review should try to collect. Missing
 metrics should be reported as gaps, not estimated.
 
 ## Core Outcome Metrics
@@ -29,7 +29,7 @@ metrics should be reported as gaps, not estimated.
 | --- | --- |
 | Open PR backlog | Number of open generated PRs waiting for review or fixes. |
 | Open `kaizen` issue backlog | Number of eligible issues waiting for automated processing. |
-| Repeated failure reasons | Most common failure causes across the month. |
+| Repeated failure reasons | Most common failure causes across the review window. |
 | Post-merge correction rate | Share of merged generated PRs that needed follow-up fixes or reverts. |
 | Sync drift count | Number of dogfood or shared-skill drift findings. |
 

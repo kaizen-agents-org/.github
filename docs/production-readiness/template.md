@@ -1,13 +1,14 @@
-# Production Readiness Log Template
+# Production Readiness Review Template
 
-Copy this template into
-[Production Readiness Log](../production-readiness-log.md) for each monthly
-entry.
+Create each review as `docs/production-readiness/logs/YYYY-MM-DD.md`, using the
+review date as the file name. After adding a dated review file, update
+[Production Readiness Log](../production-readiness-log.md) with a short index
+entry and latest summary row.
 
 ```markdown
-## YYYY-MM-DD
+# Production Readiness Review: YYYY-MM-DD
 
-### Scope
+## Scope
 
 Reviewed repositories:
 
@@ -18,12 +19,12 @@ Reviewed repositories:
 - `kaizen-agents-org/coderabbit`
 - `kaizen-agents-org/renovate-config`
 
-### Summary
+## Summary
 
 <One paragraph describing whether readiness improved, regressed, or stayed the
 same since the previous entry.>
 
-### Verification Observed
+## Verification Observed
 
 Passed:
 
@@ -33,7 +34,7 @@ Failed or unavailable:
 
 - `<repo>`: `<failure or reason unavailable>`
 
-### Metrics Observed
+## Metrics Observed
 
 | Metric | Value | Evidence |
 | --- | --- | --- |
@@ -42,7 +43,7 @@ Failed or unavailable:
 | Verifier eval agreement | unavailable | <why> |
 | PR linkage success rate | unavailable | <why> |
 
-### Findings
+## Findings
 
 1. <Finding title>
 
@@ -52,7 +53,7 @@ Failed or unavailable:
 
    Needed next step: <focused action>
 
-### Priority
+## Priority
 
 Recommended order:
 
@@ -60,7 +61,7 @@ Recommended order:
 2. <next priority>
 3. <next priority>
 
-### Current Readiness Judgment
+## Current Readiness Judgment
 
 <Ready for continued dogfooding / not ready for production-grade autonomy /
 other explicit judgment.>
