@@ -61,7 +61,8 @@ Automatic issue creation is intentionally conservative:
 
 - Search existing open issues and PRs before creating anything.
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
-- Limit automatic issue creation to at most two issues per run.
+- Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
+- Limit automatic issue creation to at most three issues per run.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
 - Include a `Documentation basis` section anchored to [Documentation Sources](./documentation-sources.md), citing organization documents in that canonical source order before project-local docs, then cite the source that justifies the issue scope.
@@ -78,10 +79,10 @@ The monitor may report and file focused follow-up issues, but it must not:
 
 - Merge pull requests.
 - Push branches or commits.
-- Make broad code changes automatically.
+- Edit repository files, create implementation branches, open implementation pull requests, or make broad code changes automatically.
 - Treat its report as approval to bypass human review.
 
-Any proposed coordination change that modifies repository behavior should still go through a normal ready-for-review pull request.
+The monitor may recommend small, deterministic documentation, prompt, or configuration follow-ups, but any proposed coordination change that modifies repository behavior should still go through a normal ready-for-review pull request.
 
 ## Relationship To The Core Flow
 
