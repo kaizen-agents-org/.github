@@ -13,3 +13,4 @@ The Codex app stores runtime automation copies under `$CODEX_HOME/automations`. 
 | Automation | Source prompt | Runtime automation |
 | --- | --- | --- |
 | Kaizen Agents org monitor | [kaizen-agents-org-monitor.prompt.md](./kaizen-agents-org-monitor.prompt.md) | `$CODEX_HOME/automations/kaizen-agents-org-monitor/automation.toml` |
+| Kaizen Agents monthly readiness review | [kaizen-agents-monthly-readiness-review.prompt.md](./kaizen-agents-monthly-readiness-review.prompt.md) | `$CODEX_HOME/automations/kaizen-agents-monthly-readiness-review/automation.toml` |
