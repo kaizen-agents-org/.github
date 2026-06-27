@@ -57,8 +57,12 @@ Use this checklist for each weekly readiness review.
 ## Output
 
 - Write a dated readiness report.
+- Include structured issue candidates with target repository, evidence,
+  documentation basis, and skip reason when the finding is not ready for issue
+  creation.
 - Prepare a proposed `logs/YYYY-MM-DD.md` review file.
 - Prepare a proposed index update for
   [Production Readiness Log](../production-readiness-log.md).
-- Create at most three focused issues for concrete, duplicate-free follow-up
-  work.
+- Let the issue-creator automation create at most three focused issues from the
+  approved dated report. Created issue titles must use the
+  `[readiness-review]` prefix.

@@ -59,31 +59,27 @@ Produce a concise weekly readiness report with:
 5. Delta since the previous readiness log entry.
 6. Current findings ordered by production-readiness risk.
 7. Recommended priority for the next week.
-8. A proposed Markdown file for
+8. Issue candidates suitable for the follow-up issue-creator automation,
+   including target repository, evidence, documentation basis, and skip reason
+   when a finding is not ready for issue creation.
+9. A proposed Markdown file for
    `.github/docs/production-readiness/logs/YYYY-MM-DD.md` using
    `.github/docs/production-readiness/template.md`.
-9. A proposed index update for `.github/docs/production-readiness-log.md`.
+10. A proposed index update for `.github/docs/production-readiness-log.md`.
 
 Do not edit files, push branches, merge PRs, or create broad implementation
 changes automatically. If the proposed dated review file and index update should
 be committed, leave them as report text for a human or a normal
 ready-for-review PR.
 
-Create GitHub issues only when all of these are true:
-
-- the issue is concrete and actionable;
-- the target repository is clear;
-- the finding is not already covered by an open issue or PR across the monitored
-  repository set;
-- the issue is supported by observed evidence or by source-managed
-  documentation in the canonical source order defined by
-  `.github/docs/documentation-sources.md`;
-- the work is small enough for the normal Kaizen issue-to-PR flow;
-- the issue body includes evidence, affected repository, recommended action,
-  and documentation basis when applicable.
-
-Limit issue creation to at most three issues per run. Use the `kaizen` label and
-prefix issue titles with `[readiness]`. If no issues are created, say why.
+Do not create GitHub issues from this weekly review prompt. The review should
+produce a structured `Issue Candidates` section only. The separate
+`kaizen-agents-readiness-issue-creator` automation consumes the latest dated
+readiness report and creates at most three duplicate-free issues after applying
+its stricter validation rules. Candidate titles should be written without the
+final automation prefix; the issue creator adds `[readiness-review]` to created
+GitHub issue titles. If a finding is not ready for issue creation, mark it as
+blocked, duplicate, unclear, or report-only in the issue candidates section.
 
 Do not treat this weekly review as approval for production-grade autonomous
 maintenance. The review records readiness evidence and gaps; human review still

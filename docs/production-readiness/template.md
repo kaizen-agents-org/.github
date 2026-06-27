@@ -61,6 +61,16 @@ Recommended order:
 2. <next priority>
 3. <next priority>
 
+## Issue Candidates
+
+These candidates are the only inputs the readiness issue-creator automation may
+turn into GitHub issues. Created issue titles use the `[readiness-review]`
+prefix.
+
+| Candidate | Target repository | Status | Evidence | Documentation basis |
+| --- | --- | --- | --- | --- |
+| <short issue title> | `kaizen-agents-org/<repo>` | ready / blocked / duplicate / unclear / report-only | <report evidence> | <docs and headings> |
+
 ## Current Readiness Judgment
 
 <Ready for continued dogfooding / not ready for production-grade autonomy /
