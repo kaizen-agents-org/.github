@@ -49,7 +49,17 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - What is still missing
    - What is still being hardened
 
-9. [Design Decisions](./design-decisions.md)
+9. [Production Readiness Log](./production-readiness-log.md)
+   - Dated readiness evaluations
+   - Observed operational gaps
+   - Priority hardening work before broader production use
+
+10. [Production Readiness Reviews](./production-readiness/README.md)
+   - Weekly review process
+   - Checklist, metrics, and log template
+   - Source-managed weekly automation prompt
+
+11. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -97,3 +107,8 @@ GitHub Issue
 `kaizen-loop` has Phase 2 support for builder-agent-based fixes, verifier review, isolated per-issue worktrees, scheduler registration, opt-in queueing, PR creation, and `pr-guardian` follow-up. `verifier` has a runnable `verifier check` CLI and writes Kaizen Loop verdict payloads through `KAIZEN_VERIFIER_RESULT_PATH`.
 
 The current focus is hardening contracts, evidence quality, and operational behavior while keeping the system optimized for reviewable PRs, not unreviewed autonomy.
+
+See [Production Readiness Log](./production-readiness-log.md) for dated
+readiness reviews and the current list of operational gaps. See
+[Production Readiness Reviews](./production-readiness/README.md) for the
+weekly checklist, metrics, and log template.
