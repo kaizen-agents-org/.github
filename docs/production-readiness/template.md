@@ -39,9 +39,27 @@ Failed or unavailable:
 | Metric | Value | Evidence |
 | --- | --- | --- |
 | Issue-to-PR success rate | unavailable | <why> |
+| Verification failure rate | unavailable | <why> |
+| Verifier block rate | unavailable | <why> |
+| Needs-human rate | unavailable | <why> |
+| PR guardian failure rate | unavailable | <why> |
 | Sandbox E2E pass count | unavailable | <why> |
 | Verifier eval agreement | unavailable | <why> |
+| Verifier false-positive rate | unavailable | <why> |
 | PR linkage success rate | unavailable | <why> |
+| Safety-check coverage | unavailable | <why> |
+| Open PR backlog | unavailable | <why> |
+| Open `kaizen` issue backlog | unavailable | <why> |
+| Repeated failure reasons | unavailable | <why> |
+| Post-merge correction rate | unavailable | <why> |
+| Sync drift count | unavailable | <why> |
+
+## Repository / CI / PR State
+
+- Repository state: <branch, upstream, and default-branch alignment>
+- CI state: <latest relevant checks or reason unavailable>
+- PR state: <open generated PR count, blockers, or reason unavailable>
+- Explicit gaps: <metrics or state that could not be collected>
 
 ## Findings
 
