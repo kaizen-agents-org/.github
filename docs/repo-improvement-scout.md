@@ -6,6 +6,12 @@ The scout is separate from [Organization Monitor](./org-monitor.md). The organiz
 
 The GitHub-managed source prompt for the Codex automation lives at [`../automations/kaizen-agents-repo-improvement-scout.prompt.md`](../automations/kaizen-agents-repo-improvement-scout.prompt.md). The local Codex runtime copy under `$CODEX_HOME/automations/kaizen-agents-repo-improvement-scout/automation.toml` should be treated as a synced copy, not the source of truth.
 
+## Runtime Cadence
+
+The scout runs on the frequent organization automation cadence: daily at 02:45, 10:45, and 18:45 in the local Codex automation schedule.
+
+This cadence is intentionally higher than the organization monitor because the scout owns proactive, repo-local improvement discovery. The organization monitor runs later in the nightly window as a conservative coordination check.
+
 ## Scope
 
 The scout actively scans the four implementation and coordination repositories:
