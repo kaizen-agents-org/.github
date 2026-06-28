@@ -63,6 +63,6 @@ Use this checklist for each weekly readiness review.
 - Prepare a proposed `logs/YYYY-MM-DD.md` review file.
 - Prepare a proposed index update for
   [Production Readiness Log](../production-readiness-log.md).
-- Let the issue-creator automation create at most three focused issues from the
-  approved dated report. Created issue titles must use the
-  `[readiness-review]` prefix.
+- Let the issue-creator automation create at most three focused issues per
+  target repository from the approved dated report. Created issue titles must
+  use the `[readiness-review]` prefix.
