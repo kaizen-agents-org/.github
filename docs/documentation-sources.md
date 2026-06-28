@@ -33,13 +33,18 @@ Issue bodies should include a `Documentation basis` section with:
 - the relevant heading or short excerpt
 - why that source supports the issue scope
 
+Use repository-relative paths when citing files from the source repository. For
+organization docs in a `kaizen-agents-org/.github` checkout, cite `docs/...`.
+In another repository or URL context, `.github/docs/...` means the same `docs/...`
+directory in the organization `.github` repository.
+
 Example:
 
 ```markdown
 ## Documentation basis
 
-- `.github/docs/architecture.md`, "Product Goal": the workflow should produce reviewable PRs, not unreviewed autonomy.
-- `.github/docs/issue-to-pr-mvp.md`, "Repository Contract": target repositories should keep `.kaizen/config.yml` and Kaizen issue templates aligned.
+- `docs/architecture.md`, "Product Goal": the workflow should produce reviewable PRs, not unreviewed autonomy.
+- `docs/issue-to-pr-mvp.md`, "Repository Contract": target repositories should keep `.kaizen/config.yml` and Kaizen issue templates aligned.
 ```
 
 Do not create an automated issue when the documentation basis is missing, stale, or contradictory. Include the observation in the coordination report and ask for human clarification or a documentation update first.

@@ -2,7 +2,7 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-repo-improv
 
 Scout the active Kaizen Agents repositories for concrete repo-local improvement issues and create focused GitHub issues for the normal Kaizen issue-to-PR loop.
 
-This automation is the improve layer defined by `.github/docs/automation-roles.md`. It owns proactive repo-local improvement discovery. Do not create `[monitor]` operation issues or `[readiness-review]` issues from this prompt.
+This automation is the improve layer defined by the organization automation roles doc. In a checkout of `kaizen-agents-org/.github`, read it at `docs/automation-roles.md`; from another repository or URL context, `.github/docs/automation-roles.md` means that same file in the organization `.github` repository. It owns proactive repo-local improvement discovery. Do not create `[monitor]` operation issues or `[readiness-review]` issues from this prompt.
 
 Active repositories: `kaizen-agents-org/.github`, `kaizen-agents-org/builder-agent`, `kaizen-agents-org/kaizen-loop`, and `kaizen-agents-org/verifier`. Do not scout `coderabbit` or `renovate-config`; they are downstream shared-configuration repositories and are out of scope unless cited only as sync context for a `.github` finding.
 
@@ -10,7 +10,9 @@ Use the local checkouts or worktrees provided by the Codex automation runtime in
 
 Use the GitHub default branch, expected to be `origin/main` for these repositories, as the source of truth. Before using local files as issue evidence, fetch the target repository with `git -C <repo> fetch --prune origin` when a local checkout is available, then read from the updated default-branch ref or from an isolated temporary worktree created from `origin/main`. Do not create issues from local-only files, feature-branch-only files, dirty worktree changes, or stale unmerged content.
 
-Read the source-managed organization docs first when available on `.github` default branch: `.github/docs/architecture.md`, `.github/docs/documentation-sources.md`, `.github/docs/issue-to-pr-mvp.md`, `.github/docs/implementation-status.md`, `.github/docs/repo-improvement-scout.md`, and relevant project-local README/docs from each target repository default branch. Project-local docs may add repository-specific detail, but they must not silently override the organization-level responsibility model.
+Path convention: when reading from the `kaizen-agents-org/.github` repository checkout or its default-branch ref, organization docs are repository-relative paths under `docs/...`. When referring to the organization docs from another repository or URL context, `.github/docs/...` means the `docs/...` directory in `kaizen-agents-org/.github`.
+
+Read the source-managed organization docs first when available on the `.github` default branch: `docs/architecture.md`, `docs/documentation-sources.md`, `docs/issue-to-pr-mvp.md`, `docs/implementation-status.md`, `docs/repo-improvement-scout.md`, and relevant project-local README/docs from each target repository default branch. Project-local docs may add repository-specific detail, but they must not silently override the organization-level responsibility model.
 
 For each active repository, perform a repo-local improvement scan:
 

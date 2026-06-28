@@ -20,21 +20,27 @@ Expected local repository names are `.github`, `kaizen-loop`, `builder-agent`,
 and `verifier`. If a checkout is unavailable, report that observation and
 continue with GitHub remote checks.
 
+Path convention: when reading from the `kaizen-agents-org/.github` repository
+checkout or its default-branch ref, organization docs are repository-relative
+paths under `docs/...`. When referring to those same files from another
+repository or URL context, `.github/docs/...` means the `docs/...` directory in
+`kaizen-agents-org/.github`.
+
 Read these source-managed readiness docs first:
 
-- `.github/docs/automation-roles.md`
-- `.github/docs/documentation-sources.md`
-- `.github/docs/production-readiness/README.md`
-- `.github/docs/production-readiness/checklist.md`
-- `.github/docs/production-readiness/metrics.md`
-- `.github/docs/production-readiness/template.md`
-- `.github/docs/production-readiness-log.md`
+- `docs/automation-roles.md`
+- `docs/documentation-sources.md`
+- `docs/production-readiness/README.md`
+- `docs/production-readiness/checklist.md`
+- `docs/production-readiness/metrics.md`
+- `docs/production-readiness/template.md`
+- `docs/production-readiness-log.md`
 
 Fetch `origin main` for `kaizen-agents-org/.github` before selecting a report.
-Use only `.github/docs/production-readiness-log.md` from the updated
+Use only `docs/production-readiness-log.md` from the updated
 `origin/main` ref as the readiness index. Locate the latest dated report linked
 from that index, normally under
-`.github/docs/production-readiness/logs/YYYY-MM-DD.md`, and read that report
+`docs/production-readiness/logs/YYYY-MM-DD.md`, and read that report
 only from `origin/main`. Do not create issues from local-only reports, open PR
 contents, proposed report text, unmerged branches, or previous automation
 memory. If no dated report is available on `origin/main`, create no issues and
@@ -56,7 +62,7 @@ For each candidate, verify all of the following before creating an issue:
   issue-to-PR flow;
 - the candidate is supported by observed evidence in the dated report;
 - the candidate is supported by source-managed documentation in the canonical
-  source order defined by `.github/docs/documentation-sources.md`;
+  source order defined by `docs/documentation-sources.md`;
 - the cited documentation exists on the relevant repository default branch when
   practical;
 - the work is not already covered by an open issue or PR for the same target
