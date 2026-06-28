@@ -16,18 +16,24 @@ local repository names are `.github`, `kaizen-loop`, `builder-agent`, and
 `verifier`. If a checkout is unavailable, report that observation and continue
 with GitHub remote checks.
 
+Path convention: when reading or writing files in the `kaizen-agents-org/.github`
+repository checkout or its default-branch ref, use repository-relative paths
+such as `docs/production-readiness-log.md`. When referring to those same files
+from another repository or URL context, `.github/docs/...` means the `docs/...`
+directory in `kaizen-agents-org/.github`.
+
 Read these source-managed readiness docs first:
 
-- `.github/docs/automation-roles.md`
-- `.github/docs/production-readiness/README.md`
-- `.github/docs/production-readiness/checklist.md`
-- `.github/docs/production-readiness/metrics.md`
-- `.github/docs/production-readiness/template.md`
-- `.github/docs/production-readiness-log.md`
+- `docs/automation-roles.md`
+- `docs/production-readiness/README.md`
+- `docs/production-readiness/checklist.md`
+- `docs/production-readiness/metrics.md`
+- `docs/production-readiness/template.md`
+- `docs/production-readiness-log.md`
 
-Use `.github/docs/production-readiness-log.md` as the readiness index. Read the
+Use `docs/production-readiness-log.md` as the readiness index. Read the
 latest dated review file linked from that index, normally under
-`.github/docs/production-readiness/logs/YYYY-MM-DD.md`, as the baseline for the
+`docs/production-readiness/logs/YYYY-MM-DD.md`, as the baseline for the
 weekly delta. Separate default-branch documentation facts from local-only
 observations. Before citing a document as issue basis, verify it exists on the
 repository default branch when practical.
@@ -73,9 +79,9 @@ Produce a concise weekly readiness report with:
    creation. The `builder-agent` row must be present even when it has no ready
    candidate.
 10. The Markdown content written to
-   `.github/docs/production-readiness/logs/YYYY-MM-DD.md` using
-   `.github/docs/production-readiness/template.md`.
-11. The index update written to `.github/docs/production-readiness-log.md`.
+   `docs/production-readiness/logs/YYYY-MM-DD.md` using
+   `docs/production-readiness/template.md`.
+11. The index update written to `docs/production-readiness-log.md`.
 
 When producing issue candidates, evaluate ownership by repository responsibility
 instead of by the broad system symptom. Use `builder-agent` for gaps in
@@ -90,10 +96,10 @@ appear only as downstream sync targets when `.github` sync evidence requires
 mentioning them.
 
 After producing the report, create or update a normal ready-for-review PR in
-`kaizen-agents-org/.github` containing only:
+`kaizen-agents-org/.github` containing only these repository-relative paths:
 
-- `.github/docs/production-readiness/logs/YYYY-MM-DD.md`
-- `.github/docs/production-readiness-log.md`
+- `docs/production-readiness/logs/YYYY-MM-DD.md`
+- `docs/production-readiness-log.md`
 
 Fetch `origin main` before writing. Base the branch on the updated default
 branch. Use a deterministic branch name such as

@@ -33,6 +33,11 @@ Issue bodies should include a `Documentation basis` section with:
 - the relevant heading or short excerpt
 - why that source supports the issue scope
 
+Use repository-relative paths when citing files from the source repository. For
+organization docs in a `kaizen-agents-org/.github` checkout, cite `docs/...`.
+In another repository or URL context, `.github/docs/...` means the same `docs/...`
+directory in the organization `.github` repository.
+
 Example:
 
 ```markdown
