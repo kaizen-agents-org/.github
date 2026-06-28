@@ -25,5 +25,5 @@ The runtime schedule is configured in the Codex app and should preserve this spl
 | --- | --- | --- | --- | --- |
 | Kaizen Agents repo improvement scout | Daily at 02:45, 10:45, and 18:45 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Frequent proactive repo-local issue discovery. |
 | Kaizen Agents org monitor | Daily at 04:15 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Conservative coordination check after the nighttime scout run. |
-| Kaizen Agents weekly readiness review | Mondays at 09:30 | Local | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Aggregate readiness signal into dated reports. |
-| Kaizen Agents readiness issue creator | Mondays at 10:30 | Local | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create conservative readiness issues from the latest dated report. |
+| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Aggregate readiness signal into dated reports. |
+| Kaizen Agents readiness issue creator | Mondays at 10:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create conservative readiness issues from the latest dated report. |

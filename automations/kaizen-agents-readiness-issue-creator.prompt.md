@@ -10,10 +10,11 @@ Repositories in scope:
 - `kaizen-agents-org/builder-agent`
 - `kaizen-agents-org/verifier`
 
-Use local checkouts provided by the Codex automation runtime. Expected local
-repository names are `.github`, `kaizen-loop`, `builder-agent`, and `verifier`.
-If a checkout is unavailable, report that observation and continue with GitHub
-remote checks.
+Use the local checkouts or worktrees provided by the Codex automation runtime.
+Prefer running this issue creator in a Codex worktree execution environment.
+Expected local repository names are `.github`, `kaizen-loop`, `builder-agent`,
+and `verifier`. If a checkout is unavailable, report that observation and
+continue with GitHub remote checks.
 
 Read these source-managed readiness docs first:
 
