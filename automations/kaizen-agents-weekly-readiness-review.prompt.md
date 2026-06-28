@@ -18,6 +18,7 @@ with GitHub remote checks.
 
 Read these source-managed readiness docs first:
 
+- `.github/docs/automation-roles.md`
 - `.github/docs/production-readiness/README.md`
 - `.github/docs/production-readiness/checklist.md`
 - `.github/docs/production-readiness/metrics.md`
@@ -71,10 +72,10 @@ Produce a concise weekly readiness report with:
    documentation basis, and skip reason when a finding is not ready for issue
    creation. The `builder-agent` row must be present even when it has no ready
    candidate.
-10. A proposed Markdown file for
+10. The Markdown content written to
    `.github/docs/production-readiness/logs/YYYY-MM-DD.md` using
    `.github/docs/production-readiness/template.md`.
-11. A proposed index update for `.github/docs/production-readiness-log.md`.
+11. The index update written to `.github/docs/production-readiness-log.md`.
 
 When producing issue candidates, evaluate ownership by repository responsibility
 instead of by the broad system symptom. Use `builder-agent` for gaps in
@@ -88,17 +89,38 @@ metrics. Use `verifier` for independent review depth and verdict quality. Use
 appear only as downstream sync targets when `.github` sync evidence requires
 mentioning them.
 
-Do not edit files, push branches, merge PRs, or create broad implementation
-changes automatically. If the proposed dated review file and index update should
-be committed, leave them as report text for a human or a normal
-ready-for-review PR.
+After producing the report, create or update a normal ready-for-review PR in
+`kaizen-agents-org/.github` containing only:
+
+- `.github/docs/production-readiness/logs/YYYY-MM-DD.md`
+- `.github/docs/production-readiness-log.md`
+
+Fetch `origin main` before writing. Base the branch on the updated default
+branch. Use a deterministic branch name such as
+`codex/weekly-readiness-review-YYYY-MM-DD`. If a same-date readiness report PR
+already exists, update that branch and PR instead of opening a duplicate. If the
+same dated report already exists on `origin/main`, report that no report PR is
+needed. The PR must be a normal ready-for-review PR, not a draft. The PR body
+must explain that the separate readiness issue creator will only create issues
+after this report PR is merged to `main`.
+
+After opening or updating that report PR, run the project `pr-guardian`
+workflow for the report PR. Continue until the report PR is merge-ready or has a
+specific external blocker. If the guardian finds CI, CodeRabbit, Codex, bot, or
+human feedback that applies to the report PR, fix only the two allowed readiness
+report paths above or explain why a suggestion is not applicable.
+
+Do not edit files outside the two readiness report paths above. Do not merge
+PRs, create GitHub issues, create implementation branches, or make broad
+implementation changes automatically.
 
 Do not create GitHub issues from this weekly review prompt. The review should
 produce a structured `Issue Candidates` section only. The separate
 `kaizen-agents-readiness-issue-creator` automation consumes the latest dated
-readiness report and creates at most three duplicate-free issues per target
-repository after applying its stricter validation rules. Candidate titles should
-be written without the final automation prefix; the issue creator adds
+readiness report from `origin/main` after the report PR is merged and creates at
+most three duplicate-free issues per target repository after applying its
+stricter validation rules. Candidate titles should be written without the final
+automation prefix; the issue creator adds
 `[readiness-review]` to created GitHub issue titles. If a finding is not ready
 for issue creation, mark it as blocked, duplicate, unclear, or report-only in the
 issue candidates section.

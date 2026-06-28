@@ -25,5 +25,16 @@ The runtime schedule is configured in the Codex app and should preserve this spl
 | --- | --- | --- | --- | --- |
 | Kaizen Agents repo improvement scout | Daily at 02:45, 10:45, and 18:45 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Frequent proactive repo-local issue discovery. |
 | Kaizen Agents org monitor | Daily at 04:15 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Conservative coordination check after the nighttime scout run. |
-| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Aggregate readiness signal into dated reports. |
-| Kaizen Agents readiness issue creator | Mondays at 10:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create conservative readiness issues from the latest dated report. |
+| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Open or update a readiness report PR. |
+| Kaizen Agents readiness issue creator | Daily at 10:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create readiness issues from the latest merged report on `main`. |
+
+## Responsibility Model
+
+The automations follow the three-layer responsibility model in [Automation Roles](../docs/automation-roles.md):
+
+| Layer | Automation | Primary output |
+| --- | --- | --- |
+| Improve | Kaizen Agents repo improvement scout | `[scout]` issues for repo-local improvements. |
+| Maintain | Kaizen Agents org monitor | Coordination report and, only when needed, `[monitor]` issues. |
+| Readiness-check | Kaizen Agents weekly readiness review | Ready-for-review PR containing a dated readiness report and index update. |
+| Readiness-check | Kaizen Agents readiness issue creator | `[readiness-review]` issues from a merged readiness report on `main`. |

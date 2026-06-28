@@ -2,6 +2,8 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-repo-improv
 
 Scout the active Kaizen Agents repositories for concrete repo-local improvement issues and create focused GitHub issues for the normal Kaizen issue-to-PR loop.
 
+This automation is the improve layer defined by `.github/docs/automation-roles.md`. It owns proactive repo-local improvement discovery. Do not create `[monitor]` operation issues or `[readiness-review]` issues from this prompt.
+
 Active repositories: `kaizen-agents-org/.github`, `kaizen-agents-org/builder-agent`, `kaizen-agents-org/kaizen-loop`, and `kaizen-agents-org/verifier`. Do not scout `coderabbit` or `renovate-config`; they are downstream shared-configuration repositories and are out of scope unless cited only as sync context for a `.github` finding.
 
 Use the local checkouts or worktrees provided by the Codex automation runtime instead of assuming a workstation-specific absolute path. Prefer running this scout in a Codex worktree execution environment. The expected local repository names are `.github`, `builder-agent`, `kaizen-loop`, and `verifier`. If a local checkout cannot be located, report that local observation as unavailable and continue with GitHub remote checks.
@@ -16,6 +18,8 @@ For each active repository, perform a repo-local improvement scan:
 - `builder-agent`: requirement understanding, implementation artifacts, self-review quality, adapter/CLI behavior, backend/model selection, fallback behavior, build-result schema fidelity, and outputs consumed by `kaizen-loop` and `verifier`.
 - `kaizen-loop`: orchestration, workspace lifecycle, issue selection, verification command execution, verifier integration, policy/reflection, PR creation/linkage, scheduler, run reporting, and fleet commands.
 - `verifier`: independent review depth, verdict quality, schema fidelity, eval harnesses, seeded/golden corpus, false-positive controls, and reproducibility.
+
+Do not create operation, sync, scheduler, CI/check, documentation source-order, fleet refresh, or production-readiness issues unless the finding is also a concrete repo-local improvement in the target repository. Those concerns belong to the monitor or readiness-check layer.
 
 For each repository, inspect default-branch docs and code enough to identify small, actionable improvements. Prefer issues that the normal Kaizen scheduler can complete as one focused PR. Good issue candidates have concrete evidence, a clear owner repository, a bounded expected change, and a documentation basis. Do not create broad roadmap epics, speculative ideas, vague cleanup issues, duplicate issues, or issues that require secrets, billing, production infrastructure, destructive data changes, or human policy decisions before implementation can start.
 

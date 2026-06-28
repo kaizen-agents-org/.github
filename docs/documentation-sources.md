@@ -14,6 +14,7 @@ Use these documents in this order when checking whether a proposed issue matches
 | [Issue-to-PR MVP](./issue-to-pr-mvp.md) | Runtime contract for turning a GitHub Issue into a ready-for-review PR. |
 | [Daily Dogfood Sync](./daily-dogfood-sync.md) | Deterministic shared-skill and contract-file sync rules. |
 | [Shared Skill Sync](./shared-skill-sync.md) | Push-triggered shared-skill propagation rules and target-repository PR behavior. |
+| [Automation Roles](./automation-roles.md) | Automation layer responsibilities, issue prefixes, creation limits, and PR permissions. |
 | [Organization Monitor](./org-monitor.md) | Monitor scope, issue creation rules, and safety boundaries. |
 | [Repository Improvement Scout](./repo-improvement-scout.md) | Scout scope, repo-local issue creation rules, and safety boundaries. |
 | [Implementation Status](./implementation-status.md) | Current implementation state and known hardening gaps. |

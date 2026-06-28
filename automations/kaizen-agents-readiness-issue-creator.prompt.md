@@ -3,6 +3,10 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-readiness-i
 Create focused Kaizen improvement issues from the latest production-readiness
 review report.
 
+This automation is a daily post-merge poll. It should create issues only after
+the weekly readiness report PR has been merged to `main`; if no new approved
+report is available, it should report that and create no issues.
+
 Repositories in scope:
 
 - `kaizen-agents-org/.github`
@@ -18,6 +22,7 @@ continue with GitHub remote checks.
 
 Read these source-managed readiness docs first:
 
+- `.github/docs/automation-roles.md`
 - `.github/docs/documentation-sources.md`
 - `.github/docs/production-readiness/README.md`
 - `.github/docs/production-readiness/checklist.md`
@@ -25,13 +30,15 @@ Read these source-managed readiness docs first:
 - `.github/docs/production-readiness/template.md`
 - `.github/docs/production-readiness-log.md`
 
-Use `.github/docs/production-readiness-log.md` as the readiness index. Locate
-the latest dated report linked from the index, normally under
-`.github/docs/production-readiness/logs/YYYY-MM-DD.md`. Prefer the latest
-report on the `.github` repository default branch. If the latest local report is
-not present on the default branch, treat it as local-only evidence and do not
-create issues from it unless the automation run explicitly supplies that report
-as approved input.
+Fetch `origin main` for `kaizen-agents-org/.github` before selecting a report.
+Use only `.github/docs/production-readiness-log.md` from the updated
+`origin/main` ref as the readiness index. Locate the latest dated report linked
+from that index, normally under
+`.github/docs/production-readiness/logs/YYYY-MM-DD.md`, and read that report
+only from `origin/main`. Do not create issues from local-only reports, open PR
+contents, proposed report text, unmerged branches, or previous automation
+memory. If no dated report is available on `origin/main`, create no issues and
+report that no approved readiness report exists yet.
 
 Create issues only from the report's `Issue Candidates` section. Do not infer
 new issues directly from findings, priorities, or previous automation memory.

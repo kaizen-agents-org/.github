@@ -2,7 +2,7 @@
 
 The Kaizen Agents organization uses a Codex automation named `Kaizen Agents org monitor` as a cross-repository coordination check.
 
-The monitor is not part of the runtime `kaizen-loop` issue-to-PR pipeline. It is an operational review loop for keeping the organization documentation, repository state, and component responsibilities aligned while the system is changing.
+The monitor is the maintain layer in the [Automation Roles](./automation-roles.md) model. It is not part of the runtime `kaizen-loop` issue-to-PR pipeline. It is an operational review loop for keeping the organization documentation, repository state, and component responsibilities aligned while the system is changing.
 
 The GitHub-managed source prompt for the Codex automation lives at [`../automations/kaizen-agents-org-monitor.prompt.md`](../automations/kaizen-agents-org-monitor.prompt.md). The local Codex runtime copy under `$CODEX_HOME/automations/kaizen-agents-org-monitor/automation.toml` should be treated as a synced copy, not the source of truth.
 
@@ -56,6 +56,8 @@ Each run produces a concise coordination report covering:
 - Whether local runner state can be refreshed after dogfood changes with `kaizen fleet --root .. --owner kaizen-agents-org --prune --verify`.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
+
+The monitor should not create general repo-improvement issues. Those belong to the [Repository Improvement Scout](./repo-improvement-scout.md). Monitor issues should stay focused on operation, sync, scheduler, CI/check, documentation source-order, branch/default-branch drift, fleet refresh, or responsibility ambiguity that would make the organization automation harder to operate.
 
 ## Issue Creation
 
