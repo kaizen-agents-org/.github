@@ -104,18 +104,13 @@ GitHub Issue
 
 The organization monitor sits outside that flow. Its job is to notice drift and create reviewable follow-up work so the core flow remains understandable and maintainable.
 
-## Local Kaizen Loop Schedule
+## Local Kaizen Loop Job Schedules
 
-The local Kaizen Loop jobs for the Kaizen Agents repositories are staggered to avoid running every repository at the same time. Each repository has a nightly run and an afternoon run:
+The local Kaizen Loop jobs for the Kaizen Agents repositories should remain staggered to avoid running every repository at the same time. The authoritative schedule for each repository is its `.kaizen/config.yml` `scheduler.jobs` map, not an organization-wide set of fixed nightly, afternoon, or polling fields.
 
-| Nightly (JST) | Afternoon (JST) | Repository |
-| --- | --- | --- |
-| 01:30 | 13:30 | `kaizen-agents-org/.github` |
-| 02:15 | 14:15 | `kaizen-agents-org/builder-agent` |
-| 02:45 | 14:45 | `kaizen-agents-org/kaizen-loop` |
-| 03:00 | 15:00 | `kaizen-agents-org/verifier` |
+The monitor should read the enabled named jobs for each repository and report their configured schedules, run modes, and safety settings as repository-owned configuration. For example, one repository may define `maintenance` and `maintenance-followup` daily jobs, while another repository may choose different job names, intervals, or anchor times.
 
-The nightly job runs `kaizen run --project <slug> --scheduled --trigger scheduled`. The afternoon job runs `kaizen run --project <slug> --scheduled --trigger afternoon`. Both process eligible open `kaizen` issues for that repository.
+Scheduled jobs process eligible open `kaizen` issues according to the run mode and guards configured on the job. Monitor reports should not infer fixed triggers such as `scheduled` or `afternoon`, and should not require every repository to expose matching job names or times.
 
 ## Why Open PR Count Stays Low
 
