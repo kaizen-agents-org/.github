@@ -9,13 +9,12 @@ Repositories in scope:
 - `kaizen-agents-org/kaizen-loop`
 - `kaizen-agents-org/builder-agent`
 - `kaizen-agents-org/verifier`
-- `kaizen-agents-org/coderabbit`
-- `kaizen-agents-org/renovate-config`
 
-Use local checkouts provided by the Codex automation runtime. Expected local
-repository names are `.github`, `kaizen-loop`, `builder-agent`, `verifier`,
-`coderabbit`, and `renovate-config`. If a checkout is unavailable, report that
-observation and continue with GitHub remote checks.
+Use the local checkouts or worktrees provided by the Codex automation runtime.
+Prefer running this issue creator in a Codex worktree execution environment.
+Expected local repository names are `.github`, `kaizen-loop`, `builder-agent`,
+and `verifier`. If a checkout is unavailable, report that observation and
+continue with GitHub remote checks.
 
 Read these source-managed readiness docs first:
 
@@ -39,6 +38,9 @@ new issues directly from findings, priorities, or previous automation memory.
 If the latest report has no `Issue Candidates` section, or every candidate is
 marked blocked, duplicate, unclear, or report-only, create no issues and explain
 why.
+Skip candidates targeting repositories outside the active scope above, including
+`kaizen-agents-org/coderabbit` and `kaizen-agents-org/renovate-config`; mention
+them as out of scope in the final report instead of creating issues.
 
 For each candidate, verify all of the following before creating an issue:
 
@@ -50,8 +52,9 @@ For each candidate, verify all of the following before creating an issue:
   source order defined by `.github/docs/documentation-sources.md`;
 - the cited documentation exists on the relevant repository default branch when
   practical;
-- the work is not already covered by an open issue or PR anywhere in the
-  monitored repository set;
+- the work is not already covered by an open issue or PR for the same target
+  repository and same actionable follow-up, or by an explicit cross-repo
+  coordination issue that owns that exact work;
 - the target repository has fewer than four open issues labeled `kaizen`, unless
   the candidate is a concrete closed-loop health finding about sync, scheduler,
   or CI drift.
@@ -61,10 +64,15 @@ Before creating issues, establish current GitHub state per repository. Prefer
 kaizen-agents-org/<repo>` queries, or cross-check GitHub connector results with
 equivalent `gh` queries when both are available. Search existing open issues and
 PRs across all monitored repositories using the candidate title, affected
-component, file paths, and conceptual keywords.
+component, file paths, and conceptual keywords. Treat duplicate prevention as
+repo-scoped by default: related work in another repository should be mentioned in
+the duplicate-check summary, but it must not by itself block a concrete
+repo-local issue.
 
-Limit issue creation to at most three issues per run across the whole
-organization. Use the `kaizen` label and prefix issue titles with
+Limit issue creation to at most three issues total per run from the approved
+dated report. Do not let one repository's open `kaizen` issue count block
+another repository's eligible candidate, but do not exceed the global per-run
+cap. Use the `kaizen` label and prefix issue titles with
 `[readiness-review]` so it is clear they were created from the readiness review
 automation. Each issue body must include:
 

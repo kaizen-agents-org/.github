@@ -44,22 +44,27 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
-8. [Implementation Status](./implementation-status.md)
+8. [Repository Improvement Scout](./repo-improvement-scout.md)
+   - Proactive repo-local improvement discovery
+   - `[scout]` issue creation rules
+   - Source prompt stored under `../automations/`
+
+9. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-9. [Production Readiness Log](./production-readiness-log.md)
+10. [Production Readiness Log](./production-readiness-log.md)
    - Dated readiness evaluations
    - Observed operational gaps
    - Priority hardening work before broader production use
 
-10. [Production Readiness Reviews](./production-readiness/README.md)
+11. [Production Readiness Reviews](./production-readiness/README.md)
    - Weekly review process
    - Checklist, metrics, and log template
    - Source-managed weekly automation prompt
 
-11. [Design Decisions](./design-decisions.md)
+12. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -90,6 +95,10 @@ The daily dogfood sync runs the deterministic shared skill sync contract on a sc
 ## Organization Monitor
 
 The Codex automation `Kaizen Agents org monitor` periodically reviews the core repositories for local/remote drift, open PRs and issues, CI state, responsibility alignment, and daily dogfood sync health. It may create focused `[monitor]` issues for concrete follow-up work after checking for duplicates, but it does not push, merge, or make broad changes automatically. Its source prompt is stored at [automations/kaizen-agents-org-monitor.prompt.md](../automations/kaizen-agents-org-monitor.prompt.md). See [Organization Monitor](./org-monitor.md).
+
+## Repository Improvement Scout
+
+The Codex automation `Kaizen Agents repo improvement scout` actively scans the active repositories for small, repo-local improvement issues. It may create focused `[scout]` issues for the normal Kaizen scheduler, but it does not implement changes itself. Its source prompt is stored at [automations/kaizen-agents-repo-improvement-scout.prompt.md](../automations/kaizen-agents-repo-improvement-scout.prompt.md). See [Repository Improvement Scout](./repo-improvement-scout.md).
 
 ## Current Focus
 

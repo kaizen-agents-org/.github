@@ -9,13 +9,12 @@ Repositories in scope:
 - `kaizen-agents-org/kaizen-loop`
 - `kaizen-agents-org/builder-agent`
 - `kaizen-agents-org/verifier`
-- `kaizen-agents-org/coderabbit`
-- `kaizen-agents-org/renovate-config`
 
-Use local checkouts provided by the Codex automation runtime. Expected local
-repository names are `.github`, `kaizen-loop`, `builder-agent`, `verifier`,
-`coderabbit`, and `renovate-config`. If a checkout is unavailable, report that
-observation and continue with GitHub remote checks.
+Use the local checkouts or worktrees provided by the Codex automation runtime.
+Prefer running this review in a Codex worktree execution environment. Expected
+local repository names are `.github`, `kaizen-loop`, `builder-agent`, and
+`verifier`. If a checkout is unavailable, report that observation and continue
+with GitHub remote checks.
 
 Read these source-managed readiness docs first:
 
@@ -43,6 +42,10 @@ Collect evidence for:
 - `verifier` verification: `pnpm typecheck`, `pnpm test`,
   `pnpm schema:check`;
 - real sandbox or dogfood E2E evidence for issue-to-PR completion;
+- `builder-agent` contract health: result artifact quality, self-review report
+  usefulness, adapter/CLI reproducibility, backend/model selection behavior,
+  fallback behavior, verifier-consumable output quality, and
+  `discoveredIssues` output quality;
 - verifier eval harness or seeded/golden corpus evidence;
 - safety controls: process-tree termination, run-level timeout, environment
   allowlist, disk preflight, shutdown cleanup;
@@ -58,14 +61,32 @@ Produce a concise weekly readiness report with:
 4. Metrics observed, explicitly marking unavailable metrics.
 5. Delta since the previous readiness log entry.
 6. Current findings ordered by production-readiness risk.
-7. Recommended priority for the next week.
-8. Issue candidates suitable for the follow-up issue-creator automation,
-   including target repository, evidence, documentation basis, and skip reason
-   when a finding is not ready for issue creation.
-9. A proposed Markdown file for
+7. Repository-by-repository readiness coverage. Include every repository in
+   scope. For each repository, list ready issue candidates or explicitly state
+   why no repo-local candidate is ready. Do not let higher-priority findings in
+   `kaizen-loop` or `verifier` hide `builder-agent` or `.github` follow-ups.
+8. Recommended priority for the next week.
+9. Issue candidates suitable for the follow-up issue-creator automation,
+   grouped by target repository and including target repository, evidence,
+   documentation basis, and skip reason when a finding is not ready for issue
+   creation. The `builder-agent` row must be present even when it has no ready
+   candidate.
+10. A proposed Markdown file for
    `.github/docs/production-readiness/logs/YYYY-MM-DD.md` using
    `.github/docs/production-readiness/template.md`.
-10. A proposed index update for `.github/docs/production-readiness-log.md`.
+11. A proposed index update for `.github/docs/production-readiness-log.md`.
+
+When producing issue candidates, evaluate ownership by repository responsibility
+instead of by the broad system symptom. Use `builder-agent` for gaps in
+implementation artifacts, self-review quality, adapter/CLI behavior, backend
+selection/fallback, build-result schema fidelity, or outputs consumed by
+`kaizen-loop` and `verifier`. Use `kaizen-loop` for orchestration, workspace,
+policy, verification command execution, PR creation, scheduling, and run
+metrics. Use `verifier` for independent review depth and verdict quality. Use
+`.github` for organization documentation, automations, and sync source docs.
+`coderabbit` and `renovate-config` are not weekly readiness targets; they may
+appear only as downstream sync targets when `.github` sync evidence requires
+mentioning them.
 
 Do not edit files, push branches, merge PRs, or create broad implementation
 changes automatically. If the proposed dated review file and index update should
@@ -75,11 +96,12 @@ ready-for-review PR.
 Do not create GitHub issues from this weekly review prompt. The review should
 produce a structured `Issue Candidates` section only. The separate
 `kaizen-agents-readiness-issue-creator` automation consumes the latest dated
-readiness report and creates at most three duplicate-free issues after applying
-its stricter validation rules. Candidate titles should be written without the
-final automation prefix; the issue creator adds `[readiness-review]` to created
-GitHub issue titles. If a finding is not ready for issue creation, mark it as
-blocked, duplicate, unclear, or report-only in the issue candidates section.
+readiness report and creates at most three duplicate-free issues total after
+applying its stricter validation rules. Candidate titles should be written
+without the final automation prefix; the issue creator adds
+`[readiness-review]` to created GitHub issue titles. If a finding is not ready
+for issue creation, mark it as blocked, duplicate, unclear, or report-only in the
+issue candidates section.
 
 Do not treat this weekly review as approval for production-grade autonomous
 maintenance. The review records readiness evidence and gaps; human review still

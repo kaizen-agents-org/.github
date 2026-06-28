@@ -6,9 +6,15 @@ The monitor is not part of the runtime `kaizen-loop` issue-to-PR pipeline. It is
 
 The GitHub-managed source prompt for the Codex automation lives at [`../automations/kaizen-agents-org-monitor.prompt.md`](../automations/kaizen-agents-org-monitor.prompt.md). The local Codex runtime copy under `$CODEX_HOME/automations/kaizen-agents-org-monitor/automation.toml` should be treated as a synced copy, not the source of truth.
 
+## Runtime Cadence
+
+The monitor runs once daily at 04:15 in the local Codex automation schedule, after the nighttime [Repository Improvement Scout](./repo-improvement-scout.md) run.
+
+This timing reflects the monitor's conservative purpose: it checks organization-level coordination, sync health, and drift after the proactive scout has had a chance to discover repo-local improvement issues.
+
 ## Scope
 
-The monitor reviews the core and support organization repositories:
+The monitor reviews the active organization repositories:
 
 | Area | Repositories |
 | --- | --- |
@@ -16,10 +22,8 @@ The monitor reviews the core and support organization repositories:
 | Builder component | `kaizen-agents-org/builder-agent` |
 | Orchestrator component | `kaizen-agents-org/kaizen-loop` |
 | Independent verifier component | `kaizen-agents-org/verifier` |
-| Code review configuration | `kaizen-agents-org/coderabbit` |
-| Renovate configuration | `kaizen-agents-org/renovate-config` |
 
-The local automation may inspect local checkouts for these repositories as well as their GitHub remotes.
+The local automation may inspect local checkouts for these repositories as well as their GitHub remotes. `coderabbit` and `renovate-config` are downstream shared-configuration repositories, not active monitor targets; they are mentioned only when `.github` sync evidence requires it.
 
 ## Local Kaizen Loop Scheduler
 

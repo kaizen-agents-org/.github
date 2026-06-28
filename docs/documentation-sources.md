@@ -15,6 +15,7 @@ Use these documents in this order when checking whether a proposed issue matches
 | [Daily Dogfood Sync](./daily-dogfood-sync.md) | Deterministic shared-skill and contract-file sync rules. |
 | [Shared Skill Sync](./shared-skill-sync.md) | Push-triggered shared-skill propagation rules and target-repository PR behavior. |
 | [Organization Monitor](./org-monitor.md) | Monitor scope, issue creation rules, and safety boundaries. |
+| [Repository Improvement Scout](./repo-improvement-scout.md) | Scout scope, repo-local issue creation rules, and safety boundaries. |
 | [Implementation Status](./implementation-status.md) | Current implementation state and known hardening gaps. |
 | [Production Readiness Reviews](./production-readiness/README.md) | Weekly readiness review process, checklist, metrics, and log template. |
 | [Production Readiness Log](./production-readiness-log.md) | Dated readiness findings, observed operational gaps, and priority hardening work. |

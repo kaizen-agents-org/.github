@@ -16,8 +16,6 @@ Reviewed repositories:
 - `kaizen-agents-org/kaizen-loop`
 - `kaizen-agents-org/builder-agent`
 - `kaizen-agents-org/verifier`
-- `kaizen-agents-org/coderabbit`
-- `kaizen-agents-org/renovate-config`
 
 ## Summary
 
