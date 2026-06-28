@@ -96,9 +96,9 @@ ready-for-review PR.
 Do not create GitHub issues from this weekly review prompt. The review should
 produce a structured `Issue Candidates` section only. The separate
 `kaizen-agents-readiness-issue-creator` automation consumes the latest dated
-readiness report and creates at most three duplicate-free issues total after
-applying its stricter validation rules. Candidate titles should be written
-without the final automation prefix; the issue creator adds
+readiness report and creates at most three duplicate-free issues per target
+repository after applying its stricter validation rules. Candidate titles should
+be written without the final automation prefix; the issue creator adds
 `[readiness-review]` to created GitHub issue titles. If a finding is not ready
 for issue creation, mark it as blocked, duplicate, unclear, or report-only in the
 issue candidates section.

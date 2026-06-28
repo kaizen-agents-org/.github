@@ -44,7 +44,7 @@ The scout may create `[scout]` issues when all of these are true:
 - the issue is ready for the next Kaizen run without human clarification;
 - the target repository has fewer than four open issues labeled `kaizen`.
 
-The scout adds the `kaizen` label to created issues. It creates at most two issues per target repository per run and at most six issues total per run. Additional eligible findings stay in the report.
+The scout adds the `kaizen` label to created issues. It creates at most two issues per target repository per run. There is no organization-wide issue creation cap because each repository already has its own per-run and open-issue limits. Additional eligible findings for a repository stay in the report.
 
 ## Safety Boundaries
 

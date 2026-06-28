@@ -69,10 +69,10 @@ repo-scoped by default: related work in another repository should be mentioned i
 the duplicate-check summary, but it must not by itself block a concrete
 repo-local issue.
 
-Limit issue creation to at most three issues total per run from the approved
-dated report. Do not let one repository's open `kaizen` issue count block
-another repository's eligible candidate, but do not exceed the global per-run
-cap. Use the `kaizen` label and prefix issue titles with
+Limit issue creation to at most three issues per target repository per run from
+the approved dated report. Do not apply an organization-wide cap, and do not let
+one repository's open `kaizen` issue count block another repository's eligible
+candidate. Use the `kaizen` label and prefix issue titles with
 `[readiness-review]` so it is clear they were created from the readiness review
 automation. Each issue body must include:
 
