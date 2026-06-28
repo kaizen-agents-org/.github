@@ -2,7 +2,7 @@
 
 The Kaizen Agents organization uses a Codex automation named `Kaizen Agents repo improvement scout` to actively find small, repo-local improvement issues for the normal Kaizen issue-to-PR loop.
 
-The scout is separate from [Organization Monitor](./org-monitor.md). The organization monitor is conservative coordination health checking. The scout is proactive backlog discovery.
+The scout is the improve layer in the [Automation Roles](./automation-roles.md) model. It is separate from [Organization Monitor](./org-monitor.md): the organization monitor is conservative coordination health checking, while the scout is proactive backlog discovery.
 
 The GitHub-managed source prompt for the Codex automation lives at [`../automations/kaizen-agents-repo-improvement-scout.prompt.md`](../automations/kaizen-agents-repo-improvement-scout.prompt.md). The local Codex runtime copy under `$CODEX_HOME/automations/kaizen-agents-repo-improvement-scout/automation.toml` should be treated as a synced copy, not the source of truth.
 
@@ -33,6 +33,8 @@ The scout looks for bounded, evidence-backed improvements that can become one fo
 - `builder-agent`: implementation artifact quality, self-review quality, adapter/CLI behavior, backend/model selection, fallback behavior, build-result schema fidelity, and verifier-consumable outputs.
 - `kaizen-loop`: orchestration, workspace lifecycle, issue intake, verification execution, verifier integration, policy, PR creation/linkage, scheduler behavior, run reporting, and fleet commands.
 - `verifier`: independent review depth, verdict quality, schema fidelity, eval harnesses, seeded/golden corpus, false-positive controls, and reproducibility.
+
+The scout should not create operation, sync, scheduler, CI, source-order, or readiness-review issues unless the finding is also a concrete repo-local improvement in the target repository. Those concerns belong to the monitor or readiness-review layer.
 
 ## Issue Creation
 

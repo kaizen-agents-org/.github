@@ -38,33 +38,38 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Shared skill sync delegation
    - Organization monitor contract
 
-7. [Organization Monitor](./org-monitor.md)
+7. [Automation Roles](./automation-roles.md)
+   - Improve, maintain, and readiness-check responsibilities
+   - Issue prefixes, issue creation limits, and PR permissions
+   - Boundaries between scout, monitor, readiness review, and issue creator
+
+8. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
-8. [Repository Improvement Scout](./repo-improvement-scout.md)
+9. [Repository Improvement Scout](./repo-improvement-scout.md)
    - Proactive repo-local improvement discovery
    - `[scout]` issue creation rules
    - Source prompt stored under `../automations/`
 
-9. [Implementation Status](./implementation-status.md)
+10. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-10. [Production Readiness Log](./production-readiness-log.md)
+11. [Production Readiness Log](./production-readiness-log.md)
    - Dated readiness evaluations
    - Observed operational gaps
    - Priority hardening work before broader production use
 
-11. [Production Readiness Reviews](./production-readiness/README.md)
+12. [Production Readiness Reviews](./production-readiness/README.md)
    - Weekly review process
    - Checklist, metrics, and log template
    - Source-managed weekly automation prompt
 
-12. [Design Decisions](./design-decisions.md)
+13. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
@@ -99,6 +104,10 @@ The Codex automation `Kaizen Agents org monitor` periodically reviews the core r
 ## Repository Improvement Scout
 
 The Codex automation `Kaizen Agents repo improvement scout` actively scans the active repositories for small, repo-local improvement issues. It may create focused `[scout]` issues for the normal Kaizen scheduler, but it does not implement changes itself. Its source prompt is stored at [automations/kaizen-agents-repo-improvement-scout.prompt.md](../automations/kaizen-agents-repo-improvement-scout.prompt.md). See [Repository Improvement Scout](./repo-improvement-scout.md).
+
+## Automation Layers
+
+The automation system is split into improve, maintain, and readiness-check layers. See [Automation Roles](./automation-roles.md) for the authoritative role boundaries, issue prefixes, and PR permissions.
 
 ## Current Focus
 
