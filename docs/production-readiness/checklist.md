@@ -5,7 +5,7 @@ Use this checklist for each weekly readiness review.
 ## Repository State
 
 - Confirm local checkout availability for `.github`, `kaizen-loop`,
-  `builder-agent`, `verifier`, `coderabbit`, and `renovate-config`.
+  `builder-agent`, and `verifier`.
 - Record local branch and upstream state.
 - Distinguish local-only observations from default-branch facts.
 - Check open PR and open `kaizen` issue counts per repository.

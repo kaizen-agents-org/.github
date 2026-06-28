@@ -8,7 +8,7 @@ The GitHub-managed source prompt for the Codex automation lives at [`../automati
 
 ## Scope
 
-The monitor reviews the core and support organization repositories:
+The monitor reviews the active organization repositories:
 
 | Area | Repositories |
 | --- | --- |
@@ -16,10 +16,8 @@ The monitor reviews the core and support organization repositories:
 | Builder component | `kaizen-agents-org/builder-agent` |
 | Orchestrator component | `kaizen-agents-org/kaizen-loop` |
 | Independent verifier component | `kaizen-agents-org/verifier` |
-| Code review configuration | `kaizen-agents-org/coderabbit` |
-| Renovate configuration | `kaizen-agents-org/renovate-config` |
 
-The local automation may inspect local checkouts for these repositories as well as their GitHub remotes.
+The local automation may inspect local checkouts for these repositories as well as their GitHub remotes. `coderabbit` and `renovate-config` are downstream shared-configuration repositories, not active monitor targets; they are mentioned only when `.github` sync evidence requires it.
 
 ## Local Kaizen Loop Scheduler
 
@@ -107,8 +105,6 @@ The local Kaizen Loop jobs for the Kaizen Agents repositories are staggered to a
 | Nightly (JST) | Afternoon (JST) | Repository |
 | --- | --- | --- |
 | 01:30 | 13:30 | `kaizen-agents-org/.github` |
-| 01:45 | 13:45 | `kaizen-agents-org/coderabbit` |
-| 02:00 | 14:00 | `kaizen-agents-org/renovate-config` |
 | 02:15 | 14:15 | `kaizen-agents-org/builder-agent` |
 | 02:45 | 14:45 | `kaizen-agents-org/kaizen-loop` |
 | 03:00 | 15:00 | `kaizen-agents-org/verifier` |
