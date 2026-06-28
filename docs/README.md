@@ -115,6 +115,7 @@ The first usable vertical slice is now wired together as an MVP:
 
 ```text
 GitHub Issue
+  -> kaizen-loop
   -> builder-agent
   -> mechanical verification
   -> verifier
