@@ -104,6 +104,12 @@ needed. The PR must be a normal ready-for-review PR, not a draft. The PR body
 must explain that the separate readiness issue creator will only create issues
 after this report PR is merged to `main`.
 
+After opening or updating that report PR, run the project `pr-guardian`
+workflow for the report PR. Continue until the report PR is merge-ready or has a
+specific external blocker. If the guardian finds CI, CodeRabbit, Codex, bot, or
+human feedback that applies to the report PR, fix only the two allowed readiness
+report paths above or explain why a suggestion is not applicable.
+
 Do not edit files outside the two readiness report paths above. Do not merge
 PRs, create GitHub issues, create implementation branches, or make broad
 implementation changes automatically.

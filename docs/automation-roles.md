@@ -15,9 +15,9 @@ Kaizen Agents uses four Codex automations in three layers: improve, maintain, an
 
 `org-monitor` owns conservative maintenance. It should report broad state and create issues only for operational drift, sync failures, scheduler/fleet health, CI/check drift, documentation source-order gaps, or responsibility ambiguity that would make the automation system harder to operate. It must not become a general improvement scout.
 
-`weekly-readiness-review` owns readiness assessment. It should inspect evidence, write the dated report, update the readiness index, and open or update a normal ready-for-review PR containing only the report file and index update. It must not create GitHub issues or implementation PRs.
+`weekly-readiness-review` owns readiness assessment. It should inspect evidence, write the dated report, update the readiness index, open or update a normal ready-for-review PR containing only the report file and index update, and run `pr-guardian` on that report PR until it is merge-ready or blocked. It must not create GitHub issues or implementation PRs.
 
-`readiness-issue-creator` owns approved-report issue creation. It must read the latest dated readiness report from the `.github` default branch after the report PR is merged. It must not create issues from local-only reports, open PR contents, proposed report text, or previous automation memory.
+`readiness-issue-creator` owns approved-report issue creation. It runs as a daily post-merge poll and must read the latest dated readiness report from the `.github` default branch after the report PR is merged. It must not create issues from local-only reports, open PR contents, proposed report text, or previous automation memory.
 
 ## Issue Prefixes
 

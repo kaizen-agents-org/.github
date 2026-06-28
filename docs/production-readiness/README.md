@@ -13,10 +13,10 @@ The readiness loop has three phases:
 1. The weekly review produces a dated report and structured issue candidates.
 2. The weekly review opens or updates a normal ready-for-review PR containing
    only the dated report and the readiness log index update.
-3. After a human merges that report PR, the issue-creator automation consumes
-   the latest dated report from `main` and creates focused, duplicate-free
-   `kaizen` issues with the `[readiness-review]` title prefix when the
-   candidates pass validation.
+3. After a human merges that report PR, the issue-creator automation's daily
+   post-merge poll consumes the latest dated report from `main` and creates
+   focused, duplicate-free `kaizen` issues with the `[readiness-review]` title
+   prefix when the candidates pass validation.
 
 ## Documents
 
@@ -39,8 +39,10 @@ Run the readiness review once per week. Each review should:
 5. Produce a concise dated report and structured issue candidates.
 6. Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md` and
    updates `../production-readiness-log.md`.
-7. Leave issue creation to the issue-creator automation after the report PR is
-   merged to `main`.
+7. Run `pr-guardian` on that report PR until it is merge-ready or blocked.
+8. Leave issue creation to the issue-creator automation after the report PR is
+   merged to `main`; the issue creator checks daily so it does not depend on a
+   one-hour merge window.
 
 ## Source-Managed Automation
 
@@ -56,7 +58,7 @@ of truth.
 
 The weekly readiness review may inspect broadly and propose focused issue
 candidates. It may push a branch and open or update a ready-for-review PR only
-for the dated report and readiness log index update. The issue-creator
-automation may create focused follow-up issues only from an approved dated
-report already merged to `main`. Neither automation may merge PRs or create
-broad implementation work automatically.
+for the dated report and readiness log index update, then run `pr-guardian` for
+that report PR. The issue-creator automation may create focused follow-up issues
+only from an approved dated report already merged to `main`. Neither automation
+may merge PRs or create broad implementation work automatically.

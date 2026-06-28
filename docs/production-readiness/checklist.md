@@ -62,6 +62,9 @@ Use this checklist for each weekly readiness review.
   creation.
 - Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md` and
   updates [Production Readiness Log](../production-readiness-log.md).
+- Run `pr-guardian` on the report PR until it is merge-ready or blocked.
 - Let the issue-creator automation create at most three focused issues per
-  target repository after that report PR is merged to `main`. Created issue
-  titles must use the `[readiness-review]` prefix.
+  target repository after that report PR is merged to `main`. The issue creator
+  checks daily, so issue creation does not depend on the report PR merging
+  within the same hourly window. Created issue titles must use the
+  `[readiness-review]` prefix.

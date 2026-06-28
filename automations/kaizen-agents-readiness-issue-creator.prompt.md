@@ -3,6 +3,10 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-readiness-i
 Create focused Kaizen improvement issues from the latest production-readiness
 review report.
 
+This automation is a daily post-merge poll. It should create issues only after
+the weekly readiness report PR has been merged to `main`; if no new approved
+report is available, it should report that and create no issues.
+
 Repositories in scope:
 
 - `kaizen-agents-org/.github`
