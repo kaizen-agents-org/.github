@@ -43,8 +43,8 @@ Example:
 ```markdown
 ## Documentation basis
 
-- `docs/architecture.md`, "Product Goal": the workflow should produce reviewable PRs, not unreviewed autonomy.
-- `docs/issue-to-pr-mvp.md`, "Repository Contract": target repositories should keep `.kaizen/config.yml` and Kaizen issue templates aligned.
+- `.github/docs/architecture.md`, "Product Goal": the workflow should produce reviewable PRs, not unreviewed autonomy.
+- `.github/docs/issue-to-pr-mvp.md`, "Repository Contract": target repositories should keep `.kaizen/config.yml` and Kaizen issue templates aligned.
 ```
 
 Do not create an automated issue when the documentation basis is missing, stale, or contradictory. Include the observation in the coordination report and ask for human clarification or a documentation update first.
