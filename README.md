@@ -81,7 +81,9 @@ Core repositories vendor these skills so local agents can use the same workflows
 The `automations/` directory stores GitHub-managed source prompts for local Codex automations. Runtime automation copies live under `$CODEX_HOME/automations`, but those local files are not the source of truth.
 
 - [Kaizen Agents org monitor](./automations/kaizen-agents-org-monitor.prompt.md): cross-repository coordination monitor prompt.
+- [Kaizen Agents repo improvement scout](./automations/kaizen-agents-repo-improvement-scout.prompt.md): repo-local improvement issue discovery prompt.
 - [Kaizen Agents weekly readiness review](./automations/kaizen-agents-weekly-readiness-review.prompt.md): weekly production-readiness review prompt.
+- [Kaizen Agents readiness issue creator](./automations/kaizen-agents-readiness-issue-creator.prompt.md): readiness backlog issue creation prompt from merged reports.
 
 ## Documentation Source Of Truth
 
