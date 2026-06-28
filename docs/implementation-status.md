@@ -67,7 +67,7 @@ Implemented loop edges include:
 - target repository maintenance jobs select those issues and open ready-for-review PRs
 - source contract changes merged into `.github/main` trigger deterministic target sync PRs for managed dogfood files
 - shared-skill-only changes merged into `.github/main` trigger the narrower shared-skill sync PRs
-- local runners can refresh post-merge runtime state with `kaizen fleet --root .. --owner kaizen-agents-org --prune --verify`, which rebuilds registry entries, ensures workspaces, creates labels, syncs scheduler jobs, repairs stale locks when requested, and runs each repo's configured setup/verify commands against synced workspaces
+- local runners can refresh post-merge runtime state with `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --prune --verify`, which rebuilds registry entries for the four active repositories, ensures workspaces, creates labels, syncs scheduler jobs, repairs stale locks when requested, and runs each active repo's configured setup/verify commands against synced workspaces
 - the next Codex monitor and `kaizen-loop` maintenance schedules re-check the updated repositories
 
 ### builder-agent
