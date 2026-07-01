@@ -98,6 +98,14 @@ automation. Each issue body must include:
   supports the issue scope;
 - duplicate-check summary.
 
+Each created issue must also include a `PR linkage requirement` section. State
+that the implementation PR for this issue must target the repository default
+branch, include `Closes #<issue-number>` for same-repository work or `Closes
+kaizen-agents-org/<repo>#<issue-number>` for cross-repository work in the PR
+body, and verify `gh pr view <pr> --json baseRefName,closingIssuesReferences,isDraft`
+before reporting the PR ready. Do not rely on a PR title, branch name, or issue
+comment as proof that GitHub will close the issue on merge.
+
 After issue creation, produce a concise report with:
 
 1. Source report used.

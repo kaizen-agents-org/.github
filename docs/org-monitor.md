@@ -72,6 +72,7 @@ Automatic issue creation is intentionally conservative:
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
 - Include a `Documentation basis` section anchored to [Documentation Sources](./documentation-sources.md), citing organization documents in that canonical source order before project-local docs, then cite the source that justifies the issue scope.
+- Include a `PR linkage requirement` section telling the implementer to put a GitHub closing keyword in the implementation PR body and verify `closingIssuesReferences` before reporting the PR ready.
 - If the documentation basis is missing, stale, contradictory, or narrower than the canonical source-order contract, keep the finding in the report as documentation drift and file a documentation clarification issue only when that is the clear actionable next step.
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 

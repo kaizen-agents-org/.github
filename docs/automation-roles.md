@@ -38,3 +38,10 @@ Each automation applies limits per target repository so one repository cannot co
 | `readiness-issue-creator` | At most three issues per target repository per run. |
 
 The shared backlog guard still applies: skip new issue creation for a target repository when it already has four or more open issues labeled `kaizen`, except where a monitor prompt explicitly allows a concrete closed-loop health finding to bypass that guard.
+
+Every issue-creating automation must include a `PR linkage requirement` section
+in each created issue body. The section tells the implementer to put a GitHub
+closing keyword in the implementation PR body and verify
+`closingIssuesReferences` before reporting the PR ready. This keeps issue
+creation aligned with the issue-to-PR promise: merging the implementation PR
+closes the source issue.
