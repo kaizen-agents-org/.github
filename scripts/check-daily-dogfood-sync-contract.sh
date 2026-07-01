@@ -192,11 +192,10 @@ while IFS= read -r repo; do
   )
 done < <(jq -r '.targets[].name' "${manifest}")
 
-# Scheduler dogfood configs that have drifted before must stay on the current
-# kaizen-loop scheduler contract.
-for repo in coderabbit kaizen-loop; do
-  config=".github/dogfood-sync/targets/${repo}/.kaizen/config.yml"
-  awk '
+# Every manifest-managed runtime config must stay on the current scheduler.jobs
+# contract.
+while IFS=$'\t' read -r repo config; do
+  if ! awk '
     /^scheduler:$/ {
       in_scheduler=1
       next
@@ -217,13 +216,27 @@ for repo in coderabbit kaizen-loop; do
     in_jobs && /^    maintenance-followup:$/ { maintenance_followup=1 }
     in_jobs && /^    issue-watch:$/ { issue_watch=1 }
     END { exit(found_jobs && maintenance && maintenance_followup && issue_watch ? 0 : 1) }
-  ' "${config}"
+  ' "${config}"; then
+    echo "${repo} dogfood scheduler config must define scheduler.jobs maintenance, maintenance-followup, and issue-watch" >&2
+    exit 1
+  fi
 
   if grep -Eq "^[[:space:]]{2}(nightly|afternoon|poll):" "${config}"; then
     echo "${repo} dogfood scheduler config must use scheduler.jobs, not legacy scheduler keys" >&2
     exit 1
   fi
-done
+done < <(
+  jq -r '
+    .targets[].name as $repo
+    | .managedPaths[]
+    | select(.type == "file" and .target == ".kaizen/config.yml")
+    | [
+        $repo,
+        (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo)))
+      ]
+    | @tsv
+  ' "${manifest}"
+)
 
 if ! awk '
   /^run:$/ {
