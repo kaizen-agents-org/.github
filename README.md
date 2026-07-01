@@ -61,6 +61,8 @@ flowchart TB
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
 - [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): deterministic daily sync contract for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
+- [docs/automation-roles.md](./docs/automation-roles.md): automation layer responsibilities, issue prefixes, and creation limits.
+- [docs/repo-improvement-scout.md](./docs/repo-improvement-scout.md): proactive repo-local improvement scout scope and issue creation rules.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
 - [docs/production-readiness-log.md](./docs/production-readiness-log.md): dated readiness findings and operational gaps.
 - [docs/production-readiness/README.md](./docs/production-readiness/README.md): weekly readiness review process, checklist, metrics, and template.
@@ -87,4 +89,4 @@ The `automations/` directory stores GitHub-managed source prompts for local Code
 
 ## Documentation Source Of Truth
 
-Organization coordination and automated monitor issues should follow the source order in `docs/documentation-sources.md`, starting with the organization profile, this README, and the architecture docs, then the Issue-to-PR MVP, Daily Dogfood Sync, Shared Skill Sync, and Organization Monitor docs as needed. When the monitor creates a follow-up issue, its body should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the monitor should report the drift instead of creating an implementation issue from an assumption.
+Organization coordination and automated improvement issue creation should follow the source order in `docs/documentation-sources.md`, starting with the organization profile, this README, and the architecture docs, then consulting the Issue-to-PR MVP, Daily Dogfood Sync, Shared Skill Sync, Automation Roles, Organization Monitor, Repository Improvement Scout, and readiness docs as needed. Monitor, scout, and readiness issue bodies should cite the relevant documentation path or URL and explain why that source supports the issue scope. If the docs are stale or contradictory, the automation should report the drift instead of creating an implementation issue from an assumption.
