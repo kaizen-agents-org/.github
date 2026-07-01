@@ -194,7 +194,35 @@ done < <(jq -r '.targets[].name' "${manifest}")
 
 # Every manifest target must manage exactly one runtime config, and each config
 # must stay on the current scheduler.jobs contract.
+runtime_config_path_count="$(
+  jq -er '
+    [
+      .managedPaths[]
+      | select(.type == "file" and .target == ".kaizen/config.yml")
+    ]
+    | length
+  ' "${manifest}"
+)"
+if [[ "${runtime_config_path_count}" -ne 1 ]]; then
+  echo "manifest must contain exactly one managed .kaizen/config.yml path" >&2
+  exit 1
+fi
+
 while IFS= read -r repo; do
+  target_count="$(
+    jq -er --arg repo "${repo}" '
+      [
+        .targets[]
+        | select(.name == $repo)
+      ]
+      | length
+    ' "${manifest}"
+  )"
+  if [[ "${target_count}" -ne 1 ]]; then
+    echo "manifest must contain exactly one target entry for ${repo}" >&2
+    exit 1
+  fi
+
   config="$(
     jq -er --arg repo "${repo}" '
       [
