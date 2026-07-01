@@ -192,9 +192,27 @@ while IFS= read -r repo; do
   )
 done < <(jq -r '.targets[].name' "${manifest}")
 
-# Every manifest-managed runtime config must stay on the current scheduler.jobs
-# contract.
-while IFS=$'\t' read -r repo config; do
+# Every manifest target must manage exactly one runtime config, and each config
+# must stay on the current scheduler.jobs contract.
+while IFS= read -r repo; do
+  config="$(
+    jq -er --arg repo "${repo}" '
+      [
+        .managedPaths[]
+        | select(.type == "file" and .target == ".kaizen/config.yml")
+        | (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo)))
+      ] as $configs
+      | if ($configs | length) == 1 then
+          $configs[0]
+        else
+          empty
+        end
+    ' "${manifest}"
+  )" || {
+    echo "${repo} dogfood manifest must manage exactly one .kaizen/config.yml file" >&2
+    exit 1
+  }
+
   if ! awk '
     /^scheduler:$/ {
       in_scheduler=1
@@ -225,18 +243,7 @@ while IFS=$'\t' read -r repo config; do
     echo "${repo} dogfood scheduler config must use scheduler.jobs, not legacy scheduler keys" >&2
     exit 1
   fi
-done < <(
-  jq -r '
-    .targets[].name as $repo
-    | .managedPaths[]
-    | select(.type == "file" and .target == ".kaizen/config.yml")
-    | [
-        $repo,
-        (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo)))
-      ]
-    | @tsv
-  ' "${manifest}"
-)
+done < <(jq -r '.targets[].name' "${manifest}")
 
 if ! awk '
   /^run:$/ {
