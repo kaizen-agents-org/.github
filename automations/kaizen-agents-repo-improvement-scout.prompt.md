@@ -39,4 +39,6 @@ When creating an issue, add the `kaizen` label and prefix the title with `[scout
 - duplicate-check summary;
 - related issues or PRs, if any.
 
+Each created issue must also include a `PR linkage requirement` section. State that the implementation PR for this issue must target the repository default branch, include `Closes #<issue-number>` for same-repository work or `Closes kaizen-agents-org/<repo>#<issue-number>` for cross-repository work in the PR body, and verify `gh pr view <pr> --json baseRefName,closingIssuesReferences,isDraft` before reporting the PR ready. Do not rely on a PR title, branch name, or issue comment as proof that GitHub will close the issue on merge.
+
 Produce a concise scout report with: repositories scanned, verified GitHub state, issues created with URLs, eligible findings skipped due target repo issue limit or per-run limit, duplicate findings, repo-local "no issue created" reasons, and any unavailable checks. Do not edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically.

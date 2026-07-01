@@ -38,3 +38,8 @@ The automations follow the three-layer responsibility model in [Automation Roles
 | Maintain | Kaizen Agents org monitor | Coordination report and, only when needed, `[monitor]` issues. |
 | Readiness-check | Kaizen Agents weekly readiness review | Ready-for-review PR containing a dated readiness report and index update. |
 | Readiness-check | Kaizen Agents readiness issue creator | `[readiness-review]` issues from a merged readiness report on `main`. |
+
+All issue-creating automations must put a `PR linkage requirement` section in
+created issue bodies. The section tells implementers to include a GitHub closing
+keyword in the PR body and verify `closingIssuesReferences` before reporting a
+PR ready, so merged implementation PRs close their source issues.

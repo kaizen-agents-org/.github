@@ -17,6 +17,9 @@ shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
 sync_script="scripts/sync-daily-dogfood.sh"
 manifest=".github/dogfood-sync/manifest.json"
 contract_doc="docs/daily-dogfood-sync.md"
+scout_prompt="automations/kaizen-agents-repo-improvement-scout.prompt.md"
+monitor_prompt="automations/kaizen-agents-org-monitor.prompt.md"
+readiness_issue_prompt="automations/kaizen-agents-readiness-issue-creator.prompt.md"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required to validate ${manifest}" >&2
@@ -29,11 +32,23 @@ for path in \
   "${shared_skill_workflow}" \
   "${sync_script}" \
   "${manifest}" \
-  "${contract_doc}"; do
+  "${contract_doc}" \
+  "${scout_prompt}" \
+  "${monitor_prompt}" \
+  "${readiness_issue_prompt}"; do
   if [[ ! -f "${path}" ]]; then
     echo "missing daily dogfood sync contract file: ${path}" >&2
     exit 1
   fi
+done
+
+# Issue-creating prompts must preserve the closed-loop requirement: generated
+# implementation PRs close their source issues through GitHub-recognized links.
+for prompt in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}"; do
+  grep -q "PR linkage requirement" "${prompt}"
+  grep -q "Closes #<issue-number>" "${prompt}"
+  grep -q "kaizen-agents-org/<repo>#<issue-number>" "${prompt}"
+  grep -q "closingIssuesReferences" "${prompt}"
 done
 
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
