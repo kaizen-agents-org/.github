@@ -192,11 +192,56 @@ while IFS= read -r repo; do
   )
 done < <(jq -r '.targets[].name' "${manifest}")
 
-# Scheduler dogfood configs that have drifted before must stay on the current
-# kaizen-loop scheduler contract.
-for repo in coderabbit kaizen-loop; do
-  config=".github/dogfood-sync/targets/${repo}/.kaizen/config.yml"
-  awk '
+# Every manifest target must manage exactly one runtime config, and each config
+# must stay on the current scheduler.jobs contract.
+runtime_config_path_count="$(
+  jq -er '
+    [
+      .managedPaths[]
+      | select(.type == "file" and .target == ".kaizen/config.yml")
+    ]
+    | length
+  ' "${manifest}"
+)"
+if [[ "${runtime_config_path_count}" -ne 1 ]]; then
+  echo "manifest must contain exactly one managed .kaizen/config.yml path" >&2
+  exit 1
+fi
+
+while IFS= read -r repo; do
+  target_count="$(
+    jq -er --arg repo "${repo}" '
+      [
+        .targets[]
+        | select(.name == $repo)
+      ]
+      | length
+    ' "${manifest}"
+  )"
+  if [[ "${target_count}" -ne 1 ]]; then
+    echo "manifest must contain exactly one target entry for ${repo}" >&2
+    exit 1
+  fi
+
+  config="$(
+    jq -er --arg repo "${repo}" '
+      [
+        .managedPaths[]
+        | select(.type == "file" and .target == ".kaizen/config.yml")
+        | (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo)))
+      ] as $configs
+      | if ($configs | length) == 1 then
+          $configs[0]
+        else
+          empty
+        end
+    ' "${manifest}"
+  )" || {
+    echo "${repo} dogfood manifest must manage exactly one .kaizen/config.yml file" >&2
+    exit 1
+  }
+
+  if ! awk '
     /^scheduler:$/ {
       in_scheduler=1
       next
@@ -217,13 +262,16 @@ for repo in coderabbit kaizen-loop; do
     in_jobs && /^    maintenance-followup:$/ { maintenance_followup=1 }
     in_jobs && /^    issue-watch:$/ { issue_watch=1 }
     END { exit(found_jobs && maintenance && maintenance_followup && issue_watch ? 0 : 1) }
-  ' "${config}"
+  ' "${config}"; then
+    echo "${repo} dogfood scheduler config must define scheduler.jobs maintenance, maintenance-followup, and issue-watch" >&2
+    exit 1
+  fi
 
   if grep -Eq "^[[:space:]]{2}(nightly|afternoon|poll):" "${config}"; then
     echo "${repo} dogfood scheduler config must use scheduler.jobs, not legacy scheduler keys" >&2
     exit 1
   fi
-done
+done < <(jq -r '.targets[].name' "${manifest}")
 
 if ! awk '
   /^run:$/ {
