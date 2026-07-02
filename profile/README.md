@@ -95,7 +95,11 @@ Start here:
 - [Issue-to-PR MVP](https://github.com/kaizen-agents-org/.github/blob/main/docs/issue-to-pr-mvp.md): organization-level contract for turning issues into ready-for-review PRs.
 - [Implementation Status](https://github.com/kaizen-agents-org/.github/blob/main/docs/implementation-status.md): what works today and what is missing.
 - [Shared Skill Sync](https://github.com/kaizen-agents-org/.github/blob/main/docs/shared-skill-sync.md): how shared Kaizen skills are distributed to the core projects.
+- [Automation Roles](https://github.com/kaizen-agents-org/.github/blob/main/docs/automation-roles.md): responsibility boundaries for scout, monitor, and readiness automations.
 - [Organization Monitor](https://github.com/kaizen-agents-org/.github/blob/main/docs/org-monitor.md): how the cross-repository coordination monitor reports drift and files focused follow-up issues.
+- [Repository Improvement Scout](https://github.com/kaizen-agents-org/.github/blob/main/docs/repo-improvement-scout.md): how proactive repo-local improvement issues are discovered and bounded.
+- [Production Readiness Reviews](https://github.com/kaizen-agents-org/.github/blob/main/docs/production-readiness/README.md): weekly readiness review process, checklist, metrics, and report flow.
+- [Production Readiness Log](https://github.com/kaizen-agents-org/.github/blob/main/docs/production-readiness-log.md): dated readiness findings and priority hardening work.
 - [Design Decisions](https://github.com/kaizen-agents-org/.github/blob/main/docs/design-decisions.md): rationale behind the current direction.
 
 For automated coordination work, issues should be grounded in the Organization Profile, repository README, Architecture Notes, or the relevant project-local README/docs. If those sources conflict or do not support the proposed work, the automation should report the documentation gap instead of filing a speculative issue.
