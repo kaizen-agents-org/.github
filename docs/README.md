@@ -84,6 +84,8 @@ Dated organization-wide evaluations and their implementation guidance:
 - [verifier-strategy-2026-07-03.ja.md](./verifier-strategy-2026-07-03.ja.md): verifier implementation plan referenced by the strategy report (Japanese).
 - [evaluation-2026-07-04.ja.md](./evaluation-2026-07-04.ja.md): follow-up snapshot evaluation, one day later, with delta against the strategy report (Japanese).
 - [improvement-playbook.ja.md](./improvement-playbook.ja.md): actionable checklist (Phase A/B/C) derived from the evaluation above; update its progress log as work completes (Japanese).
+- [evaluation-2026-07-05.ja.md](./evaluation-2026-07-05.ja.md): re-evaluation after resyncing all repos to `origin/main`, with measured delta against 07-04 (Japanese).
+- [org-design-improvement-notes-2026-07-05.ja.md](./org-design-improvement-notes-2026-07-05.ja.md): cross-repo organizational design gaps (throughput control, evidence-strength labeling, primary-intent precedence, automation-role overlap, deterministic-vs-LLM judgment principle) intended for other AI agents to consult when attempting further kaizen (Japanese).
 
 ## Core Concepts
 
