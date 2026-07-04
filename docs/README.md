@@ -41,6 +41,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
 7. [Automation Roles](./automation-roles.md)
    - Improve, maintain, and readiness-check responsibilities
    - Issue prefixes, issue creation limits, and PR permissions
+   - Duplicate ownership rules across issue-creating automations
    - Boundaries between scout, monitor, readiness review, and issue creator
 
 8. [Organization Monitor](./org-monitor.md)
@@ -118,7 +119,7 @@ The Codex automation `Kaizen Agents repo improvement scout` actively scans the a
 
 ## Automation Layers
 
-The automation system is split into improve, maintain, and readiness-check layers. See [Automation Roles](./automation-roles.md) for the authoritative role boundaries, issue prefixes, and PR permissions.
+The automation system is split into improve, maintain, and readiness-check layers. See [Automation Roles](./automation-roles.md) for the authoritative role boundaries, issue prefixes, duplicate ownership rules, and PR permissions.
 
 ## Current Focus
 

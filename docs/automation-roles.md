@@ -45,3 +45,22 @@ closing keyword in the implementation PR body and verify
 `closingIssuesReferences` before reporting the PR ready. This keeps issue
 creation aligned with the issue-to-PR promise: merging the implementation PR
 closes the source issue.
+
+## Duplicate Ownership
+
+Before creating any issue, every issue-creating automation must search open
+issues and PRs in the target repository using the proposed title, affected
+paths, component names, and conceptual keywords. It may also search sibling
+repositories for related context, but duplicate blocking is target-repository
+scoped by default.
+
+An existing issue or PR blocks new issue creation when it clearly owns the same
+target repository and the same actionable follow-up. A cross-repository issue
+or PR blocks creation only when it explicitly owns that exact cross-repository
+work. Related work elsewhere should be linked in the report or issue body, but
+it must not by itself block a concrete repo-local issue.
+
+When a finding is skipped as duplicate, the automation report must name the
+existing issue or PR that owns the work. If ownership is unclear, create no new
+issue for that finding and report the ambiguity instead of allowing two
+automations to race on the same problem.
