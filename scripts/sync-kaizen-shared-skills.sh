@@ -25,7 +25,7 @@ skills=(
 )
 
 for target_root in "$@"; do
-  if [[ ! -d "${target_root}/.git" ]]; then
+  if [[ "$(git -C "${target_root}" rev-parse --is-inside-work-tree 2>/dev/null || true)" != "true" ]]; then
     echo "target root must be a git repository: ${target_root}" >&2
     exit 1
   fi
