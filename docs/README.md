@@ -76,6 +76,15 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Why `builder-agent` has both a skill and CLI
    - Why Product Kaizen is out of scope for now
 
+## Improvement Reports
+
+Dated organization-wide evaluations and their implementation guidance:
+
+- [improvement-report-2026-07-03.ja.md](./improvement-report-2026-07-03.ja.md): value-priority strategy report (Japanese).
+- [verifier-strategy-2026-07-03.ja.md](./verifier-strategy-2026-07-03.ja.md): verifier implementation plan referenced by the strategy report (Japanese).
+- [evaluation-2026-07-04.ja.md](./evaluation-2026-07-04.ja.md): follow-up snapshot evaluation, one day later, with delta against the strategy report (Japanese).
+- [improvement-playbook.ja.md](./improvement-playbook.ja.md): actionable checklist (Phase A/B/C) derived from the evaluation above; update its progress log as work completes (Japanese).
+
 ## Core Concepts
 
 - **Product goal**: issue registration should lead to a high-quality pull request, and a human merge should resolve the issue.
