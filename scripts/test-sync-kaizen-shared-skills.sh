@@ -34,9 +34,16 @@ git -C "${base_repo}" worktree add -q -b skill-sync-target "${worktree_repo}"
 bash "${sync_script}" "${repo_root}" "${worktree_repo}" >/dev/null \
   || fail "sync rejected a linked git worktree target"
 
+mkdir -p "${worktree_repo}/docs"
+if bash "${sync_script}" "${repo_root}" "${worktree_repo}/docs" >/dev/null 2>&1; then
+  fail "sync accepted a nested directory inside a git worktree"
+fi
+[[ ! -e "${worktree_repo}/docs/skills" ]] \
+  || fail "sync created skills under a nested target directory"
+
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   diff -qr "${repo_root}/skills/${skill}" "${worktree_repo}/skills/${skill}" >/dev/null \
     || fail "synced skill does not match source: ${skill}"
 done
 
-echo "PASS: shared skill sync accepts linked git worktree targets"
+echo "PASS: shared skill sync accepts linked git worktree roots and rejects nested targets"

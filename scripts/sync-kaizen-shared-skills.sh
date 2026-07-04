@@ -25,8 +25,15 @@ skills=(
 )
 
 for target_root in "$@"; do
-  if [[ "$(git -C "${target_root}" rev-parse --is-inside-work-tree 2>/dev/null || true)" != "true" ]]; then
+  target_top_level="$(git -C "${target_root}" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -z "${target_top_level}" ]]; then
     echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
+  target_abs="$(cd "${target_root}" && pwd -P)"
+  target_top_level_abs="$(cd "${target_top_level}" && pwd -P)"
+  if [[ "${target_abs}" != "${target_top_level_abs}" ]]; then
+    echo "target root must be the git repository root: ${target_root}" >&2
     exit 1
   fi
 
