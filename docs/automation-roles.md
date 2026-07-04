@@ -50,9 +50,11 @@ closes the source issue.
 
 Before creating any issue, every issue-creating automation must search open
 issues and PRs in the target repository using the proposed title, affected
-paths, component names, and conceptual keywords. It may also search sibling
-repositories for related context, but duplicate blocking is target-repository
-scoped by default.
+paths, component names, and conceptual keywords. It must also search sibling
+repositories for explicit cross-repository coordination issues or PRs that may
+own the same work. Duplicate blocking is target-repository scoped by default,
+except when an existing cross-repository issue or PR explicitly owns the exact
+work.
 
 An existing issue or PR blocks new issue creation when it clearly owns the same
 target repository and the same actionable follow-up. A cross-repository issue
@@ -61,6 +63,8 @@ work. Related work elsewhere should be linked in the report or issue body, but
 it must not by itself block a concrete repo-local issue.
 
 When a finding is skipped as duplicate, the automation report must name the
-existing issue or PR that owns the work. If ownership is unclear, create no new
-issue for that finding and report the ambiguity instead of allowing two
-automations to race on the same problem.
+existing issue or PR that owns the work. If ownership is unclear, create no
+repo-local implementation issue for that finding and report the ambiguity
+instead of allowing two automations to race on the same problem. The maintain
+layer may still create at most one coordination issue in `kaizen-loop` when the
+org-monitor prompt's ownership-ambiguity rule applies.
