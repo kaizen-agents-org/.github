@@ -58,6 +58,34 @@ The final gate must therefore be layered:
 3. Independent verifier
 4. Human review
 
+## Deterministic Gates, LLM Discovery
+
+Automation may use LLMs to find, summarize, and explain candidate issues, but review-critical gate decisions should be deterministic wherever a component contract can support that. When an existing automation is still prompt-only, its source prompt must use explicit documented checklists, record the evidence behind create/skip decisions, and treat that behavior as an interim step toward deterministic gates.
+
+Default rule:
+
+> Let code decide gates. Let LLMs discover evidence.
+
+Use deterministic code for:
+
+- verdict selection
+- confidence or risk thresholds
+- WIP limits and queue admission
+- duplicate suppression decisions
+- retry, escalation, and stop conditions
+- PR readiness labels or status fields
+
+For source-managed automations such as scout, monitor, and readiness issue creation, do not infer from this principle that the current prompts are allowed to skip backlog guards or duplicate checks. Until those checks move behind deterministic code, the prompt itself is the auditable contract and must spell out the required checks and evidence.
+
+Use LLMs for:
+
+- extracting claims from noisy logs, diffs, or issue text
+- finding likely implementation or test risks
+- explaining why a deterministic gate failed
+- proposing follow-up work for human or automated review
+
+This keeps review-critical behavior reproducible while still using LLMs where flexible interpretation is useful. If a component needs a new autonomous judgment, first decide whether that judgment belongs in deterministic code or in LLM-produced evidence that a deterministic gate consumes.
+
 ## Main Architecture
 
 ```mermaid

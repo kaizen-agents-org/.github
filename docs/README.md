@@ -73,6 +73,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
+   - Deterministic gates, LLM discovery
    - Why `builder-agent` has both a skill and CLI
    - Why Product Kaizen is out of scope for now
 
@@ -93,6 +94,7 @@ Dated organization-wide evaluations and their implementation guidance:
 - **Core philosophy**: Build -> Verify -> Improve.
 - **Responsibility split**: builders build, verifiers verify, Kaizen Loop coordinates.
 - **Quality gate**: builder self-review, mechanical verification, independent verifier, human review.
+- **Gate design**: code decides gates; LLMs discover evidence for deterministic gates to consume.
 - **Standalone principle**: `builder-agent`, `verifier`, and `kaizen-loop` should each be useful independently.
 - **MVP posture**: automate up to ready-for-review PR creation; keep merge under human control.
 - **Issue linkage**: implementation PRs must include a closing keyword such as `Closes #123` in the PR body.
