@@ -30,8 +30,14 @@ for target_root in "$@"; do
     echo "target root must be a git repository: ${target_root}" >&2
     exit 1
   fi
-  target_abs="$(cd "${target_root}" && pwd -P)"
-  target_top_level_abs="$(cd "${target_top_level}" && pwd -P)"
+  if ! target_abs="$(cd "${target_root}" 2>/dev/null && pwd -P)"; then
+    echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
+  if ! target_top_level_abs="$(cd "${target_top_level}" 2>/dev/null && pwd -P)"; then
+    echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
   if [[ "${target_abs}" != "${target_top_level_abs}" ]]; then
     echo "target root must be the git repository root: ${target_root}" >&2
     exit 1
