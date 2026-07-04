@@ -5,8 +5,9 @@ set -euo pipefail
 #
 # Validates that the deterministic, manifest-driven daily dogfood sync remains
 # wired the way docs/daily-dogfood-sync.md describes: a scheduled daily workflow
-# delegating to the manifest-driven sync workflow, a complete manifest, present
-# managed source paths, and the shared-skill fast path still callable.
+# delegating to the manifest-driven sync workflow, executable source-issue link
+# regression coverage, a complete manifest, present managed source paths, and
+# the shared-skill fast path still callable.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${repo_root}"
@@ -15,6 +16,7 @@ daily_workflow=".github/workflows/daily-dogfood-sync.yml"
 dogfood_workflow=".github/workflows/sync-daily-dogfood.yml"
 shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
 sync_script="scripts/sync-daily-dogfood.sh"
+pr_link_test="scripts/test-sync-daily-dogfood-pr-link.sh"
 manifest=".github/dogfood-sync/manifest.json"
 contract_doc="docs/daily-dogfood-sync.md"
 scout_prompt="automations/kaizen-agents-repo-improvement-scout.prompt.md"
@@ -32,6 +34,7 @@ for path in \
   "${dogfood_workflow}" \
   "${shared_skill_workflow}" \
   "${sync_script}" \
+  "${pr_link_test}" \
   "${manifest}" \
   "${contract_doc}" \
   "${scout_prompt}" \
@@ -294,5 +297,7 @@ fi
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"
 done
+
+"${pr_link_test}"
 
 echo "Daily dogfood sync contract is present."
