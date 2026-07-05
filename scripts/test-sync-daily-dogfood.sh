@@ -37,6 +37,22 @@ make_targets() {
   done < <(jq -r '.targets[].name' "${manifest}")
 }
 
+make_worktree_targets() {
+  local base_parent="$1"
+  local worktree_parent="$2"
+  local repo
+
+  while IFS= read -r repo; do
+    git init -q "${base_parent}/${repo}"
+    git -C "${base_parent}/${repo}" config user.email "test@example.com"
+    git -C "${base_parent}/${repo}" config user.name "test"
+    : > "${base_parent}/${repo}/.keep"
+    git -C "${base_parent}/${repo}" add -A
+    git -C "${base_parent}/${repo}" commit -qm init
+    git -C "${base_parent}/${repo}" worktree add -q -b "dogfood-sync-${repo}" "${worktree_parent}/${repo}"
+  done < <(jq -r '.targets[].name' "${manifest}")
+}
+
 # --- Happy path: managed paths copied, only managed paths change. ---
 happy="$(mktemp -d)"
 trap 'rm -rf "${happy}"' EXIT
@@ -68,9 +84,22 @@ while IFS= read -r repo; do
 done < <(jq -r '.targets[].name' "${manifest}")
 echo "PASS: managed paths copied for every target"
 
+# --- Regression: linked git worktree targets are valid repositories. ---
+worktree_base="$(mktemp -d)"
+worktree_targets="$(mktemp -d)"
+trap 'rm -rf "${happy}" "${worktree_base}" "${worktree_targets}"' EXIT
+make_worktree_targets "${worktree_base}" "${worktree_targets}"
+
+[[ -f "${worktree_targets}/builder-agent/.git" ]] \
+  || fail "test setup did not create a linked worktree with .git as a file"
+
+bash "${sync_script}" "${repo_root}" "${worktree_targets}" >/dev/null \
+  || fail "sync rejected linked git worktree targets"
+echo "PASS: linked git worktree targets are accepted"
+
 # --- Safety: unmanaged drift in a target aborts the sync. ---
 guard="$(mktemp -d)"
-trap 'rm -rf "${happy}" "${guard}"' EXIT
+trap 'rm -rf "${happy}" "${worktree_base}" "${worktree_targets}" "${guard}"' EXIT
 make_targets "${guard}"
 echo "rogue" > "${guard}/builder-agent/UNMANAGED_DRIFT.txt"
 
@@ -84,7 +113,7 @@ echo "PASS: unmanaged drift aborts the sync"
 # --- Safety: unsafe manifest target paths abort before copy/delete. ---
 unsafe_source="$(mktemp -d)"
 unsafe_targets="$(mktemp -d)"
-trap 'rm -rf "${happy}" "${guard}" "${unsafe_source}" "${unsafe_targets}"' EXIT
+trap 'rm -rf "${happy}" "${worktree_base}" "${worktree_targets}" "${guard}" "${unsafe_source}" "${unsafe_targets}"' EXIT
 mkdir -p "${unsafe_source}/.github/dogfood-sync" "${unsafe_targets}/builder-agent"
 git -C "${unsafe_targets}/builder-agent" init -q
 git -C "${unsafe_targets}/builder-agent" config user.email "test@example.com"
@@ -114,7 +143,7 @@ echo "PASS: unsafe target paths abort before copy"
 # --- Safety: unsafe manifest source paths abort before read/copy. ---
 unsafe_source_path_source="$(mktemp -d)"
 unsafe_source_path_targets="$(mktemp -d)"
-trap 'rm -rf "${happy}" "${guard}" "${unsafe_source}" "${unsafe_targets}" "${unsafe_source_path_source}" "${unsafe_source_path_targets}"' EXIT
+trap 'rm -rf "${happy}" "${worktree_base}" "${worktree_targets}" "${guard}" "${unsafe_source}" "${unsafe_targets}" "${unsafe_source_path_source}" "${unsafe_source_path_targets}"' EXIT
 mkdir -p "${unsafe_source_path_source}/.github/dogfood-sync" "${unsafe_source_path_targets}/builder-agent"
 git -C "${unsafe_source_path_targets}/builder-agent" init -q
 git -C "${unsafe_source_path_targets}/builder-agent" config user.email "test@example.com"
