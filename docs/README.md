@@ -90,6 +90,7 @@ Dated organization-wide evaluations and their implementation guidance:
 - [org-design-improvement-notes-2026-07-05.ja.md](./org-design-improvement-notes-2026-07-05.ja.md): cross-repo organizational design gaps (throughput control, evidence-strength labeling, primary-intent precedence, automation-role overlap, deterministic-vs-LLM judgment principle) intended for other AI agents to consult when attempting further kaizen (Japanese).
 - [evaluation-2026-07-05-v2.ja.md](./evaluation-2026-07-05-v2.ja.md): same-day afternoon re-evaluation with new findings — BLOCKED root cause (`required_conversation_resolution` + unresolved bot threads), WIP-limit/sandbox-smoke completion confirmed, fleet-hygiene regression evidence, and tracking issues filed per recommendation (Japanese).
 - [product-adoption-plan-2026-07-05.ja.md](./product-adoption-plan-2026-07-05.ja.md): decision guide for onboarding a real product onto the harness — staged timeline (supervised pilot in ~2 weeks, steady operation in 1.5–2.5 months), pilot preconditions, per-stack adjustments, and the single hard wait item (untrusted issue authors until Phase C-2) (Japanese).
+- [onboarding-kit-design-2026-07-05.ja.md](./onboarding-kit-design-2026-07-05.ja.md): design for deploying the harness onto a target repository in 4 commands — Onboarding Contract, declarative profiles under `.github/onboarding/`, `kaizen init --profile` hardening, branch-protection preset, deterministic contract check, smoke-artifact acceptance gate, and the Phase C-1 reusable-workflow runtime (Japanese).
 
 ## Core Concepts
 
