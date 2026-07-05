@@ -374,9 +374,9 @@
     <h2>入口 — 対象リポジトリで 1 コマンド</h2>
     <div class="cmd">
       <pre><span class="p">$</span> cd my-product
-<span class="p">$</span> curl -fsSL https://raw.githubusercontent.com/kaizen-agents-org/.github/main/onboarding/onboard.sh | sh</pre>
+<span class="p">$</span> curl -fsSL "https://raw.githubusercontent.com/kaizen-agents-org/.github/onboarding-v0.x/onboarding/onboard.sh" | sh</pre>
     </div>
-    <p class="cmd-note">兄弟スクリプトと versions.json は onboard.sh 自身と同じ base URL・同一 ref から取得。対象リポジトリ側には何も前提としない。冪等なので、済んでいるステップは検知してスキップされる。</p>
+    <p class="cmd-note">bootstrap も <code>main</code> ではなくリリースタグ(<code>onboarding-v0.x</code>)でピン留めし、初回導入の再現性を保証する。兄弟スクリプトと versions.json は onboard.sh 自身と同じ base URL・同一タグ ref から取得。対象リポジトリ側には何も前提としない。冪等なので、済んでいるステップは検知してスキップされる。</p>
   </section>
 
   <section>

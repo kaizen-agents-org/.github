@@ -169,10 +169,12 @@ org 内リポジトリへの skills 配布は「`.github/skills/` 正本 → syn
 
 ```bash
 cd my-product
-curl -fsSL https://raw.githubusercontent.com/kaizen-agents-org/.github/main/onboarding/onboard.sh | sh
+curl -fsSL "https://raw.githubusercontent.com/kaizen-agents-org/.github/onboarding-v0.x/onboarding/onboard.sh" | sh
 ```
 
-`onboard.sh` は §6 のコンポーネントを 1 本の冪等な動線に束ねるオーケストレータである。対象リポジトリ内には何も前提としない: 依存する兄弟スクリプト(`install-kaizen.sh` / `apply-branch-protection.sh` / `check-onboarding-contract.sh`)と versions.json は、自身と同じ base URL(`kaizen-agents-org/.github` の `onboarding/` 配下)から同一 ref で取得する。内部では次を順に行う:
+**入口もタグでピン留めする**: ツールチェーンを versions.json でピン留めするのと同じ理由で、bootstrap 自体も `main` ではなく `.github` のリリースタグ(`onboarding-v0.x`。#113 のタグ導入に相乗り)を参照する。これにより初回導入の再現性が保証され、upstream の変更が導入途中の挙動を変えることがない。最新タグの案内は onboarding/README が担う。
+
+`onboard.sh` は §6 のコンポーネントを 1 本の冪等な動線に束ねるオーケストレータである。対象リポジトリ内には何も前提としない: 依存する兄弟スクリプト(`install-kaizen.sh` / `apply-branch-protection.sh` / `check-onboarding-contract.sh`)と versions.json は、自身と同じ base URL(`kaizen-agents-org/.github` の `onboarding/` 配下)から**同一タグ ref** で取得する。内部では次を順に行う:
 
 ```text
 onboard.sh(冪等 — 既に済んでいるステップは検知してスキップ)
