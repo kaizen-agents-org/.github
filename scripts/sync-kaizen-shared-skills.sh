@@ -25,8 +25,21 @@ skills=(
 )
 
 for target_root in "$@"; do
-  if [[ ! -d "${target_root}/.git" ]]; then
+  target_top_level="$(git -C "${target_root}" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -z "${target_top_level}" ]]; then
     echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
+  if ! target_abs="$(cd "${target_root}" 2>/dev/null && pwd -P)"; then
+    echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
+  if ! target_top_level_abs="$(cd "${target_top_level}" 2>/dev/null && pwd -P)"; then
+    echo "target root must be a git repository: ${target_root}" >&2
+    exit 1
+  fi
+  if [[ "${target_abs}" != "${target_top_level_abs}" ]]; then
+    echo "target root must be the git repository root: ${target_root}" >&2
     exit 1
   fi
 
