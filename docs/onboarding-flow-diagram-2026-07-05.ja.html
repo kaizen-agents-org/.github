@@ -1,0 +1,519 @@
+<title>Kaizen Agents 導入フロー</title>
+<style>
+  :root {
+    --bg: #f3f5f8;
+    --surface: #ffffff;
+    --ink: #1c2733;
+    --ink-2: #5a6773;
+    --line: #d9dfe7;
+    --indigo: #2f4e8c;
+    --indigo-ink: #2f4e8c;
+    --indigo-soft: #e9edf7;
+    --vermilion: #bf3b2f;
+    --vermilion-soft: #fbeae6;
+    --green: #25795a;
+    --green-soft: #e3f1ea;
+    --mono-bg: #edf0f4;
+    --shadow: 0 1px 2px rgba(28, 39, 51, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151c;
+      --surface: #182029;
+      --ink: #e5eaf0;
+      --ink-2: #97a3b0;
+      --line: #2b3542;
+      --indigo: #8caae6;
+      --indigo-ink: #a9c1f0;
+      --indigo-soft: #202c40;
+      --vermilion: #e87f70;
+      --vermilion-soft: #3b2320;
+      --green: #66bd94;
+      --green-soft: #1c342b;
+      --mono-bg: #0d1218;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f5f8;
+    --surface: #ffffff;
+    --ink: #1c2733;
+    --ink-2: #5a6773;
+    --line: #d9dfe7;
+    --indigo: #2f4e8c;
+    --indigo-ink: #2f4e8c;
+    --indigo-soft: #e9edf7;
+    --vermilion: #bf3b2f;
+    --vermilion-soft: #fbeae6;
+    --green: #25795a;
+    --green-soft: #e3f1ea;
+    --mono-bg: #edf0f4;
+    --shadow: 0 1px 2px rgba(28, 39, 51, 0.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151c;
+    --surface: #182029;
+    --ink: #e5eaf0;
+    --ink-2: #97a3b0;
+    --line: #2b3542;
+    --indigo: #8caae6;
+    --indigo-ink: #a9c1f0;
+    --indigo-soft: #202c40;
+    --vermilion: #e87f70;
+    --vermilion-soft: #3b2320;
+    --green: #66bd94;
+    --green-soft: #1c342b;
+    --mono-bg: #0d1218;
+    --shadow: none;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+  }
+  code {
+    background: var(--mono-bg);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  a { color: var(--indigo-ink); }
+  a:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--indigo-ink);
+    text-transform: uppercase;
+  }
+  header h1 {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    margin: 8px 0 10px;
+    text-wrap: balance;
+  }
+  header .lede {
+    color: var(--ink-2);
+    max-width: 40em;
+    margin: 0;
+  }
+  .status {
+    margin-top: 18px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--vermilion);
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    color: var(--ink-2);
+  }
+  .status strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- section headings ---------- */
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* ---------- stage strip ---------- */
+  .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stage {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stage .num {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--indigo-ink);
+  }
+  .stage h3 { font-size: 14.5px; font-weight: 600; margin: 4px 0 2px; }
+  .stage p { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.6; }
+  .stage .tag {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 1px 10px;
+  }
+  .tag.now { background: var(--indigo-soft); color: var(--indigo-ink); }
+  .tag.wait { background: var(--mono-bg); color: var(--ink-2); }
+  .stage.dim { opacity: 0.82; }
+  @media (max-width: 640px) { .stages { grid-template-columns: 1fr; } }
+
+  /* ---------- command block ---------- */
+  .cmd {
+    background: var(--mono-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 18px;
+    overflow-x: auto;
+  }
+  .cmd pre {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre;
+  }
+  .cmd .p { color: var(--ink-2); user-select: none; }
+  .cmd-note { font-size: 12.5px; color: var(--ink-2); margin: 8px 2px 0; }
+
+  /* ---------- pipeline ---------- */
+  .pipeline { display: flex; flex-direction: column; }
+  .step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    column-gap: 16px;
+  }
+  .rail { position: relative; }
+  .node {
+    width: 32px; height: 32px;
+    margin: 2px auto 0;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--indigo);
+    color: var(--indigo-ink);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .step .rail::after {
+    content: "";
+    position: absolute;
+    left: 50%; transform: translateX(-50%);
+    top: 36px; bottom: -2px;
+    width: 2px;
+    background: var(--line);
+  }
+  .step:last-child .rail::after { display: none; }
+  .step .body { padding-bottom: 22px; min-width: 0; }
+  .step:last-child .body { padding-bottom: 0; }
+  .step h3 { font-size: 15.5px; font-weight: 600; margin: 4px 0 4px; }
+  .step h3 code { font-size: 0.88em; }
+  .step p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 44em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    background: var(--indigo-soft);
+    color: var(--indigo-ink);
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .confirm {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    margin-top: 10px;
+    background: var(--vermilion-soft);
+    border: 1px solid color-mix(in srgb, var(--vermilion) 35%, transparent);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+  }
+  .confirm b {
+    color: var(--vermilion);
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .node.goal { border-color: var(--green); color: var(--green); }
+  .goal-card {
+    background: var(--green-soft);
+    border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 4px;
+  }
+  .goal-card h3 { margin-top: 0; color: var(--green); }
+  .goal-card p { color: var(--ink); opacity: 0.85; }
+  .contract {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 20px;
+    font-size: 13px;
+  }
+  .contract li { display: flex; gap: 8px; align-items: baseline; }
+  .contract li::before { content: "✓"; color: var(--green); font-weight: 700; }
+  @media (max-width: 560px) { .contract { grid-template-columns: 1fr; } }
+
+  /* ---------- runtime cards ---------- */
+  .runtimes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .runtimes { grid-template-columns: 1fr; } }
+  .rt {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rt .kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--ink-2); }
+  .rt h3 { font-size: 15px; font-weight: 600; margin: 0; }
+  .rt p { font-size: 13px; color: var(--ink-2); margin: 0; }
+  .rt .flow {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.9;
+    background: var(--mono-bg);
+    border-radius: 6px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    color: var(--ink);
+  }
+  .rt .flow .arr { color: var(--indigo-ink); }
+  .merge-note {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-2);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 9px 14px;
+  }
+  @media (max-width: 640px) { .merge-note { grid-column: auto; } }
+
+  /* ---------- ops list ---------- */
+  .ops { display: flex; flex-direction: column; gap: 10px; }
+  .op {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 13px 16px;
+    box-shadow: var(--shadow);
+  }
+  .op .ico {
+    font-size: 16px;
+    color: var(--indigo-ink);
+    text-align: center;
+    line-height: 1.5;
+  }
+  .op h3 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .op p { font-size: 13px; color: var(--ink-2); margin: 0; max-width: 46em; }
+
+  footer { font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Kaizen Agents Org / Onboarding Flow</div>
+    <h1>ハーネスを他プロジェクトへ導入するフロー</h1>
+    <p class="lede">対象リポジトリで <code>onboard.sh</code> を 1 回実行すると、Onboarding Contract(導入完了の状態定義)が満たされ、以後は同じコマンドの再実行がアップデートになる — という設計。所要 30 分以内、前提は「gh CLI が使える」こと。</p>
+    <div class="status"><strong>現在のステータス: 設計段階。</strong>このフローは PR #111 の設計書で定義されたもので、実装は Stage 1 の issue(.github #112 / #113、kaizen-loop #178 / #179)の完了待ちです。</div>
+  </header>
+
+  <section>
+    <h2>展開の 3 段階</h2>
+    <div class="stages">
+      <div class="stage">
+        <div class="num">STAGE 1</div>
+        <h3>Local Scheduler 型</h3>
+        <p>オーナーのマシンで scheduler を回す。dogfood で稼働中の構成に「導入動線」を足すだけ。</p>
+        <span class="tag now">実装対象(〜2週間)</span>
+      </div>
+      <div class="stage dim">
+        <div class="num">STAGE 2</div>
+        <h3>GitHub Actions 型</h3>
+        <p>対象リポジトリの Actions で完結。caller workflow 1 枚 + <code>kaizen:run</code> ラベルが実行認可。</p>
+        <span class="tag wait">Phase B 完了後(C-1)</span>
+      </div>
+      <div class="stage dim">
+        <div class="num">STAGE 3</div>
+        <h3>公開テンプレート</h3>
+        <p>「Use this template」で第三者がドキュメントのみで導入。</p>
+        <span class="tag wait">Phase C</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>入口 — 対象リポジトリで 1 コマンド</h2>
+    <div class="cmd">
+      <pre><span class="p">$</span> cd my-product
+<span class="p">$</span> curl -fsSL "https://raw.githubusercontent.com/kaizen-agents-org/.github/onboarding-v0.x/onboarding/onboard.sh" | sh</pre>
+    </div>
+    <p class="cmd-note">bootstrap も <code>main</code> ではなくリリースタグ(<code>onboarding-v0.x</code>)でピン留めし、初回導入の再現性を保証する。兄弟スクリプトと versions.json は onboard.sh 自身と同じ base URL・同一タグ ref から取得。対象リポジトリ側には何も前提としない。冪等なので、済んでいるステップは検知してスキップされる。</p>
+  </section>
+
+  <section>
+    <h2>onboard.sh の内部 — 7 ステップ・人間の確認は 3 点だけ</h2>
+    <div class="pipeline">
+
+      <div class="step">
+        <div class="rail"><div class="node">1</div></div>
+        <div class="body">
+          <h3>ツールチェーン install / update</h3>
+          <p>versions.json(互換バージョン組)と突合し、kaizen-loop / builder-agent / verifier のうち差分があるものだけ更新。</p>
+          <div class="chips"><span class="chip">install-kaizen.sh</span><span class="chip">versions.json</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">2</div></div>
+        <div class="body">
+          <h3>スタック検出 → プロファイル提案</h3>
+          <p><code>package.json</code> / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code> を検出し、pilot-node / pilot-python / pilot-go / pilot-rust を提案。検出は提案まで — 確定はしない。</p>
+          <div class="confirm"><b>確認 1</b><span>プロファイルと verify コマンドの承認(検証コマンドは信頼の根幹)</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">3</div></div>
+        <div class="body">
+          <h3><code>kaizen init --profile &lt;選択&gt;</code></h3>
+          <p>プロファイルをデフォルト config にオーバーレイして雛形を生成。ラベル・issue テンプレート作成、shared skills の vendor と指紋記録まで行う。</p>
+          <div class="chips"><span class="chip">.kaizen/config.yml</span><span class="chip">kaizen ラベル群</span><span class="chip">ISSUE_TEMPLATE/kaizen.yml</span><span class="chip">skills/ + manifest</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">4</div></div>
+        <div class="body">
+          <h3>Branch protection 適用</h3>
+          <p>組織標準(required check + conversation resolution + enforce_admins)を <code>gh api</code> PUT 1 回で適用する冪等スクリプト。</p>
+          <div class="confirm"><b>確認 2</b><span>管理権限に踏み込む操作のため明示承認</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">5</div></div>
+        <div class="body">
+          <h3><code>kaizen doctor --repair</code></h3>
+          <p>プリフライト: gh 認証・ラベル・agent 認証・builder / verifier の可用性を検査し、直せるものは自動修復。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">6</div></div>
+        <div class="body">
+          <h3><code>kaizen smoke --yes</code></h3>
+          <p>sandbox の Issue → PR を実際に完走させる受け入れテスト。完走の証拠を artifact としてリポジトリにコミット。</p>
+          <div class="confirm"><b>確認 3</b><span>実リポジトリに sandbox issue / PR を作る操作のため承認</span></div>
+          <div class="chips"><span class="chip">docs/smoke-runs/&lt;ts&gt;.json</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node">7</div></div>
+        <div class="body">
+          <h3>check-onboarding-contract.sh</h3>
+          <p>契約充足を決定的スクリプトで最終判定。組織の安全最低線 — <code>pr-only</code> 固定、wipLimit ≤ 5、verifier 有効、protectedPaths がオーバーレイで削れない最低集合を包含 — もここで検証する。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="rail"><div class="node goal">✓</div></div>
+        <div class="body">
+          <div class="goal-card">
+            <h3>導入完了 = Onboarding Contract 充足</h3>
+            <p>手順書を終えたからではなく、対象リポジトリが次の状態になったことをもって完了と機械判定する:</p>
+            <ul class="contract">
+              <li>.kaizen/config.yml(スキーマ + 安全最低線)</li>
+              <li>kaizen ラベル群</li>
+              <li>issue テンプレート</li>
+              <li>branch protection</li>
+              <li>skills + skills-manifest.json</li>
+              <li>smoke artifact 1 件以上</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>導入後の運用 — 同じ契約の上にランタイムを載せ替える</h2>
+    <div class="runtimes">
+      <div class="rt">
+        <div class="kicker">形態 A — STAGE 1(今すぐ)</div>
+        <h3>Local Scheduler 型</h3>
+        <p>オーナーのマシンで夜間などに scheduler を実行。初期は流量を絞る(wipLimit 2、1 夜 1 issue)。</p>
+        <div class="flow">kaizen scheduler<br><span class="arr">└→</span> kaizen fix &lt;issue&gt;<br><span class="arr">&nbsp;&nbsp;&nbsp;├</span> builder-agent<br><span class="arr">&nbsp;&nbsp;&nbsp;├</span> 機械検証(config)<br><span class="arr">&nbsp;&nbsp;&nbsp;└</span> verifier <span class="arr">→</span> PR 作成</div>
+      </div>
+      <div class="rt">
+        <div class="kicker">形態 B — STAGE 2(Phase C-1)</div>
+        <h3>GitHub Actions 型</h3>
+        <p>書き込み権限者が issue に <code>kaizen:run</code> ラベルを付ける = 実行認可。対象側の導入物は caller workflow 1 枚。</p>
+        <div class="flow">issue labeled: kaizen:run<br><span class="arr">└→</span> kaizen-run.yml(caller)<br><span class="arr">&nbsp;&nbsp;&nbsp;└→</span> reusable workflow @v0.x<br><span class="arr">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>contract check <span class="arr">→</span> fix <span class="arr">→</span> PR</div>
+      </div>
+      <div class="merge-note">どちらの形態も同じ Onboarding Contract・同じ PR 品質ゲート(機械検証 + verifier + 人間レビュー)に合流する。自律マージは凍結のまま。</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>継続運用</h2>
+    <div class="ops">
+      <div class="op">
+        <div class="ico mono">↻</div>
+        <div>
+          <h3>アップデート = 同じコマンドの再実行</h3>
+          <p>versions.json 突合 → 差分コンポーネントのみ更新 → skills 再 vendor → config マイグレーション(ユーザーのカスタマイズは保持)→ 契約再検証。専用のアップデート手順は存在しない。</p>
+        </div>
+      </div>
+      <div class="op">
+        <div class="ico mono">◔</div>
+        <div>
+          <h3>週 1 の self-update check</h3>
+          <p>upstream に新しい互換バージョン組が出たら対象リポジトリに通知 issue を 1 件だけ立てる。自動更新はせず、実行は常にオーナーの 1 コマンド。</p>
+        </div>
+      </div>
+      <div class="op">
+        <div class="ico mono">＋</div>
+        <div>
+          <h3>fleet.json への登録(1 行 PR)</h3>
+          <p>org 側の monitor / weekly readiness レビューの巡回対象に加わる。automation のコピーは発生しない。scout(issue 生成側)は消化の安定を確認してから opt-in。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    出典: <a href="https://github.com/kaizen-agents-org/.github/pull/111">PR #111</a> — docs/onboarding-kit-design-2026-07-05.ja.md。姉妹編の adoption plan が「いつ・どの条件で載せるか」、本フローが「どうやって載せるか」を担う。
+  </footer>
+
+</div>
