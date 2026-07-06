@@ -245,7 +245,7 @@ Responsibility follows the normal ownership split:
 
 The default timing is: after required checks pass, inspect unresolved review threads before treating a generated PR as merge-ready. If a bot thread identifies a real defect, rerun or repair the generated PR. If the thread is false positive, obsolete, or a product-policy judgment, record that decision in the PR conversation before a human resolves it.
 
-The organization default should be consistent across `kaizen-loop`, `builder-agent`, `verifier`, and `.github`: required status checks plus required conversation resolution for protected main branches. Exceptions should be explicit design decisions with a repository-specific reason. Periodic branch-protection audits should treat a missing `required_conversation_resolution` setting as configuration drift unless an exception is documented.
+The organization default should be consistent across `kaizen-loop`, `builder-agent`, `verifier`, and `.github`: required status checks, required conversation resolution, and `enforce_admins` for protected main branches. Exceptions should be explicit design decisions with a repository-specific reason. Periodic branch-protection audits should treat a missing `required_conversation_resolution` setting or missing admin enforcement as configuration drift unless an exception is documented.
 
 ## Product Kaizen Skill Is Out of Scope For Now
 
