@@ -46,6 +46,8 @@ Failed or unavailable:
 | Verifier false-positive rate | unavailable | <why> |
 | PR linkage success rate | unavailable | <why> |
 | Safety-check coverage | unavailable | <why> |
+| Non-Node E2E pass count | unavailable | <target repository language/stack and why> |
+| Stack-assumption issue count | unavailable | <target repository language/stack and why> |
 | Open PR backlog | unavailable | <why> |
 | Open `kaizen` issue backlog | unavailable | <why> |
 | Repeated failure reasons | unavailable | <why> |
@@ -57,6 +59,8 @@ Failed or unavailable:
 - Repository state: <branch, upstream, and default-branch alignment>
 - CI state: <latest relevant checks or reason unavailable>
 - PR state: <open generated PR count, blockers, or reason unavailable>
+- Stack-independence state: <target repository language/stack, completed
+  non-Node E2E run, filed assumption issues, or reason unavailable>
 - Explicit gaps: <metrics or state that could not be collected>
 
 ## Findings

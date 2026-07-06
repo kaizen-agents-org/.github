@@ -29,6 +29,10 @@ Use this checklist for each weekly readiness review.
   issue-link recognition, and PR guardian follow-up.
 - Record the issue, branch, PR, verifier verdict, and linkage result when
   available.
+- Record the target repository language and stack family for each completed
+  run. Keep stack-independence as a readiness gap until at least one dissimilar
+  non-Node repository has completed Issue-to-PR-to-merge and any broken
+  assumptions have been filed as target-repository issues.
 - If no real E2E evidence exists, keep that as a readiness gap.
 
 ## Verifier Quality
