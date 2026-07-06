@@ -231,6 +231,22 @@ Non-responsibilities:
 - implementing the code change
 - making independent code-quality judgments itself
 
+## Generated PRs And Conversation Resolution
+
+Generated PRs must remain normal ready-for-review pull requests that pass the same branch protection as human-authored PRs.
+
+For repositories that use `required_conversation_resolution: true`, a generated PR can report all required checks as successful and still have `mergeStateStatus: BLOCKED` when a review thread remains unresolved. This is expected behavior, not a branch protection failure. Review bot threads from CodeRabbit, Codex connector, or similar systems are part of the review gate until they are answered and resolved.
+
+Responsibility follows the normal ownership split:
+
+- `builder-agent` should address actionable implementation feedback when Kaizen Loop reruns the builder for a generated PR.
+- `kaizen-loop` should detect unresolved review threads during PR follow-up and either rerun the builder for actionable bot feedback or escalate with clear evidence when the thread needs human judgment.
+- Human maintainers decide whether non-actionable or policy-level bot comments can be resolved, and they remain responsible for the final merge.
+
+The default timing is: after required checks pass, inspect unresolved review threads before treating a generated PR as merge-ready. If a bot thread identifies a real defect, rerun or repair the generated PR. If the thread is false positive, obsolete, or a product-policy judgment, record that decision in the PR conversation before a human resolves it.
+
+The organization default should be consistent across `kaizen-loop`, `builder-agent`, `verifier`, and `.github`: required status checks, required conversation resolution, and `enforce_admins` for protected main branches. Exceptions should be explicit design decisions with a repository-specific reason. Periodic branch-protection audits should treat a missing `required_conversation_resolution` setting or missing admin enforcement as configuration drift unless an exception is documented.
+
 ## Product Kaizen Skill Is Out of Scope For Now
 
 The Product Kaizen Skill is useful, but it belongs to a different layer.
