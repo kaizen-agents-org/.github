@@ -80,7 +80,7 @@ This directory contains the organization-level documentation for Kaizen Agents.
 
 ## Improvement Reports
 
-Dated organization-wide evaluations and their implementation guidance:
+Dated organization-wide evaluations and their implementation guidance. Evaluation reports and the improvement playbook in this directory are the canonical, versioned copies; any local workspace copies outside this repository are mirrors only.
 
 - [improvement-report-2026-07-03.ja.md](./improvement-report-2026-07-03.ja.md): value-priority strategy report (Japanese).
 - [verifier-strategy-2026-07-03.ja.md](./verifier-strategy-2026-07-03.ja.md): verifier implementation plan referenced by the strategy report (Japanese).
