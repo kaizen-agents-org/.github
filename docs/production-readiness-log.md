@@ -11,10 +11,12 @@ weekly checklist, metrics, and log template used to maintain this log.
 
 | Date | Judgment | Main gaps |
 | --- | --- | --- |
+| [2026-07-06](./production-readiness/logs/2026-07-06.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Verifier dogfood verification failures, local-only review-window metrics, high open backlog, incomplete full-fleet refresh evidence, partial safety-control smoke coverage. |
 | [2026-06-29](./production-readiness/logs/2026-06-29.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | No recorded real sandbox E2E artifact, local-only outcome metrics, open generated PR backlog, small verifier eval corpus, incomplete active-fleet refresh evidence. |
 | [2026-06-27](./production-readiness/logs/2026-06-27.md) | Ready for dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Verifier depth, real E2E evidence, safety hardening, PR linkage checks, operational metrics. |
 
 ## Review Files
 
+- [2026-07-06](./production-readiness/logs/2026-07-06.md): weekly readiness review.
 - [2026-06-29](./production-readiness/logs/2026-06-29.md): weekly readiness review.
 - [2026-06-27](./production-readiness/logs/2026-06-27.md): baseline readiness review.
