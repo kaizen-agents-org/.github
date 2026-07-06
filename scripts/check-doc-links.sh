@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "${script_dir}/.." && pwd)"
+
+REPO_ROOT="${repo_root}" \
 ruby <<'RUBY'
 require "pathname"
 
-root = Pathname.new(Dir.pwd)
+root = Pathname.new(ENV.fetch("REPO_ROOT"))
+Dir.chdir(root)
 broken = []
 
 Dir.glob("docs/**/*.md").sort.each do |file|
