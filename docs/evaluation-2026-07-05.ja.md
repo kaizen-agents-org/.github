@@ -2,7 +2,7 @@
 
 対象: kaizen-agents-org 全リポジトリ(`.github` / `kaizen-loop` / `builder-agent` / `verifier` / `coderabbit` / `renovate-config`)
 根拠: 全リポジトリを `origin/main` へ fast-forward 同期した直後の GitHub 実測(open PR/issue、CI)、`verifier` の `pnpm eval` 実行結果、`kaizen-loop` のソース確認、ローカル `~/.kaizen` の smoke artifact 確認。
-前回評価: [EVALUATION-2026-07-04.ja.md](./EVALUATION-2026-07-04.ja.md)、[IMPROVEMENT-PLAYBOOK.ja.md](./IMPROVEMENT-PLAYBOOK.ja.md)
+前回評価: [evaluation-2026-07-04.ja.md](./evaluation-2026-07-04.ja.md)、[improvement-playbook.ja.md](./improvement-playbook.ja.md)
 
 ---
 
@@ -56,4 +56,4 @@ Phase A の「流れの回復」は大きく前進した。次に着手すべき
 3. **メトリクスの GitHub 永続化**(A-5)— ローカル集計は取れるようになったので、あとは `.github/docs/metrics/` への週次書き込みを自動化するだけ。
 4. **Phase B(verifier LLM 化)への着手判断**— eval コーパスが 20 ケースに拡充され CI ゲート化もされたので、戦略ノート Step 3(Claim 抽出の LLM 化)に進む条件は整いつつある。ただし正規表現ゲートの限界(誤検知)を実データで再確認してから進めるとよい。
 
-具体的な次アクションは引き続き [IMPROVEMENT-PLAYBOOK.ja.md](./IMPROVEMENT-PLAYBOOK.ja.md) のチェックリストに従う。A-1/A-2 は完了扱いにしてよい状態、A-3〜A-5 が次の焦点。
+具体的な次アクションは引き続き [improvement-playbook.ja.md](./improvement-playbook.ja.md) のチェックリストに従う。A-1/A-2 は完了扱いにしてよい状態、A-3〜A-5 が次の焦点。
