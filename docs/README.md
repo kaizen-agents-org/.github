@@ -11,66 +11,71 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - End-to-end workflow
    - Quality gate model
 
-2. [Documentation Sources](./documentation-sources.md)
+1. [Documentation Sources](./documentation-sources.md)
    - Source-of-truth order
    - Documentation-backed issue evidence
    - Maintenance expectations for profile, README, architecture, and project docs
 
-3. [MVP Plan](./mvp-plan.md)
+1. [MVP Plan](./mvp-plan.md)
    - Phased plan for making the system usable
    - Minimal vertical slice
    - Gate contracts
    - Operational readiness
 
-4. [Issue-to-PR MVP](./issue-to-pr-mvp.md)
+1. [Issue-to-PR MVP](./issue-to-pr-mvp.md)
    - Organization-level MVP goal
    - Per-repository contract
    - Ready-for-review PR requirements
    - Failure behavior
 
-5. [Shared Skill Sync](./shared-skill-sync.md)
+1. [Shared Skill Sync](./shared-skill-sync.md)
    - Shared skill source of truth
    - Per-project vendoring
    - Update propagation workflow
 
-6. [Daily Dogfood Sync](./daily-dogfood-sync.md)
+1. [Kaizen Toolchain Release Tags](./release-tags.md)
+   - `v0.x.y` tag policy for `kaizen-loop`, `builder-agent`, and `verifier`
+   - Compatibility manifest ownership
+   - Release and install verification checklist
+
+1. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
    - Organization monitor contract
 
-7. [Automation Roles](./automation-roles.md)
+1. [Automation Roles](./automation-roles.md)
    - Improve, maintain, and readiness-check responsibilities
    - Issue prefixes, issue creation limits, and PR permissions
    - Duplicate ownership rules across issue-creating automations
    - Boundaries between scout, monitor, readiness review, and issue creator
 
-8. [Organization Monitor](./org-monitor.md)
+1. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
-9. [Repository Improvement Scout](./repo-improvement-scout.md)
+1. [Repository Improvement Scout](./repo-improvement-scout.md)
    - Proactive repo-local improvement discovery
    - `[scout]` issue creation rules
    - Source prompt stored under `../automations/`
 
-10. [Implementation Status](./implementation-status.md)
+1. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-11. [Production Readiness Log](./production-readiness-log.md)
+1. [Production Readiness Log](./production-readiness-log.md)
    - Dated readiness evaluations
    - Observed operational gaps
    - Priority hardening work before broader production use
 
-12. [Production Readiness Reviews](./production-readiness/README.md)
+1. [Production Readiness Reviews](./production-readiness/README.md)
    - Weekly review process
    - Checklist, metrics, and log template
    - Source-managed weekly automation prompt
 
-13. [Design Decisions](./design-decisions.md)
+1. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough

@@ -59,6 +59,7 @@ flowchart TB
 - [docs/architecture.md](./docs/architecture.md): system responsibilities and end-to-end flow.
 - [docs/issue-to-pr-mvp.md](./docs/issue-to-pr-mvp.md): organization-level MVP contract.
 - [docs/shared-skill-sync.md](./docs/shared-skill-sync.md): how shared skills are distributed.
+- [docs/release-tags.md](./docs/release-tags.md): release tag policy and compatibility manifest checklist for the onboarding toolchain.
 - [docs/daily-dogfood-sync.md](./docs/daily-dogfood-sync.md): deterministic daily sync contract for shared skills and dogfooding contracts.
 - [docs/org-monitor.md](./docs/org-monitor.md): cross-repository coordination monitor.
 - [docs/automation-roles.md](./docs/automation-roles.md): automation layer responsibilities, issue prefixes, and creation limits.
