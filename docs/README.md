@@ -33,44 +33,49 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Per-project vendoring
    - Update propagation workflow
 
-6. [Daily Dogfood Sync](./daily-dogfood-sync.md)
+6. [Kaizen Toolchain Release Tags](./release-tags.md)
+   - `v0.x.y` tag policy for `kaizen-loop`, `builder-agent`, and `verifier`
+   - Compatibility manifest ownership
+   - Release and install verification checklist
+
+7. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
    - Organization monitor contract
 
-7. [Automation Roles](./automation-roles.md)
+8. [Automation Roles](./automation-roles.md)
    - Improve, maintain, and readiness-check responsibilities
    - Issue prefixes, issue creation limits, and PR permissions
    - Duplicate ownership rules across issue-creating automations
    - Boundaries between scout, monitor, readiness review, and issue creator
 
-8. [Organization Monitor](./org-monitor.md)
+9. [Organization Monitor](./org-monitor.md)
    - Cross-repository coordination checks
    - Conservative follow-up issue creation
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
-9. [Repository Improvement Scout](./repo-improvement-scout.md)
+10. [Repository Improvement Scout](./repo-improvement-scout.md)
    - Proactive repo-local improvement discovery
    - `[scout]` issue creation rules
    - Source prompt stored under `../automations/`
 
-10. [Implementation Status](./implementation-status.md)
+11. [Implementation Status](./implementation-status.md)
    - What works today
    - What is still missing
    - What is still being hardened
 
-11. [Production Readiness Log](./production-readiness-log.md)
+12. [Production Readiness Log](./production-readiness-log.md)
    - Dated readiness evaluations
    - Observed operational gaps
    - Priority hardening work before broader production use
 
-12. [Production Readiness Reviews](./production-readiness/README.md)
+13. [Production Readiness Reviews](./production-readiness/README.md)
    - Weekly review process
    - Checklist, metrics, and log template
    - Source-managed weekly automation prompt
 
-13. [Design Decisions](./design-decisions.md)
+14. [Design Decisions](./design-decisions.md)
    - Product goal
    - Responsibility separation
    - Why self-review is not enough
