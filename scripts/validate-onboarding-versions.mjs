@@ -18,6 +18,11 @@ try {
   process.exit(1);
 }
 
+if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
+  console.error("onboarding versions manifest must be a JSON object");
+  process.exit(1);
+}
+
 const keys = Object.keys(manifest).sort();
 const expectedKeys = [...expectedComponents].sort();
 
@@ -28,7 +33,7 @@ if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
 
 for (const component of expectedComponents) {
   const version = manifest[component];
-  if (typeof version !== "string" || !/^v0\.\d+\.\d+$/.test(version)) {
+  if (typeof version !== "string" || !/^v0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
     console.error(`${component} must be pinned to a v0.x.y tag`);
     process.exit(1);
   }
