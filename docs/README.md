@@ -70,6 +70,10 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Observed operational gaps
    - Priority hardening work before broader production use
 
+1. [Weekly Kaizen Metrics](./metrics/README.md)
+   - Durable ISO-week snapshots from `kaizen status --metrics`
+   - Denominator-bearing rates for Phase A-5 and readiness reviews
+
 1. [Production Readiness Reviews](./production-readiness/README.md)
    - Weekly review process
    - Checklist, metrics, and log template

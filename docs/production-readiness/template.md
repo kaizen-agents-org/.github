@@ -34,8 +34,12 @@ Failed or unavailable:
 
 ## Metrics Observed
 
+Weekly metrics snapshot: `docs/metrics/<ISO-week>.md`
+
 | Metric | Value | Evidence |
 | --- | --- | --- |
+| Human-edit-free merge rate | unavailable | <numerator / denominator and why unavailable if missing> |
+| Median time-to-merge | unavailable | <merged PR denominator and why unavailable if missing> |
 | Issue-to-PR success rate | unavailable | <why> |
 | Verification failure rate | unavailable | <why> |
 | Verifier block rate | unavailable | <why> |
@@ -53,6 +57,7 @@ Failed or unavailable:
 | Repeated failure reasons | unavailable | <why> |
 | Post-merge correction rate | unavailable | <why> |
 | Sync drift count | unavailable | <why> |
+| Open PR age | unavailable | <open PR denominator and oldest/median age when available> |
 
 ## Repository / CI / PR State
 

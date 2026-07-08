@@ -65,6 +65,7 @@ flowchart TB
 - [docs/automation-roles.md](./docs/automation-roles.md): automation layer responsibilities, issue prefixes, and creation limits.
 - [docs/repo-improvement-scout.md](./docs/repo-improvement-scout.md): proactive repo-local improvement scout scope and issue creation rules.
 - [docs/implementation-status.md](./docs/implementation-status.md): current implementation state.
+- [docs/metrics/README.md](./docs/metrics/README.md): weekly denominator-bearing Kaizen metrics snapshots.
 - [docs/production-readiness-log.md](./docs/production-readiness-log.md): dated readiness findings and operational gaps.
 - [docs/production-readiness/README.md](./docs/production-readiness/README.md): weekly readiness review process, checklist, metrics, and template.
 - [docs/design-decisions.md](./docs/design-decisions.md): rationale for the current architecture.

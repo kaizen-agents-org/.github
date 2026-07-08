@@ -25,6 +25,7 @@ directory in `kaizen-agents-org/.github`.
 Read these source-managed readiness docs first:
 
 - `docs/automation-roles.md`
+- `docs/metrics/README.md`
 - `docs/production-readiness/README.md`
 - `docs/production-readiness/checklist.md`
 - `docs/production-readiness/metrics.md`
@@ -37,6 +38,24 @@ latest dated review file linked from that index, normally under
 weekly delta. Separate default-branch documentation facts from local-only
 observations. Before citing a document as issue basis, verify it exists on the
 repository default branch when practical.
+
+Read the latest weekly metrics file under `docs/metrics/` when one exists. For
+the current review, collect `kaizen status --project <slug> --metrics --json`
+for these slugs and write or update `docs/metrics/<ISO-week>.md` before writing
+the dated readiness report:
+
+- `kaizen-agents-org-.github`
+- `kaizen-agents-org-kaizen-loop`
+- `kaizen-agents-org-builder-agent`
+- `kaizen-agents-org-verifier`
+
+The weekly metrics file must include denominators for human-edit-free merge
+rate, time-to-merge, Issue-to-PR success rate, verifier block rate,
+needs-human rate, and open PR age. If a metric cannot be collected, mark it
+unavailable with the denominator actually inspected and the reason the numerator
+or timestamp is missing. Do not estimate missing values. The readiness report's
+Metrics Observed section must cite the current weekly metrics file instead of
+repeating a generic "metrics unavailable" finding when the snapshot exists.
 
 Collect evidence for:
 
@@ -65,7 +84,8 @@ Produce a concise weekly readiness report with:
 1. Review date.
 2. Repositories reviewed.
 3. Verification observed.
-4. Metrics observed, explicitly marking unavailable metrics.
+4. Metrics observed, explicitly marking unavailable metrics. Cite
+   `docs/metrics/<ISO-week>.md` and summarize its denominator-bearing rates.
 5. Delta since the previous readiness log entry.
 6. Current findings ordered by production-readiness risk.
 7. Repository-by-repository readiness coverage. Include every repository in
@@ -82,6 +102,7 @@ Produce a concise weekly readiness report with:
    `docs/production-readiness/logs/YYYY-MM-DD.md` using
    `docs/production-readiness/template.md`.
 11. The index update written to `docs/production-readiness-log.md`.
+12. The weekly metrics content written to `docs/metrics/<ISO-week>.md`.
 
 When producing issue candidates, evaluate ownership by repository responsibility
 instead of by the broad system symptom. Use `builder-agent` for gaps in
@@ -100,6 +121,7 @@ After producing the report, create or update a normal ready-for-review PR in
 
 - `docs/production-readiness/logs/YYYY-MM-DD.md`
 - `docs/production-readiness-log.md`
+- `docs/metrics/<ISO-week>.md`
 
 Fetch `origin main` before writing. Base the branch on the updated default
 branch. Use a deterministic branch name such as
@@ -113,12 +135,13 @@ after this report PR is merged to `main`.
 After opening or updating that report PR, run the project `pr-guardian`
 workflow for the report PR. Continue until the report PR is merge-ready or has a
 specific external blocker. If the guardian finds CI, CodeRabbit, Codex, bot, or
-human feedback that applies to the report PR, fix only the two allowed readiness
-report paths above or explain why a suggestion is not applicable.
+human feedback that applies to the report PR, fix only the allowed readiness
+report and weekly metrics paths above or explain why a suggestion is not
+applicable.
 
-Do not edit files outside the two readiness report paths above. Do not merge
-PRs, create GitHub issues, create implementation branches, or make broad
-implementation changes automatically.
+Do not edit files outside the allowed readiness report and weekly metrics paths
+above. Do not merge PRs, create GitHub issues, create implementation branches,
+or make broad implementation changes automatically.
 
 Do not create GitHub issues from this weekly review prompt. The review should
 produce a structured `Issue Candidates` section only. The separate
