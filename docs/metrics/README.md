@@ -6,8 +6,8 @@ is named by ISO week, for example `2026-W28.md`.
 ## Collection Contract
 
 The weekly readiness review automation owns this directory. Before it writes the
-dated readiness report, it should collect `kaizen status --metrics --json` for
-the active readiness repositories:
+dated readiness report, it should collect `kaizen status --project <slug> --metrics --json`
+for each active readiness repository:
 
 - `kaizen-agents-org/.github`
 - `kaizen-agents-org/kaizen-loop`
@@ -32,4 +32,3 @@ Every weekly snapshot must include denominators for:
 If a value cannot be collected from the available `kaizen status --metrics`
 output or GitHub state, record it as unavailable with the denominator that was
 actually inspected. Do not estimate missing values.
-

@@ -24,8 +24,10 @@ done
 grep -Fq 'docs/metrics/<ISO-week>.md' "${readiness_prompt}"
 grep -Fq 'docs/metrics/README.md' "${readiness_prompt}"
 grep -Fq 'kaizen status --project' "${readiness_prompt}"
+grep -Fq 'kaizen status --project <slug> --metrics --json' "${metrics_readme}"
 grep -Fq 'metrics/<ISO-week>.md' "${readiness_readme}"
 grep -Fiq 'human-edit-free merge rate' "${metrics_doc}"
+grep -Fq 'weekly metrics file' "docs/automation-roles.md"
 
 for required in \
   'Human-edit-free merge rate' \
@@ -39,6 +41,8 @@ do
 done
 
 grep -Eq '19 PRs / 73 processed issues' "${baseline}"
+grep -Fq 'Ratio of `reviewWindow.prCreated` to `reviewWindow.processed`' "${baseline}"
+grep -Eq '1 merged generated PR inspected' "${baseline}"
 grep -Eq '20 blocked verifier decisions / 39 inferred verifier decisions' "${baseline}"
 grep -Eq '8 open needs-human issues / 34 open `kaizen` issues' "${baseline}"
 
