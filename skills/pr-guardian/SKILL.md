@@ -13,12 +13,14 @@ Use this workflow by default after opening a pull request, and when an existing 
    - Use explicit repo or PR URLs when provided.
    - Otherwise identify the current branch PR, branch, remote, and expected base branch.
    - If the user asks for "each repo" or "all repos", scan the relevant workspace repositories, list open PRs, and process one repo at a time.
+   - If the user says a PR is still blocked, still remains, or points at a repository PR list, enumerate the open PRs in the relevant repositories and process every PR that is `BLOCKED`, has unresolved review threads, or has actionable bot/human feedback. Do not stop after fixing only the current checkout's branch.
 2. Load local repo context before edits.
    - Read local instructions such as `AGENTS.md`, package scripts, branch status, and PR metadata.
    - Preserve unrelated local changes.
 3. Build a complete PR state and feedback inventory.
    - Read `mergeStateStatus`, `mergeable`, `reviewDecision`, `statusCheckRollup`, `reviews`, `latestReviews`, review requests, PR comments, and `gh pr checks`.
    - Always fetch thread-aware review data before claiming success. Flat PR comments are not enough because CodeRabbit, Codex, and human actionable feedback is often in inline review threads.
+   - Do not treat an earlier PR Guardian summary comment as current evidence. A bot review can arrive after that comment, so every resume must re-fetch PR state, comments, reviews, latest reviews, and review threads from GitHub.
    - Use `references/pr-feedback-audit.md` for concrete `gh` and GraphQL commands when thread state, bot comments, CI logs, or cross-repo scanning matter.
 4. Classify every feedback item.
    - `fix`: code, docs, tests, CI, or config change is needed.
@@ -63,10 +65,10 @@ gh api graphql \
   -f name='<repo>' \
   -F number=<number> \
   -f query='
-query($owner:String!, $name:String!, $number:Int!) {
+query($owner:String!, $name:String!, $number:Int!, $cursor:String) {
   repository(owner:$owner, name:$name) {
     pullRequest(number:$number) {
-      reviewThreads(first:100) {
+      reviewThreads(first:100, after:$cursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id
@@ -121,9 +123,10 @@ If `mergeable` is `MERGEABLE` but `mergeStateStatus` remains `BLOCKED`, keep inv
 ## Loop control
 
 - Default to 5 fix-and-push attempts per PR.
-- Cap each CI or review wait window at 30 minutes, or 30 polling checks at 60-second intervals. If checks or review bots are still pending after that, do one fresh PR-state and review-thread fetch, then report `pending external review` instead of waiting indefinitely. Do not claim conversations are resolved when the latest bot review is still pending.
+- Cap each CI or review wait window at 30 minutes, or 30 polling checks at 60-second intervals. If required checks are still pending after that, report `pending required checks` with the check names instead of merge-ready. Only report `pending external review` after required checks are green and a bot or maintainer review is still pending; do one fresh PR-state and review-thread fetch first, and do not claim conversations are resolved when the latest bot review is still pending.
 - If the same CI failure or review comment returns after two fixes, stop broad changes and inspect the underlying assumption before trying again.
 - For cross-repo work, finish and report one PR before moving to the next so context loss still leaves useful progress.
+- For multi-PR or "still blocked" requests, do a final `gh pr list --state open` scan across the target repositories before reporting success. If any target PR remains `BLOCKED` or has unresolved threads, keep processing it instead of stopping.
 
 ## Final Report
 
