@@ -276,22 +276,24 @@ while IFS= read -r repo; do
   fi
 done < <(jq -r '.targets[].name' "${manifest}")
 
-if ! awk '
-  /^run:$/ {
-    in_run=1
-    next
-  }
-  in_run && /^[^ ]/ {
-    in_run=0
-  }
-  in_run && /^  maxOpenPullRequests: 3$/ {
-    found=1
-  }
-  END { exit(found ? 0 : 1) }
-' ".github/dogfood-sync/targets/kaizen-loop/.kaizen/config.yml"; then
-  echo "kaizen-loop dogfood runtime config must keep run.maxOpenPullRequests: 3" >&2
-  exit 1
-fi
+while IFS= read -r repo; do
+  if ! awk '
+    /^run:$/ {
+      in_run=1
+      next
+    }
+    in_run && /^[^ ]/ {
+      in_run=0
+    }
+    in_run && /^  maxOpenPullRequests: 3$/ {
+      found=1
+    }
+    END { exit(found ? 0 : 1) }
+  ' ".github/dogfood-sync/targets/${repo}/.kaizen/config.yml"; then
+    echo "${repo} dogfood runtime config must keep run.maxOpenPullRequests: 3" >&2
+    exit 1
+  fi
+done < <(jq -r '.targets[].name' "${manifest}")
 
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
