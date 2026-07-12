@@ -365,12 +365,47 @@ jobs:
               echo "- ${repo}: DRIFTED with no open sync PR" >> "${PWD}/daily-dogfood-sync-report.md"
               drifted=1
             else
-              echo "${repo}: origin/${base} drifts but open sync PR exists (${open_pr})"
+              git -C "${repo}" fetch --quiet origin "${branch}"
+              pr_drift=0
+              while IFS=$'\t' read -r type source_path target_path; do
+                pr_copy="$(mktemp -d)"
+                if git -C "${repo}" archive "origin/${branch}" "${target_path}" 2>/dev/null \
+                  | tar -x -C "${pr_copy}" 2>/dev/null; then
+                  case "${type}" in
+                    directory)
+                      diff -qr "source/${source_path}" "${pr_copy}/${target_path}" >/dev/null 2>&1 || pr_drift=1
+                      ;;
+                    file)
+                      diff -q "source/${source_path}" "${pr_copy}/${target_path}" >/dev/null 2>&1 || pr_drift=1
+                      ;;
+                  esac
+                else
+                  pr_drift=1
+                fi
+                rm -rf "${pr_copy}"
+              done < <(
+                jq -r --arg repo "${repo}" '
+                  .managedPaths[]
+                  | [
+                      .type,
+                      (.source // (.sourcePattern | gsub("\\{repo\\}"; $repo))),
+                      .target
+                    ]
+                  | @tsv
+                ' "${manifest}"
+              )
+              if [ "${pr_drift}" -ne 0 ]; then
+                echo "::error title=Dogfood sync PR stale::${repo} sync PR ${open_pr} does not exactly match the manifest-managed source contracts."
+                echo "- ${repo}: DRIFTED with stale sync PR ${open_pr}" >> "${PWD}/daily-dogfood-sync-report.md"
+                drifted=1
+              else
+                echo "${repo}: origin/${base} drifts but verified sync PR exists (${open_pr})"
+              fi
             fi
           done < <(jq -r '.targets[].name' "${manifest}")
 
           if [ "${drifted}" -ne 0 ]; then
-            echo "::error title=Daily dogfood sync incomplete::One or more target repositories remain drifted with no open sync PR after the sync run."
+            echo "::error title=Daily dogfood sync incomplete::One or more target repositories remain drifted without an exact, open sync PR after the sync run."
             exit 1
           fi
 
