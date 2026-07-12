@@ -13,6 +13,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="${repo_root}/.github/dogfood-sync/manifest.json"
 sync_script="${repo_root}/scripts/sync-daily-dogfood.sh"
+guardian_contract_check="${repo_root}/scripts/check-pr-guardian-contract.sh"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required to run this test" >&2
@@ -23,6 +24,21 @@ fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
+
+# --- Contract: weak guardian guidance must never be distributed. ---
+bash "${guardian_contract_check}" >/dev/null \
+  || fail "strict pr-guardian source contract was rejected"
+
+weak_guardian="$(mktemp)"
+sed \
+  -e 's/isDraft,mergeable,mergeStateStatus/isDraft,mergeStateStatus/' \
+  -e 's/including outdated threads/only current threads/' \
+  "${repo_root}/skills/pr-guardian/SKILL.md" > "${weak_guardian}"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted weakened pr-guardian guidance"
+fi
+rm -f "${weak_guardian}"
+echo "PASS: weakened pr-guardian guidance is rejected before sync"
 
 make_targets() {
   local parent="$1"
