@@ -28,7 +28,6 @@ on:
     paths:
       - ".github/dogfood-sync/**"
       - ".github/ISSUE_TEMPLATE/kaizen.yml"
-      - "skills/**"
       - "scripts/sync-daily-dogfood.sh"
       - ".github/workflows/sync-daily-dogfood.yml"
 
