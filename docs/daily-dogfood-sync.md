@@ -37,7 +37,7 @@ The called workflow:
 4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
 5. Verifies that each target checkout now matches the manifest-managed sources.
 6. Opens or updates ready-for-review sync PRs on the fixed branch `codex/daily-dogfood-sync` targeting `main` in target repositories when managed files changed.
-7. Asserts that no target repository's `origin/main` still drifts from the managed contracts without an open sync PR targeting `main`, failing the run if it does.
+7. Asserts that any remaining `origin/main` drift is covered by an open sync PR targeting `main` whose branch exactly matches every manifest-managed source path; a missing, stale, or incomplete sync PR fails the run.
 8. Reports the per-repository outcome in the workflow summary.
 
 The workflow must not merge PRs automatically.
