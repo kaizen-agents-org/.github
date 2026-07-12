@@ -30,6 +30,7 @@ bash "${guardian_contract_check}" >/dev/null \
   || fail "strict pr-guardian source contract was rejected"
 
 weak_guardian="$(mktemp)"
+trap 'rm -f "${weak_guardian}"' EXIT
 sed \
   -e 's/isDraft,mergeable,mergeStateStatus/isDraft,mergeStateStatus/' \
   -e 's/including outdated threads/only current threads/' \
@@ -38,6 +39,7 @@ if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted weakened pr-guardian guidance"
 fi
 rm -f "${weak_guardian}"
+trap - EXIT
 echo "PASS: weakened pr-guardian guidance is rejected before sync"
 
 make_targets() {
