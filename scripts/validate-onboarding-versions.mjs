@@ -18,6 +18,44 @@ try {
   process.exit(1);
 }
 
+const componentKeyCounts = new Map(expectedComponents.map((component) => [component, 0]));
+let depth = 0;
+
+for (let index = 0; index < raw.length; index += 1) {
+  if (raw[index] === '"') {
+    const start = index;
+    for (index += 1; index < raw.length; index += 1) {
+      if (raw[index] === "\\") {
+        index += 1;
+      } else if (raw[index] === '"') {
+        break;
+      }
+    }
+
+    let next = index + 1;
+    while (/\s/.test(raw[next] ?? "")) {
+      next += 1;
+    }
+    if (depth === 1 && raw[next] === ":") {
+      const key = JSON.parse(raw.slice(start, index + 1));
+      if (componentKeyCounts.has(key)) {
+        componentKeyCounts.set(key, componentKeyCounts.get(key) + 1);
+      }
+    }
+  } else if (raw[index] === "{") {
+    depth += 1;
+  } else if (raw[index] === "}") {
+    depth -= 1;
+  }
+}
+
+for (const [component, count] of componentKeyCounts) {
+  if (count > 1) {
+    console.error(`duplicate component key: ${component}`);
+    process.exit(1);
+  }
+}
+
 if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
   console.error("onboarding versions manifest must be a JSON object");
   process.exit(1);
