@@ -17,6 +17,7 @@ dogfood_workflow=".github/workflows/sync-daily-dogfood.yml"
 shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
 sync_script="scripts/sync-daily-dogfood.sh"
 pr_link_test="scripts/test-sync-daily-dogfood-pr-link.sh"
+monitor_contract_check="scripts/check-org-monitor-contract.sh"
 manifest=".github/dogfood-sync/manifest.json"
 contract_doc="docs/daily-dogfood-sync.md"
 scout_prompt="automations/kaizen-agents-repo-improvement-scout.prompt.md"
@@ -35,6 +36,7 @@ for path in \
   "${shared_skill_workflow}" \
   "${sync_script}" \
   "${pr_link_test}" \
+  "${monitor_contract_check}" \
   "${manifest}" \
   "${contract_doc}" \
   "${scout_prompt}" \
@@ -304,5 +306,6 @@ for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
 done
 
 "${pr_link_test}"
+"${monitor_contract_check}"
 
 echo "Daily dogfood sync contract is present."

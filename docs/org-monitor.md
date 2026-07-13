@@ -66,6 +66,7 @@ After writing the report, the monitor may create GitHub issues for concrete foll
 Automatic issue creation is intentionally conservative:
 
 - Search existing open issues and PRs before creating anything.
+- For sync drift, derive a stable duplicate-ownership key from the target repository, managed path or component, and actionable follow-up. Store a SHA-256 digest of that normalized key in every created issue body as `<!-- monitor-ownership-key: sha256:<digest> -->`, and search both open issue and PR bodies for the exact marker before falling back to exact titles, paths or components, source refs, and conceptual action terms. Immediately before creation, repeat the search and acquire an atomic runtime claim for the same digest so overlapping runs cannot both create an issue. A newer ref does not make already-owned reconciliation work distinct, and failed or ambiguous searches or claims must keep the candidate report-only.
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
@@ -77,6 +78,8 @@ Automatic issue creation is intentionally conservative:
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 
 Speculative ideas, low-confidence observations, duplicate work, and broad cleanup suggestions should stay in the report instead of becoming issues.
+
+`scripts/check-org-monitor-contract.sh` keeps the source prompt's sync-drift duplicate-suppression rules under deterministic regression coverage. The daily dogfood contract check invokes it so the default contract-validation path cannot silently omit these rules.
 
 Daily dogfood sync drift should be reported when the monitor cannot resolve it deterministically, including a missing scheduled workflow, a broken shared-skill sync delegation, or changes outside the documented deterministic file list.
 
