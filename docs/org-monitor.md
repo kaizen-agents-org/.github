@@ -66,6 +66,7 @@ After writing the report, the monitor may create GitHub issues for concrete foll
 Automatic issue creation is intentionally conservative:
 
 - Search existing open issues and PRs before creating anything.
+- For sync drift, derive a stable duplicate-ownership key from the target repository, managed path or component, and actionable follow-up. Search the exact title, path or component, source ref or comparable drift evidence, and conceptual action terms in both open issues and open PRs immediately before creation. A newer ref does not make already-owned reconciliation work distinct, and failed or ambiguous searches must keep the candidate report-only.
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
@@ -77,6 +78,8 @@ Automatic issue creation is intentionally conservative:
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 
 Speculative ideas, low-confidence observations, duplicate work, and broad cleanup suggestions should stay in the report instead of becoming issues.
+
+`scripts/check-org-monitor-contract.sh` keeps the source prompt's sync-drift duplicate-suppression rules under deterministic regression coverage.
 
 Daily dogfood sync drift should be reported when the monitor cannot resolve it deterministically, including a missing scheduled workflow, a broken shared-skill sync delegation, or changes outside the documented deterministic file list.
 
