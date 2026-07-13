@@ -68,3 +68,12 @@ repo-local implementation issue for that finding and report the ambiguity
 instead of allowing two automations to race on the same problem. The maintain
 layer may still create at most one coordination issue in `kaizen-loop` when the
 org-monitor prompt's ownership-ambiguity rule applies.
+
+For recurring monitor sync-drift findings, duplicate ownership is identified by
+the target repository, the `sync-drift` finding kind, and the exact affected
+repository-relative path or documented component. The monitor records that
+stable ownership key in its report and issue body. After a candidate is fully
+formed, it must refresh the open issues and PRs immediately before creation;
+the earlier report inventory is not sufficient for this final gate. An exact
+title and affected path remain valid ownership evidence for older issues or PRs
+that predate ownership keys.

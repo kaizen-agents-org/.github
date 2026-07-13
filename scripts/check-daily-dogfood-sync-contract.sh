@@ -56,6 +56,13 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -q "closingIssuesReferences" "${issue_creator}"
 done
 
+# Monitor sync-drift issues must have a stable ownership key and a fresh
+# creation-time duplicate check. The initial report inventory can become stale
+# before issue creation, especially when monitor runs overlap.
+grep -Fq '<target-repository>::sync-drift::<affected-path-or-component>' "${monitor_prompt}"
+grep -Fq 'Immediately before each `gh issue create`' "${monitor_prompt}"
+grep -Fq 'Do not reuse the initial repository inventory' "${monitor_prompt}"
+
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"

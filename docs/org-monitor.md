@@ -66,6 +66,8 @@ After writing the report, the monitor may create GitHub issues for concrete foll
 Automatic issue creation is intentionally conservative:
 
 - Search existing open issues and PRs before creating anything.
+- Give each sync-drift candidate a stable ownership key made from the target repository, `sync-drift`, and the exact affected repository-relative path or documented component; include it in the report and issue body.
+- After the candidate title, path or component, and body are final, refresh open issues and PRs immediately before creation. Do not rely on the earlier report inventory; skip creation when the refreshed search matches the ownership key or the same target, title, and affected path.
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
