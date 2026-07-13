@@ -11,6 +11,7 @@ weekly checklist, metrics, and log template used to maintain this log.
 
 | Date | Judgment | Main gaps |
 | --- | --- | --- |
+| [2026-07-13](./production-readiness/logs/2026-07-13.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Unattended execution and payload-contract blockers, local-only metrics, stale same-stack E2E evidence, source-doc/prompt metrics-scope conflict, duplicate monitor drift issues. |
 | [2026-07-06](./production-readiness/logs/2026-07-06.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Verifier dogfood verification failures, local-only review-window metrics, high open backlog, incomplete full-fleet refresh evidence, partial safety-control smoke coverage. |
 | [2026-07-05](./production-readiness/logs/2026-07-05.md) | Ready for continued same-stack dogfooding; not ready to claim stack-independent production readiness. | No non-Node Issue-to-PR-to-merge evidence, no target `.kaizen/config.yml`, no merged non-Node PR evidence, no filed stack-assumption issues from a dissimilar run. |
 | [2026-06-29](./production-readiness/logs/2026-06-29.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | No recorded real sandbox E2E artifact, local-only outcome metrics, open generated PR backlog, small verifier eval corpus, incomplete active-fleet refresh evidence. |
@@ -18,6 +19,7 @@ weekly checklist, metrics, and log template used to maintain this log.
 
 ## Review Files
 
+- [2026-07-13](./production-readiness/logs/2026-07-13.md): weekly readiness review.
 - [2026-07-06](./production-readiness/logs/2026-07-06.md): weekly readiness review.
 - [2026-07-05](./production-readiness/logs/2026-07-05.md): focused stack-independence readiness evidence log.
 - [2026-06-29](./production-readiness/logs/2026-06-29.md): weekly readiness review.
