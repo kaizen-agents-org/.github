@@ -179,6 +179,20 @@ jobs:
             exit 1
           }
           guardian_marker='<!-- kaizen-pr-guardian:managed -->'
+          find_same_repo_pr() {
+            local repo="$1"
+            local base="$2"
+            local head="$3"
+            local expected_owner="$4"
+            gh pr list \
+              --repo "${repo}" \
+              --base "${base}" \
+              --head "${head}" \
+              --state open \
+              --json url,isDraft,isCrossRepository,headRepositoryOwner \
+              | jq -c --arg owner "${expected_owner}" \
+                '[.[] | select(.isCrossRepository == false and .headRepositoryOwner.login == $owner)][0] // {}'
+          }
           ensure_existing_pr_contract() {
             local repo="$1"
             local pr_url="$2"
@@ -232,20 +246,9 @@ jobs:
               continue
             fi
 
-            existing_pr="$(gh pr list \
-              --repo "${owner}/${repo}" \
-              --base "${base}" \
-              --head "${pr_head}" \
-              --state open \
-              --json url \
-              --jq '.[0].url // ""')"
-            existing_is_draft="$(gh pr list \
-              --repo "${owner}/${repo}" \
-              --base "${base}" \
-              --head "${pr_head}" \
-              --state open \
-              --json isDraft \
-              --jq '.[0].isDraft // false')"
+            existing_pr_json="$(find_same_repo_pr "${owner}/${repo}" "${base}" "${pr_head}" "${owner}")"
+            existing_pr="$(jq -r '.url // ""' <<< "${existing_pr_json}")"
+            existing_is_draft="$(jq -r '.isDraft // false' <<< "${existing_pr_json}")"
 
             git config user.name "kaizen-agents-sync"
             git config user.email "actions@github.com"
@@ -297,13 +300,8 @@ jobs:
               --head "${branch}" \
               --title "Sync Kaizen dogfood contracts" \
               --body-file "${body_file}"
-            open_pr="$(gh pr list \
-              --repo "${owner}/${repo}" \
-              --base "${base}" \
-              --head "${pr_head}" \
-              --state open \
-              --json url \
-              --jq '.[0].url // ""')"
+            open_pr_json="$(find_same_repo_pr "${owner}/${repo}" "${base}" "${pr_head}" "${owner}")"
+            open_pr="$(jq -r '.url // ""' <<< "${open_pr_json}")"
             if [ -z "${open_pr}" ]; then
               echo "::error title=Dogfood sync PR assertion failed::${repo} has managed dogfood changes but no open sync PR."
               exit 1

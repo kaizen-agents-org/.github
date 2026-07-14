@@ -157,6 +157,20 @@ jobs:
             exit 1
           }
           guardian_marker='<!-- kaizen-pr-guardian:managed -->'
+          find_same_repo_pr() {
+            local repo="$1"
+            local base="$2"
+            local head="$3"
+            local expected_owner="$4"
+            gh pr list \
+              --repo "${repo}" \
+              --base "${base}" \
+              --head "${head}" \
+              --state open \
+              --json url,isDraft,isCrossRepository,headRepositoryOwner \
+              | jq -c --arg owner "${expected_owner}" \
+                '[.[] | select(.isCrossRepository == false and .headRepositoryOwner.login == $owner)][0] // {}'
+          }
           ensure_existing_pr_contract() {
             local repo="$1"
             local pr_url="$2"
@@ -205,13 +219,8 @@ jobs:
             fi
 
             branch="codex/sync-kaizen-shared-skills"
-            existing_pr="$(gh pr list \
-              --repo "kaizen-agents-org/${repo}" \
-              --base main \
-              --head "${branch}" \
-              --state open \
-              --json url \
-              --jq '.[0].url // ""')"
+            existing_pr_json="$(find_same_repo_pr "kaizen-agents-org/${repo}" main "${branch}" kaizen-agents-org)"
+            existing_pr="$(jq -r '.url // ""' <<< "${existing_pr_json}")"
             git config user.name "kaizen-agents-sync"
             git config user.email "actions@github.com"
             git switch -c "${branch}"
@@ -254,13 +263,8 @@ jobs:
               --head "${branch}" \
               --title "Sync Kaizen shared skills" \
               --body-file "${body_file}"
-            open_pr="$(gh pr list \
-              --repo "kaizen-agents-org/${repo}" \
-              --base main \
-              --head "${branch}" \
-              --state open \
-              --json url \
-              --jq '.[0].url // ""')"
+            open_pr_json="$(find_same_repo_pr "kaizen-agents-org/${repo}" main "${branch}" kaizen-agents-org)"
+            open_pr="$(jq -r '.url // ""' <<< "${open_pr_json}")"
             if [ -z "${open_pr}" ]; then
               echo "::error title=Sync PR assertion failed::${repo} has skill changes but no open shared-skill sync PR."
               exit 1
