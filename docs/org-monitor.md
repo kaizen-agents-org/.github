@@ -8,7 +8,7 @@ The GitHub-managed source prompt for the Codex automation lives at [`../automati
 
 ## Runtime Cadence
 
-The monitor runs once daily at 04:15 in the local Codex automation schedule, after the nighttime [Repository Improvement Scout](./repo-improvement-scout.md) run.
+Exactly one organization-wide monitor runs once daily at 04:15 in the local Codex automation schedule, after the nighttime [Repository Improvement Scout](./repo-improvement-scout.md) run. Do not enable repository-scoped copies of the monitor.
 
 This timing reflects the monitor's conservative purpose: it checks organization-level coordination, sync health, and drift after the proactive scout has had a chance to discover repo-local improvement issues.
 
@@ -53,7 +53,7 @@ Each run produces a concise coordination report covering:
 - Documentation and implementation drift across the core and support components.
 - Whether local Kaizen Loop scheduler documentation and repository configs use the current `scheduler.jobs` model instead of stale fixed job fields.
 - Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, runs after managed source contract changes land on `main`, and stays limited to deterministic files it can update safely.
-- Whether local runner state can be refreshed after dogfood changes with `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --prune --verify`.
+- Whether reviewed, read-only fleet plan evidence exists from the machine-local inventory, for example `kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --dry-run --json`.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
 
@@ -91,6 +91,8 @@ The monitor may report and file focused follow-up issues, but it must not:
 - Push branches or commits.
 - Edit repository files, create implementation branches, open implementation pull requests, or make broad code changes automatically.
 - Treat its report as approval to bypass human review.
+- Mutate production `registry.json`, fleet inventory, workspaces, scheduler jobs, or run locks.
+- Run a mutating `kaizen fleet` command from a repository checkout or Codex worktree.
 
 The monitor may recommend small, deterministic documentation, prompt, or configuration follow-ups, but any proposed coordination change that modifies repository behavior should still go through a normal ready-for-review pull request.
 
@@ -134,4 +136,4 @@ Daily sync workflows use fixed branch names and update existing open sync PRs in
 
 The organization monitor should check that the daily sync is working and report drift that cannot be fixed deterministically. It should not replace the daily sync or push cross-repository updates itself.
 
-The local runtime side of the same loop is refreshed with `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --prune --verify`, which rebuilds registry/workspace/scheduler state for the four active repositories and runs configured setup and verify commands in synced workspaces. The monitor may report fleet refresh failures as local observations, but issue creation still requires default-branch documentation support and duplicate checks.
+The local runtime side is reconciled separately by an operator from the authoritative machine-local `~/.kaizen/fleet.yml`. The monitor may inspect `kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --dry-run --json` output, but must never apply it. After reviewing the plan, an operator can run the corresponding apply and verify commands outside the monitor. Fleet failures remain local observations; issue creation still requires default-branch documentation support and duplicate checks.
