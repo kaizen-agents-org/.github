@@ -37,6 +37,7 @@ The called workflow:
 4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
 5. Verifies that each target checkout now matches the manifest-managed sources.
 6. Opens or updates ready-for-review sync PRs on the fixed branch `codex/daily-dogfood-sync` targeting `main` in target repositories when managed files changed.
+   Every generated PR carries `<!-- kaizen-pr-guardian:managed -->`; the local Kaizen durable guardian uses that marker together with the known branch, same-repository head, and expected base branch before adopting the PR for review convergence.
 7. Asserts that any remaining `origin/main` drift is covered by an open sync PR targeting `main` whose branch exactly matches every manifest-managed source path; a missing, stale, or incomplete sync PR fails the run.
 8. Reports the per-repository outcome in the workflow summary.
 
