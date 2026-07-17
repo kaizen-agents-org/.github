@@ -28,5 +28,18 @@ require_contract 'If any required open-issue or open-PR query fails' 'fail-close
 require_contract 'acquire an atomic single-flight claim for the digest' 'overlapping-run single-flight claim'
 require_contract 'Never remove or overwrite another run' 'claim ownership safety'
 require_contract 'it never bypasses duplicate suppression' 'health-exception boundary'
+require_contract 'Exactly one organization-wide installation of this monitor may be enabled' 'single organization-wide installation'
+require_contract 'read-only with respect to the local Kaizen runtime' 'read-only local runtime boundary'
+require_contract 'never write, prune, rebuild, or reconcile production `registry.json`, workspaces, scheduler jobs, run locks, or machine inventory.' 'runtime mutation prohibition'
+require_contract 'Do not run a mutating `kaizen fleet` command' 'mutating fleet prohibition'
+require_contract 'first check `kaizen fleet --help` for `--manifest` support' 'manifest capability check'
+require_contract 'kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --dry-run --json' 'manifest-backed read-only fleet plan'
+require_contract 'must not omit `--dry-run`' 'dry-run enforcement'
+require_contract 'If `--manifest` is unavailable, do not run any fleet command' 'unsupported CLI fail-safe'
+
+if grep -Eq -- 'kaizen[[:space:]]+fleet([^[:alnum:]_]|$).*--root([=[:space:]]|$)' "${prompt}"; then
+  echo 'org-monitor contract contains unsafe checkout-parent fleet discovery' >&2
+  exit 1
+fi
 
 echo "PASS: org-monitor source preserves sync-drift duplicate suppression"
