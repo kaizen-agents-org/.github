@@ -12,14 +12,17 @@ gh pr checks <pr> --repo <owner/repo>
 
 ## Read every review thread
 
-Run this query and follow `pageInfo.endCursor` while `hasNextPage` is true:
+Run this loop. It feeds each `pageInfo.endCursor` into the next request and stops only when `hasNextPage` is false:
 
 ```sh
-gh api graphql \
-  -f owner='<owner>' \
-  -f name='<repo>' \
-  -F number=<number> \
-  -f query='
+cursor=
+while :; do
+  args=(
+    api graphql
+    -f owner='<owner>'
+    -f name='<repo>'
+    -F number=<number>
+    -f query='
 query($owner:String!, $name:String!, $number:Int!, $cursor:String) {
   repository(owner:$owner, name:$name) {
     pullRequest(number:$number) {
@@ -49,9 +52,69 @@ query($owner:String!, $name:String!, $number:Int!, $cursor:String) {
     }
   }
 }'
+  )
+  if [[ -n "${cursor}" ]]; then
+    args+=(-f "cursor=${cursor}")
+  fi
+  page="$(gh "${args[@]}")"
+  jq -c '.data.repository.pullRequest.reviewThreads.nodes[]' <<<"${page}"
+  if [[ "$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"${page}")" != true ]]; then
+    break
+  fi
+  cursor="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor' <<<"${page}")"
+  if [[ -z "${cursor}" || "${cursor}" == null ]]; then
+    echo 'reviewThreads reported another page without an endCursor' >&2
+    exit 1
+  fi
+done
 ```
 
-Paginate nested comments too when their `hasNextPage` is true. Also paginate REST reviews, review comments, issue comments, check runs, and annotations; do not treat summaries or the first page as complete evidence.
+For every thread whose nested `comments.pageInfo.hasNextPage` is true, run the corresponding comment loop with that thread's GraphQL `id`:
+
+```sh
+thread_id='<review-thread-id>'
+cursor=
+while :; do
+  args=(
+    api graphql
+    -f threadId="${thread_id}"
+    -f query='
+query($threadId:ID!, $cursor:String) {
+  node(id:$threadId) {
+    ... on PullRequestReviewThread {
+      comments(first:100, after:$cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { fullDatabaseId url author { login } body createdAt outdated }
+      }
+    }
+  }
+}'
+  )
+  if [[ -n "${cursor}" ]]; then
+    args+=(-f "cursor=${cursor}")
+  fi
+  page="$(gh "${args[@]}")"
+  jq -c '.data.node.comments.nodes[]' <<<"${page}"
+  if [[ "$(jq -r '.data.node.comments.pageInfo.hasNextPage' <<<"${page}")" != true ]]; then
+    break
+  fi
+  cursor="$(jq -r '.data.node.comments.pageInfo.endCursor' <<<"${page}")"
+  if [[ -z "${cursor}" || "${cursor}" == null ]]; then
+    echo 'review comments reported another page without an endCursor' >&2
+    exit 1
+  fi
+done
+```
+
+Exhaust each REST endpoint with `--paginate`; summaries and first pages are incomplete evidence:
+
+```sh
+gh api --paginate 'repos/<owner>/<repo>/pulls/<pr>/reviews?per_page=100'
+gh api --paginate 'repos/<owner>/<repo>/pulls/<pr>/comments?per_page=100'
+gh api --paginate 'repos/<owner>/<repo>/issues/<pr>/comments?per_page=100'
+gh api --paginate 'repos/<owner>/<repo>/commits/<head-sha>/check-runs?per_page=100'
+gh api --paginate 'repos/<owner>/<repo>/check-runs/<check-run-id>/annotations?per_page=100'
+```
 
 ## Reply, then resolve
 
