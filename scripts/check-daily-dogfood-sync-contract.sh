@@ -310,6 +310,57 @@ while IFS= read -r repo; do
   fi
 done < <(jq -r '.targets[].name' "${manifest}")
 
+# The trusted self-organization fleet must opt into dogfood mode explicitly.
+# A missing value falls back to external mode and silently skips every issue
+# without a separately applied execution-authorization label.
+for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.yml; do
+  if ! awk '
+    /^safety:$/ {
+      in_safety=1
+      next
+    }
+    in_safety && /^[^ ]/ {
+      in_safety=0
+    }
+    in_safety && /^  operationMode: dogfood$/ {
+      found=1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must explicitly set safety.operationMode: dogfood: ${config}" >&2
+    exit 1
+  fi
+
+  if ! awk '
+    /^issues:$/ {
+      in_issues=1
+      next
+    }
+    in_issues && /^[^ ]/ {
+      in_issues=0
+      in_selection=0
+    }
+    in_issues && /^  selection:$/ {
+      in_selection=1
+      next
+    }
+    in_selection && /^  [^ ]/ {
+      in_selection=0
+    }
+    in_selection && /^    mode: opt-in$/ { mode=1 }
+    in_selection && /^    includeLabel: ["'\'' ]*kaizen:ready["'\'' ]*$/ { label=1 }
+    END { exit(mode && label ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must require opt-in kaizen:ready selection: ${config}" >&2
+    exit 1
+  fi
+done
+
+# Dogfood configs are useful structural examples, but adopter guidance must
+# preserve the external authorization boundary instead of copying dogfood mode.
+grep -Fq 'safety.operationMode: external' docs/onboarding-kit-design-2026-07-05.ja.md
+grep -Fq 'safety.operationMode: external' docs/product-adoption-plan-2026-07-05.ja.md
+
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"
