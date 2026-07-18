@@ -332,6 +332,11 @@ for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.y
   fi
 done
 
+# Dogfood configs are useful structural examples, but adopter guidance must
+# preserve the external authorization boundary instead of copying dogfood mode.
+grep -Fq 'safety.operationMode: external' docs/onboarding-kit-design-2026-07-05.ja.md
+grep -Fq 'safety.operationMode: external' docs/product-adoption-plan-2026-07-05.ja.md
+
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"
