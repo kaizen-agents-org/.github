@@ -310,6 +310,28 @@ while IFS= read -r repo; do
   fi
 done < <(jq -r '.targets[].name' "${manifest}")
 
+# The trusted self-organization fleet must opt into dogfood mode explicitly.
+# A missing value falls back to external mode and silently skips every issue
+# without a separately applied execution-authorization label.
+for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.yml; do
+  if ! awk '
+    /^safety:$/ {
+      in_safety=1
+      next
+    }
+    in_safety && /^[^ ]/ {
+      in_safety=0
+    }
+    in_safety && /^  operationMode: dogfood$/ {
+      found=1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must explicitly set safety.operationMode: dogfood: ${config}" >&2
+    exit 1
+  fi
+done
+
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"

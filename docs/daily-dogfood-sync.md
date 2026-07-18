@@ -12,6 +12,15 @@ The synced contract covers the dogfooding files the monitored repositories depen
 - Target repositories: `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`
 - Deterministic source of truth: `.github/dogfood-sync/manifest.json`
 
+These repositories form a maintainer-controlled self-organization fleet. Their
+runtime configs must explicitly set `safety.operationMode: dogfood`; relying on
+the `external` default would require a second execution-authorization label and
+silently leave maintainer-labeled `kaizen` work unprocessed. This exception is
+limited to the repositories named here: PR-only policy, verifier checks, intake
+gates, and maintainer-controlled issue labeling remain in force. Third-party or
+adopter repositories must keep the safer `external` mode and its explicit
+authorization gate.
+
 The manifest enumerates every managed path. Three kinds of paths are managed today:
 
 - **Shared skills** copied identically into each target's `skills/` directory:
@@ -73,6 +82,7 @@ The organization monitor should check that:
 - Push-triggered sync runs to managed source contract paths after merges to `main` are gated by `TOKEN_REQUIRED` and fail closed when `KAIZEN_SYNC_TOKEN` is absent; `workflow_call` runs also fail closed when called with `require_token: true`.
 - Push-triggered sync runs derive the source issue from the merged source PR when possible, and generated target PRs verify the issue linkage through `closingIssuesReferences`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
+- The source repository and every manifest target explicitly declare `safety.operationMode: dogfood`.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
 `scripts/check-daily-dogfood-sync-contract.sh` encodes these checks as a regression test.

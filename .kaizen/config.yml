@@ -16,6 +16,10 @@ run:
   maxOpenPullRequests: 3
   latestStartHour: 7
 
+safety:
+  # This repository is part of the maintainer-controlled Kaizen Agents dogfood fleet.
+  operationMode: dogfood
+
 scheduler:
   jobs:
     maintenance:
