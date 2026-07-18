@@ -107,6 +107,12 @@ report:
 
 issues:
   label: "kaizen"
+  selection:
+    # Public issue forms add only `kaizen`; a maintainer must queue execution.
+    mode: opt-in
+    includeLabel: "kaizen:ready"
+    excludeLabels:
+      - "kaizen:needs-human"
   priorityOrder:
     - "kaizen:P0"
     - "kaizen:P1"
