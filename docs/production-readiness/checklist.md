@@ -75,3 +75,6 @@ Use this checklist for each weekly readiness review.
   `kaizen:authorized` under the explicit `kaizen-agents-org` dogfooding policy.
   The label actor must have at least triage permission in the target repository;
   external operation mode retains human authorization by default.
+  Before issue creation, verify or bootstrap the `kaizen:authorized` label; if
+  that setup cannot be verified, report the candidate as blocked instead of
+  creating an issue without authorization.

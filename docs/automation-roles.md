@@ -43,6 +43,12 @@ in the target repository. `kaizen-loop` validates the permission of the label
 event actor before accepting the authorization, so a label applied by an actor
 without sufficient permission does not open the execution gate.
 
+Before creating issues in a target repository, the automation verifies that
+the `kaizen:authorized` label exists and bootstraps the label when it is
+missing. If it cannot create and then verify the label, it fails closed: it
+reports the candidate as blocked and does not create an issue whose execution
+authorization could be silently omitted.
+
 This policy is not the default for external operation mode. Third-party and
 external deployments keep human approval as the default and should add
 `kaizen:authorized` only through an authorized maintainer action or an

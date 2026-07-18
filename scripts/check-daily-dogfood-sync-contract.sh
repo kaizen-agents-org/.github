@@ -65,6 +65,9 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -Fq 'both the `kaizen` and `kaizen:authorized` labels' <<<"${normalized_issue_creator}"
   grep -Fq 'at least triage permission' <<<"${normalized_issue_creator}"
   grep -Fq 'external operation mode' <<<"${normalized_issue_creator}"
+  grep -Fq 'gh label create "kaizen:authorized"' <<<"${normalized_issue_creator}"
+  grep -Fq 'do not create the issue' <<<"${normalized_issue_creator}"
+  grep -Fq 'silently dropped' <<<"${normalized_issue_creator}"
 done
 
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
