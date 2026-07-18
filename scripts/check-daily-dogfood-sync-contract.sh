@@ -58,6 +58,24 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -q "closingIssuesReferences" "${issue_creator}"
 done
 
+# Organization-owned issue creators must preserve the dogfooding execution
+# authorization policy as well as the normal Kaizen intake label.
+for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}"; do
+  normalized_issue_creator="$(tr '\n' ' ' < "${issue_creator}")"
+  grep -Fq 'both the `kaizen` and `kaizen:authorized` labels' <<<"${normalized_issue_creator}"
+  grep -Fq 'at least triage permission' <<<"${normalized_issue_creator}"
+  grep -Fq 'external operation mode' <<<"${normalized_issue_creator}"
+  grep -Fq -- '--search "kaizen:authorized" --limit 100 --json name' <<<"${normalized_issue_creator}"
+  grep -Fq 'any(.name == "kaizen:authorized")' <<<"${normalized_issue_creator}"
+  grep -Fq 'same exact-name query' <<<"${normalized_issue_creator}"
+  grep -Fq 'gh label create "kaizen:authorized"' <<<"${normalized_issue_creator}"
+  grep -Fq 'Label creation requires write permission' <<<"${normalized_issue_creator}"
+  grep -Fq 'triage permission is sufficient only to apply an existing label' <<<"${normalized_issue_creator}"
+  grep -Fq 'maintainer with write permission must pre-provision the label' <<<"${normalized_issue_creator}"
+  grep -Fq 'do not create the issue' <<<"${normalized_issue_creator}"
+  grep -Fq 'silently dropped' <<<"${normalized_issue_creator}"
+done
+
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"

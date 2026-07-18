@@ -43,3 +43,14 @@ All issue-creating automations must put a `PR linkage requirement` section in
 created issue bodies. The section tells implementers to include a GitHub closing
 keyword in the PR body and verify `closingIssuesReferences` before reporting a
 PR ready, so merged implementation PRs close their source issues.
+
+Within `kaizen-agents-org`, issue-creating automations add both `kaizen` and
+`kaizen:authorized` at creation time under the organization's explicit
+dogfooding policy. The label actor needs at least triage permission in the
+target repository. External operation mode retains human execution
+authorization by default; it does not inherit this policy implicitly.
+Each issue creator verifies that `kaizen:authorized` exists in its target
+repository and bootstraps the label when needed. It fails closed and reports a
+blocked candidate if the label cannot be created and re-verified. Bootstrap
+requires write permission; triage is sufficient only for applying an existing
+label, so a maintainer must pre-provision it when the automation lacks write.

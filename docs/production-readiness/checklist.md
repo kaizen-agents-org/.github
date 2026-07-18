@@ -71,4 +71,12 @@ Use this checklist for each weekly readiness review.
   target repository after that report PR is merged to `main`. The issue creator
   checks daily, so issue creation does not depend on the report PR merging
   within the same hourly window. Created issue titles must use the
-  `[readiness-review]` prefix.
+  `[readiness-review]` prefix and receive both `kaizen` and
+  `kaizen:authorized` under the explicit `kaizen-agents-org` dogfooding policy.
+  The label actor must have at least triage permission in the target repository;
+  external operation mode retains human authorization by default.
+  Before issue creation, verify or bootstrap the `kaizen:authorized` label; if
+  that setup cannot be verified, report the candidate as blocked instead of
+  creating an issue without authorization. Bootstrap requires write permission;
+  triage is sufficient only to apply an existing label, so require maintainer
+  pre-provisioning when the automation lacks write.
