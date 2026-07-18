@@ -93,10 +93,13 @@ name --jq 'any(.name == "kaizen:authorized")'` and require an exact `true`
 result. If the label is absent, bootstrap it with `gh label create
 "kaizen:authorized" --repo kaizen-agents-org/<repo> --color "5319E7"
 --description "Approved for Kaizen execution"`, then re-run the same exact-name
-query. If the label cannot be created and verified, do not create the issue;
-report the candidate as blocked by missing execution-authorization label setup.
-Never create an issue while allowing a missing `kaizen:authorized` label to be
-silently dropped.
+query. Label creation requires write permission; triage permission is sufficient
+only to apply an existing label. If the automation lacks write permission,
+report that a maintainer with write permission must pre-provision the label. If
+the label cannot be created and verified, do not create the issue; report the
+candidate as blocked by missing execution-authorization label setup. Never
+create an issue while allowing a missing `kaizen:authorized` label to be silently
+dropped.
 
 Add both the `kaizen` and `kaizen:authorized` labels and prefix issue
 titles with `[readiness-review]` so it is clear they were created from the

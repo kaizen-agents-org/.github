@@ -69,6 +69,9 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -Fq 'any(.name == "kaizen:authorized")' <<<"${normalized_issue_creator}"
   grep -Fq 'same exact-name query' <<<"${normalized_issue_creator}"
   grep -Fq 'gh label create "kaizen:authorized"' <<<"${normalized_issue_creator}"
+  grep -Fq 'Label creation requires write permission' <<<"${normalized_issue_creator}"
+  grep -Fq 'triage permission is sufficient only to apply an existing label' <<<"${normalized_issue_creator}"
+  grep -Fq 'maintainer with write permission must pre-provision the label' <<<"${normalized_issue_creator}"
   grep -Fq 'do not create the issue' <<<"${normalized_issue_creator}"
   grep -Fq 'silently dropped' <<<"${normalized_issue_creator}"
 done

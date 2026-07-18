@@ -56,8 +56,11 @@ implicitly.
 
 Before creating the first issue for a target repository, the scout verifies
 that `kaizen:authorized` exists and creates the label when it is missing. If
-the label cannot be created and verified, the scout keeps the candidate in its
-report and does not create an issue without execution authorization.
+the label is missing, bootstrap requires write permission; triage permission is
+only sufficient to apply an existing label. Without write permission, a
+maintainer must pre-provision it. If the label cannot be created and verified,
+the scout keeps the candidate in its report and does not create an issue
+without execution authorization.
 
 The scout creates at most two issues per target repository per run. There is no organization-wide issue creation cap because each repository already has its own per-run and open-issue limits. Additional eligible findings for a repository stay in the report. Each created issue must include a PR linkage requirement telling the implementer to put a GitHub closing keyword in the implementation PR body and verify `closingIssuesReferences` before reporting the PR ready.
 

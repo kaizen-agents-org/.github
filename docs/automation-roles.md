@@ -45,8 +45,11 @@ without sufficient permission does not open the execution gate.
 
 Before creating issues in a target repository, the automation verifies that
 the `kaizen:authorized` label exists and bootstraps the label when it is
-missing. If it cannot create and then verify the label, it fails closed: it
-reports the candidate as blocked and does not create an issue whose execution
+missing. Creating a repository label requires write permission; triage is only
+sufficient for applying an existing label. If the automation lacks write
+permission, a maintainer with write permission must pre-provision the label. If
+the automation cannot create or verify the label, it fails closed: it reports
+the candidate as blocked and does not create an issue whose execution
 authorization could be silently omitted.
 
 This policy is not the default for external operation mode. Third-party and

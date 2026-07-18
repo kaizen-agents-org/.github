@@ -70,7 +70,7 @@ Automatic issue creation is intentionally conservative:
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
-- Before creating the first issue in a target repository, verify that `kaizen:authorized` exists and create the label when it is missing. If the label cannot be created and verified, report the candidate as blocked and do not create an issue without execution authorization.
+- Before creating the first issue in a target repository, verify that `kaizen:authorized` exists and create the label when it is missing. Label creation requires write permission; triage is only sufficient to apply an existing label. Without write permission, require a maintainer to pre-provision it. If the label cannot be created and verified, report the candidate as blocked and do not create an issue without execution authorization.
 - Add both the `kaizen` and `kaizen:authorized` labels. Automatic authorization is limited to the `kaizen-agents-org` dogfooding policy, and the actor applying `kaizen:authorized` must have at least triage permission in the target repository so `kaizen-loop` accepts the label event. External operation mode keeps human authorization as the default.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.

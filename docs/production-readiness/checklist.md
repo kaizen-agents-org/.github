@@ -77,4 +77,6 @@ Use this checklist for each weekly readiness review.
   external operation mode retains human authorization by default.
   Before issue creation, verify or bootstrap the `kaizen:authorized` label; if
   that setup cannot be verified, report the candidate as blocked instead of
-  creating an issue without authorization.
+  creating an issue without authorization. Bootstrap requires write permission;
+  triage is sufficient only to apply an existing label, so require maintainer
+  pre-provisioning when the automation lacks write.
