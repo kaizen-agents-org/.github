@@ -70,6 +70,7 @@ Automatic issue creation is intentionally conservative:
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
+- Add both the `kaizen` and `kaizen:authorized` labels. Automatic authorization is limited to the `kaizen-agents-org` dogfooding policy, and the actor applying `kaizen:authorized` must have at least triage permission in the target repository so `kaizen-loop` accepts the label event. External operation mode keeps human authorization as the default.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
 - Include a `Documentation basis` section anchored to [Documentation Sources](./documentation-sources.md), citing organization documents in that canonical source order before project-local docs, then cite the source that justifies the issue scope.

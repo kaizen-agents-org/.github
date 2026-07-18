@@ -29,6 +29,25 @@ Kaizen Agents uses four Codex automations in three layers: improve, maintain, an
 | `[monitor]` | `org-monitor` | Operation, sync, scheduler, CI, source-order, or coordination drift. |
 | `[readiness-review]` | `readiness-issue-creator` | Work approved through a merged dated readiness report. |
 
+## Execution Authorization
+
+Issues created by `repo-improvement-scout`, `org-monitor`, and
+`readiness-issue-creator` in `kaizen-agents-org` repositories receive both the
+`kaizen` and `kaizen:authorized` labels at creation time. This is an explicit
+dogfooding policy for the Kaizen Agents organization: these source-managed
+automations are trusted to submit ready-to-run work to the scheduled Kaizen
+loop.
+
+The actor that applies `kaizen:authorized` must have at least triage permission
+in the target repository. `kaizen-loop` validates the permission of the label
+event actor before accepting the authorization, so a label applied by an actor
+without sufficient permission does not open the execution gate.
+
+This policy is not the default for external operation mode. Third-party and
+external deployments keep human approval as the default and should add
+`kaizen:authorized` only through an authorized maintainer action or an
+equivalent explicitly adopted local policy.
+
 ## Limits
 
 Each automation applies limits per target repository so one repository cannot consume another repository's capacity:

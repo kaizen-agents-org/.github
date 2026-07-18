@@ -85,9 +85,14 @@ repo-local issue.
 Limit issue creation to at most three issues per target repository per run from
 the approved dated report. Do not apply an organization-wide cap, and do not let
 one repository's open `kaizen` issue count block another repository's eligible
-candidate. Use the `kaizen` label and prefix issue titles with
-`[readiness-review]` so it is clear they were created from the readiness review
-automation. Each issue body must include:
+candidate. Add both the `kaizen` and `kaizen:authorized` labels and prefix issue
+titles with `[readiness-review]` so it is clear they were created from the
+readiness review automation. This automatic authorization is the explicit
+`kaizen-agents-org` dogfooding policy documented in `docs/automation-roles.md`;
+do not generalize it to external operation mode, where human authorization
+remains the default. The actor applying `kaizen:authorized` must have at least
+triage permission in the target repository so `kaizen-loop` accepts the label
+event. Each issue body must include:
 
 - summary of the improvement;
 - source report path and review date;

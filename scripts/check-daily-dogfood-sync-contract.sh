@@ -58,6 +58,14 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -q "closingIssuesReferences" "${issue_creator}"
 done
 
+# Organization-owned issue creators must preserve the dogfooding execution
+# authorization policy as well as the normal Kaizen intake label.
+for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}"; do
+  grep -Fq 'both the `kaizen` and `kaizen:authorized` labels' "${issue_creator}"
+  grep -Fq 'at least triage permission' "${issue_creator}"
+  grep -Fq 'external operation mode' "${issue_creator}"
+done
+
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"
