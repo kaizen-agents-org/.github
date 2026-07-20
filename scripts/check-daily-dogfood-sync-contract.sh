@@ -408,7 +408,8 @@ for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.y
       in_selection=0
     }
     in_selection && /^    mode: opt-in$/ { mode=1 }
-    END { exit(mode ? 0 : 1) }
+    in_selection && /^    includeLabel: ["'\'' ]*kaizen:ready["'\'' ]*$/ { label=1 }
+    END { exit(mode && label ? 0 : 1) }
   ' "${config}"; then
     echo "dogfood runtime config must require opt-in selection: ${config}" >&2
     exit 1
