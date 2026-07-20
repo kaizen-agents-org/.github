@@ -22,6 +22,14 @@ base `kaizen` label; a maintainer must add `kaizen:ready` before scheduled work
 can run. Third-party or adopter repositories must keep the safer `external`
 mode and its explicit authorization gate.
 
+The three trusted organization issue creators are the narrow exception: they
+add `kaizen`, `kaizen:authorized`, and `kaizen:ready` together after their
+preflight checks, so their ready-to-run dogfood issues satisfy this selector.
+Authorization and selection remain separate gates. Existing automation-created
+backlog is queued through the deliberate maintainer triage described in
+[Automation Roles](./automation-roles.md#existing-issue-triage), not by bulk
+labeling public or external issues.
+
 The manifest enumerates every managed path. Three kinds of paths are managed today:
 
 - **Shared skills** copied identically into each target's `skills/` directory:

@@ -44,13 +44,16 @@ created issue bodies. The section tells implementers to include a GitHub closing
 keyword in the PR body and verify `closingIssuesReferences` before reporting a
 PR ready, so merged implementation PRs close their source issues.
 
-Within `kaizen-agents-org`, issue-creating automations add both `kaizen` and
-`kaizen:authorized` at creation time under the organization's explicit
-dogfooding policy. The label actor needs at least triage permission in the
-target repository. External operation mode retains human execution
-authorization by default; it does not inherit this policy implicitly.
-Each issue creator verifies that `kaizen:authorized` exists in its target
-repository and bootstraps the label when needed. It fails closed and reports a
-blocked candidate if the label cannot be created and re-verified. Bootstrap
-requires write permission; triage is sufficient only for applying an existing
-label, so a maintainer must pre-provision it when the automation lacks write.
+Within `kaizen-agents-org`, issue-creating automations add `kaizen`,
+`kaizen:authorized`, and `kaizen:ready` at creation time under the
+organization's explicit dogfooding policy. Authorization and opt-in queue
+selection are separate gates, so both labels are required for scheduled work.
+The authorization-label actor needs at least triage permission in the target
+repository. External operation mode retains explicit maintainer authorization
+and queue selection; it does not inherit this policy implicitly.
+Each issue creator verifies that `kaizen:authorized` and `kaizen:ready` exist in
+its target repository and bootstraps either label when needed. It fails closed
+and reports a blocked candidate if either label cannot be created and
+re-verified. Bootstrap requires write permission; triage is sufficient only for
+applying an existing label, so a maintainer must pre-provision missing labels
+when the automation lacks write.
