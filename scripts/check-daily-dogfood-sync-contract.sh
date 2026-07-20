@@ -9,7 +9,7 @@ set -euo pipefail
 # regression coverage, a complete manifest, present managed source paths, and
 # the shared-skill fast path still callable.
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "${repo_root}"
 
 daily_workflow=".github/workflows/daily-dogfood-sync.yml"
@@ -98,7 +98,10 @@ done
 # Kaizen intake label.
 for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}"; do
   normalized_issue_creator="$(tr '\n' ' ' < "${issue_creator}")"
-  grep -Fq "\`kaizen\`, \`kaizen:authorized\`, and \`${selection_label}\` labels" <<<"${normalized_issue_creator}"
+  if ! grep -Fq "\`kaizen\`, \`kaizen:authorized\`, and \`${selection_label}\` labels" <<<"${normalized_issue_creator}"; then
+    echo "trusted issue creator must add configured selection label ${selection_label}: ${issue_creator}" >&2
+    exit 1
+  fi
   grep -Fq 'at least triage permission' <<<"${normalized_issue_creator}"
   grep -Fq 'external operation mode' <<<"${normalized_issue_creator}"
   grep -Fq -- '--search "kaizen:authorized" --limit 100 --json name' <<<"${normalized_issue_creator}"

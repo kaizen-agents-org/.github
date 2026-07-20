@@ -95,5 +95,8 @@ The organization monitor should check that:
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
 `scripts/check-daily-dogfood-sync-contract.sh` encodes these checks as a regression test.
+`scripts/test-dogfood-selection-label-contract.sh` additionally proves that the
+contract rejects a trusted issue creator when its label set omits the configured
+selection label.
 
 If the daily workflow is missing, failing, or no longer limited to the manifest-managed files, the monitor should file or update a focused `[monitor]` issue.
