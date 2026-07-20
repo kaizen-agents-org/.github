@@ -28,4 +28,27 @@ grep -Fq \
   'trusted issue creator must add configured selection label kaizen:ready: automations/kaizen-agents-repo-improvement-scout.prompt.md' \
   "${error_log}"
 
+rm -rf "${fixture}"
+mkdir -p "${fixture}"
+tar -C "${repo_root}" -cf - .github .kaizen automations docs scripts skills \
+  | tar -C "${fixture}" -xf -
+sed -i.bak 's/ and `kaizen:ready`//' "${fixture}/skills/kaizen-bug-router/SKILL.md"
+rm "${fixture}/skills/kaizen-bug-router/SKILL.md.bak"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" >/dev/null 2>&1; then
+  echo "FAIL: contract accepted bug routing without kaizen:ready" >&2
+  exit 1
+fi
+
+rm -rf "${fixture}"
+mkdir -p "${fixture}"
+tar -C "${repo_root}" -cf - .github .kaizen automations docs scripts skills \
+  | tar -C "${fixture}" -xf -
+sed -i.bak 's/ and `kaizen:ready`//' \
+  "${fixture}/.github/dogfood-sync/targets/builder-agent/AGENTS.md"
+rm "${fixture}/.github/dogfood-sync/targets/builder-agent/AGENTS.md.bak"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" >/dev/null 2>&1; then
+  echo "FAIL: contract accepted managed AGENTS without kaizen:ready" >&2
+  exit 1
+fi
+
 echo "PASS: trusted issue creators must include the configured selection label"

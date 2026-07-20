@@ -118,6 +118,20 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -Fq 'silently dropped' <<<"${normalized_issue_creator}"
 done
 
+normalized_bug_router="$(tr '\n' ' ' < "${bug_router_skill}")"
+grep -Fq 'add both the repository' <<<"${normalized_bug_router}"
+grep -Fq '`kaizen:authorized` and `kaizen:ready`' <<<"${normalized_bug_router}"
+
+for managed_agents in .github/dogfood-sync/targets/*/AGENTS.md; do
+  if grep -Fq 'Treat GitHub Issues' "${managed_agents}"; then
+    normalized_agents="$(tr '\n' ' ' < "${managed_agents}")"
+    grep -Fq "both \`kaizen\` and \`${selection_label}\`" <<<"${normalized_agents}" || {
+      echo "managed AGENTS issue eligibility must include selection label ${selection_label}: ${managed_agents}" >&2
+      exit 1
+    }
+  fi
+done
+
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
 grep -q "schedule:" "${daily_workflow}"
 grep -q "workflow_dispatch:" "${daily_workflow}"
