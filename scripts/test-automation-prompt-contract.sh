@@ -27,6 +27,20 @@ assert_rejected() {
   cp "${original}" "${fixture}/${file}"
 }
 
+assert_append_rejected() {
+  local name="$1"
+  local file="$2"
+  local text="$3"
+  local original="${repo_root}/${file}"
+
+  printf '\n  %s\n' "${text}" >> "${fixture}/${file}"
+  if bash "${checker}" "${fixture}" >/dev/null 2>&1; then
+    echo "mutation was not rejected: ${name}" >&2
+    exit 1
+  fi
+  cp "${original}" "${fixture}/${file}"
+}
+
 assert_rejected \
   "scout PR boundary" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
@@ -116,5 +130,15 @@ assert_rejected \
   "docs/automation-roles.md" \
   "At most two issues per target repository per run." \
   "At most twenty issues per target repository per run."
+
+assert_append_rejected \
+  "indented duplicate prompt marker" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "<!-- automation-contract: automation=scout; issues=[monitor]; prs=implementation; per-repo-limit=9; source=default-branch; roles-doc=docs/automation-roles.md -->"
+
+assert_append_rejected \
+  "indented duplicate documentation marker" \
+  "docs/automation-roles.md" \
+  "<!-- automation-contract: automation=scout; issues=[monitor]; prs=implementation; per-repo-limit=9; source=default-branch; roles-doc=docs/automation-roles.md -->"
 
 echo "Automation prompt contract mutations are rejected."

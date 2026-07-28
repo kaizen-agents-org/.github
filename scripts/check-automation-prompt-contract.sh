@@ -44,11 +44,11 @@ for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${read
 done
 
 for prompt in "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}"; do
-  marker_count="$(grep -c '^<!-- automation-contract:' "${prompt}" || true)"
+  marker_count="$(grep -c '^[[:space:]]*<!-- automation-contract:' "${prompt}" || true)"
   [[ "${marker_count}" == "1" ]] ||
     fail "${prompt} must contain exactly one automation contract marker"
 done
-doc_marker_count="$(grep -c '^<!-- automation-contract:' "${contract_doc}" || true)"
+doc_marker_count="$(grep -c '^[[:space:]]*<!-- automation-contract:' "${contract_doc}" || true)"
 [[ "${doc_marker_count}" == "4" ]] ||
   fail "${contract_doc} must contain exactly four automation contract markers"
 
