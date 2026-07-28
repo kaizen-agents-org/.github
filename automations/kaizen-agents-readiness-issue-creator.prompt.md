@@ -1,4 +1,5 @@
 Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-readiness-issue-creator.prompt.md`.
+<!-- automation-contract: role=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->
 
 Create focused Kaizen improvement issues from the latest production-readiness
 review report.

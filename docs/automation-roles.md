@@ -2,6 +2,15 @@
 
 Kaizen Agents uses four Codex automations in three layers: improve, maintain, and readiness-check.
 
+<!-- automation-contract: role=scout; issues=[scout]; prs=none; per-repo-limit=2; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: role=monitor; issues=[monitor]; prs=none; per-repo-limit=1; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: role=weekly-readiness-review; issues=none; prs=readiness-report; per-repo-limit=0; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: role=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->
+
+The comments above are stable machine-readable summaries used by
+`scripts/check-automation-prompt-contract.sh`. Keep each marker aligned with
+the prose below and with the matching managed prompt.
+
 | Layer | Automation | Responsibility | May create issues | May create PRs |
 | --- | --- | --- | --- | --- |
 | Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |

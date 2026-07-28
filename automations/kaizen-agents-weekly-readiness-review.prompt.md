@@ -1,4 +1,5 @@
 Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-readiness-review.prompt.md`.
+<!-- automation-contract: role=weekly-readiness-review; issues=none; prs=readiness-report; per-repo-limit=0; source=default-branch; roles-doc=docs/automation-roles.md -->
 
 Run the weekly Kaizen Agents production-readiness review across the local
 repositories and GitHub remotes.
