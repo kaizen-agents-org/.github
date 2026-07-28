@@ -39,6 +39,8 @@ apply a repository-specific policy instead of this preset.
 - `gh` must be authenticated as a repository administrator or owner.
 - Fine-grained tokens and GitHub App tokens need repository
   `Administration: write` permission.
+- GitHub authorization failures stop the command without reporting a successful
+  application; the helper does not retry with broader credentials.
 - The named branch and status-check context must already be known. The helper
   does not infer defaults, discover checks, or expand wildcard branch names.
 

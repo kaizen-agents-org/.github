@@ -38,6 +38,10 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -n "${input}" ]] || exit 91
 cp "${input}" "${GH_STUB_DIR}/payload.${count}.json"
+if [[ "${GH_STUB_FORBID:-false}" == true ]]; then
+  echo "gh: Resource not accessible by personal access token (HTTP 403)" >&2
+  exit 1
+fi
 echo "GH_MUTATION_${count}"
 STUB
 chmod +x "${tmp}/bin/gh"
@@ -99,6 +103,26 @@ grep -Fq "Dry run: no GitHub mutation performed." "${tmp}/dry-run.out" \
 grep -Fq '"required_conversation_resolution": true' "${tmp}/dry-run.out" \
   || fail "dry-run did not print the proposed policy"
 echo "PASS: dry-run prints the policy without invoking GitHub"
+
+rm -f "${tmp}/count"
+if GH_STUB_FORBID=true GH_STUB_DIR="${tmp}" PATH="${tmp}/bin:${PATH}" \
+  "${apply_script}" \
+  --repo kaizen-agents-org/example \
+  --branch main \
+  --check "Kaizen contract" \
+  > "${tmp}/forbidden.out" 2> "${tmp}/forbidden.err"; then
+  fail "GitHub authorization failure was ignored"
+fi
+[[ "$(cat "${tmp}/count")" == "1" ]] \
+  || fail "authorization failure did not stop after the rejected request"
+grep -Fq "Proposed branch-protection policy:" "${tmp}/forbidden.out" \
+  || fail "authorization failure occurred before the policy preview"
+grep -Fq "HTTP 403" "${tmp}/forbidden.err" \
+  || fail "GitHub authorization error was not preserved"
+if grep -Fq "Applied branch protection" "${tmp}/forbidden.out"; then
+  fail "authorization failure was reported as a successful application"
+fi
+echo "PASS: GitHub authorization failures stop without a success report"
 
 assert_rejected_without_gh() {
   local label="$1"
