@@ -221,4 +221,4 @@ expect_failure skill-drift 'vendored skill does not match its manifest digest' m
 expect_failure skill-symlink 'skills manifest path is not a regular file' mutate_skill_symlink
 expect_failure toolchain-drift 'skills manifest toolchain mismatch for verifier' mutate_toolchain
 
-echo "PASS: onboarding contract checker fixtures cover every invariant"
+echo "PASS onboarding security policy and admin-enforcement fixture tests passed"
