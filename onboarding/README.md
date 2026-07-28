@@ -61,7 +61,10 @@ Profile files are not merged by this checker. It deliberately checks the final
 If `skills/skills-manifest.json` is present, every regular file under `skills/`
 must be listed and match its lowercase SHA-256 digest. Symlinks and other
 special entries are rejected so a vendored path cannot resolve outside the
-target repository:
+target repository. The checker also requires `--skill-bundle-manifest FILE`,
+an authoritative digest manifest exported by the installed pinned toolchain,
+so changing a vendored file and its target-controlled digest together is still
+detected:
 
 ```json
 {
@@ -78,8 +81,12 @@ target repository:
 ```
 
 When `onboarding/versions.json` exists in the target, its component versions
-must match `toolchain`. Use `--toolchain-manifest FILE` to check a different
-version manifest.
+must contain exactly `kaizen-loop`, `builder-agent`, and `verifier` using
+`v0.x.y` release tags, and must match both the target and pinned bundle
+`toolchain` objects. Use `--toolchain-manifest FILE` to check a different
+version manifest. The pinned bundle manifest uses the same `version`,
+`toolchain`, and `files` shape shown above and must come from outside the target
+repository.
 
 ## Exit behavior and tests
 

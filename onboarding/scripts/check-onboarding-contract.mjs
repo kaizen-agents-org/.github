@@ -22,24 +22,34 @@ const REQUIRED_LABELS = [
   'kaizen:P2',
   'kaizen:pr-only'
 ];
+const REQUIRED_TOOLCHAIN_COMPONENTS = [
+  'builder-agent',
+  'kaizen-loop',
+  'verifier'
+];
+const RELEASE_TAG_PATTERN = /^v0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function usage() {
   console.error(
-    'Usage: check-onboarding-contract.sh [--observations FILE] [--toolchain-manifest FILE] TARGET_REPOSITORY'
+    'Usage: check-onboarding-contract.sh [--observations FILE] [--toolchain-manifest FILE] [--skill-bundle-manifest FILE] TARGET_REPOSITORY'
   );
 }
 
 function parseArguments(argv) {
   let observations;
+  let skillBundleManifest;
   let toolchainManifest;
   let target;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--observations' || argument === '--toolchain-manifest') {
+    if (argument === '--observations' ||
+        argument === '--toolchain-manifest' ||
+        argument === '--skill-bundle-manifest') {
       const value = argv[index + 1];
       if (!value) throw new Error(`${argument} requires a file path`);
       if (argument === '--observations') observations = value;
-      else toolchainManifest = value;
+      else if (argument === '--toolchain-manifest') toolchainManifest = value;
+      else skillBundleManifest = value;
       index += 1;
     } else if (argument === '--help' || argument === '-h') {
       usage();
@@ -53,7 +63,7 @@ function parseArguments(argv) {
     }
   }
   if (!target) throw new Error('target repository path is required');
-  return { observations, target, toolchainManifest };
+  return { observations, skillBundleManifest, target, toolchainManifest };
 }
 
 function reportFailure(message, remediation) {
@@ -277,6 +287,15 @@ function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
 }
 
+function hasExactToolchainComponents(value) {
+  return isPlainObject(value) &&
+    Object.keys(value).sort().join('\n') === REQUIRED_TOOLCHAIN_COMPONENTS.join('\n') &&
+    REQUIRED_TOOLCHAIN_COMPONENTS.every(
+      (component) => typeof value[component] === 'string' &&
+        RELEASE_TAG_PATTERN.test(value[component])
+    );
+}
+
 async function listFiles(directory, prefix = '') {
   const result = [];
   const currentDirectory = path.join(directory, ...prefix.split('/').filter(Boolean));
@@ -290,7 +309,7 @@ async function listFiles(directory, prefix = '') {
   return result;
 }
 
-async function checkSkillsManifest(target, toolchainManifestOption) {
+async function checkSkillsManifest(target, toolchainManifestOption, skillBundleManifestOption) {
   const manifestPath = path.join(target, 'skills', 'skills-manifest.json');
   if (!existsSync(manifestPath)) return;
   const manifest = await readJson(manifestPath, 'skills manifest');
@@ -299,6 +318,38 @@ async function checkSkillsManifest(target, toolchainManifestOption) {
     reportFailure(
       'skills/skills-manifest.json must have version 1 and a files object',
       'regenerate the skills manifest with the pinned Kaizen toolchain'
+    );
+    return;
+  }
+
+  if (!skillBundleManifestOption) {
+    reportFailure(
+      'a pinned skill bundle manifest is required to validate vendored skill content',
+      'pass --skill-bundle-manifest FILE from the installed pinned toolchain'
+    );
+    return;
+  }
+  const bundleManifestPath = path.resolve(skillBundleManifestOption);
+  const bundleManifest = await readJson(bundleManifestPath, 'pinned skill bundle manifest');
+  if (!bundleManifest) return;
+  const resolvedTarget = realpathSync(target);
+  const resolvedBundleManifest = realpathSync(bundleManifestPath);
+  const bundleRelativeToTarget = path.relative(resolvedTarget, resolvedBundleManifest);
+  if (bundleRelativeToTarget === '' ||
+      (!bundleRelativeToTarget.startsWith(`..${path.sep}`) &&
+       !path.isAbsolute(bundleRelativeToTarget))) {
+    reportFailure(
+      'pinned skill bundle manifest must be outside the target repository',
+      'pass the manifest exported by the separately installed pinned toolchain'
+    );
+    return;
+  }
+  if (bundleManifest.version !== 1 ||
+      !isPlainObject(bundleManifest.files) ||
+      !hasExactToolchainComponents(bundleManifest.toolchain)) {
+    reportFailure(
+      'pinned skill bundle manifest must have version 1, the exact three-component toolchain set, and a files object',
+      'regenerate the bundle manifest from the installed pinned kaizen-loop, builder-agent, and verifier releases'
     );
     return;
   }
@@ -321,6 +372,21 @@ async function checkSkillsManifest(target, toolchainManifestOption) {
       );
       continue;
     }
+    const pinnedExpected = bundleManifest.files[relative];
+    if (typeof pinnedExpected !== 'string' || !/^[0-9a-f]{64}$/.test(pinnedExpected)) {
+      reportFailure(
+        `pinned skill bundle does not declare a valid digest for ${relative}`,
+        're-vendor only files provided by the installed pinned toolchain and regenerate its bundle manifest'
+      );
+      continue;
+    }
+    if (expected !== pinnedExpected) {
+      reportFailure(
+        `skills manifest digest differs from the pinned skill bundle for ${relative}`,
+        're-vendor the skill from the installed pinned toolchain and copy its authoritative digest'
+      );
+      continue;
+    }
     const absolute = path.join(target, ...relative.split('/'));
     try {
       const stat = await fs.lstat(absolute);
@@ -332,7 +398,7 @@ async function checkSkillsManifest(target, toolchainManifestOption) {
         continue;
       }
       const actual = sha256(await fs.readFile(absolute));
-      if (actual !== expected) {
+      if (actual !== pinnedExpected) {
         reportFailure(
           `vendored skill does not match its manifest digest: ${relative}`,
           're-vendor the skill from the pinned toolchain and regenerate skills/skills-manifest.json'
@@ -373,26 +439,32 @@ async function checkSkillsManifest(target, toolchainManifestOption) {
   if (!toolchainPath) return;
   const toolchain = await readJson(toolchainPath, 'toolchain manifest');
   if (!toolchain) return;
-  if (!isPlainObject(toolchain) ||
-      Object.values(toolchain).some((version) => typeof version !== 'string' || version.length === 0)) {
+  if (!hasExactToolchainComponents(toolchain)) {
     reportFailure(
-      'toolchain manifest must be an object of component names to non-empty versions',
+      'toolchain manifest must contain exactly kaizen-loop, builder-agent, and verifier with v0.x.y release tags',
       'regenerate the toolchain manifest from onboarding/versions.json'
     );
     return;
   }
-  if (!isPlainObject(manifest.toolchain)) {
+  if (!hasExactToolchainComponents(manifest.toolchain)) {
     reportFailure(
-      'skills manifest must declare a toolchain object when toolchain metadata is present',
+      'skills manifest must declare exactly kaizen-loop, builder-agent, and verifier with v0.x.y release tags',
       'copy the pinned component versions into skills/skills-manifest.json under toolchain'
     );
     return;
   }
-  for (const [component, version] of Object.entries(toolchain)) {
+  for (const component of REQUIRED_TOOLCHAIN_COMPONENTS) {
+    const version = toolchain[component];
     if (manifest.toolchain[component] !== version) {
       reportFailure(
         `skills manifest toolchain mismatch for ${component}: expected ${JSON.stringify(version)}, found ${JSON.stringify(manifest.toolchain[component])}`,
         're-vendor skills with the pinned toolchain and update skills/skills-manifest.json'
+      );
+    }
+    if (bundleManifest.toolchain[component] !== version) {
+      reportFailure(
+        `pinned skill bundle toolchain mismatch for ${component}: expected ${JSON.stringify(version)}, found ${JSON.stringify(bundleManifest.toolchain[component])}`,
+        'use the skill bundle manifest exported by the exact versions in onboarding/versions.json'
       );
     }
   }
@@ -427,7 +499,7 @@ checkConfig(config);
 await checkIssueTemplate(target);
 checkObservations(observations);
 await checkSmokeArtifact(target);
-await checkSkillsManifest(target, options.toolchainManifest);
+await checkSkillsManifest(target, options.toolchainManifest, options.skillBundleManifest);
 
 if (failures > 0) {
   console.error(`Onboarding contract failed with ${failures} mismatch(es).`);
