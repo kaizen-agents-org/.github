@@ -30,8 +30,8 @@ assert_rejected() {
 assert_rejected \
   "scout PR boundary" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
-  "prs=none" \
-  "prs=implementation"
+  "Do not edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically." \
+  "Edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically."
 
 assert_rejected \
   "scout issue prefix" \
@@ -88,9 +88,27 @@ assert_rejected \
   "per-repo-limit=4"
 
 assert_rejected \
-  "role documentation alignment" \
+  "readiness creator PR boundary" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "Do not edit files, push branches, merge PRs, create implementation branches, or" \
+  "Edit files, push branches, merge PRs, create implementation branches, or"
+
+assert_rejected \
+  "role documentation marker alignment" \
   "docs/automation-roles.md" \
   "automation=scout" \
   "automation=repo-scout"
+
+assert_rejected \
+  "role documentation scout PR boundary" \
+  "docs/automation-roles.md" \
+  "| Improve | \`Kaizen Agents repo improvement scout\` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, \`\[scout\]\` issues. | No. |" \
+  "| Improve | \`Kaizen Agents repo improvement scout\` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, \`[scout]\` issues. | Yes. |"
+
+assert_rejected \
+  "role documentation scout limit" \
+  "docs/automation-roles.md" \
+  "At most two issues per target repository per run." \
+  "At most twenty issues per target repository per run."
 
 echo "Automation prompt contract mutations are rejected."

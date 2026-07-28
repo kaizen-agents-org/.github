@@ -63,7 +63,7 @@ require_contract_marker "${weekly_review}" '<!-- automation-contract: automation
 require_contract_marker "${readiness_creator}" '<!-- automation-contract: automation=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->'
 
 require_text "${scout}" 'prefix the title with `[scout]`'
-require_text "${scout}" 'open implementation PRs'
+require_text "${scout}" 'Do not edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically.'
 require_text "${scout}" 'Limit automatic issue creation to at most two issues per target repository per run.'
 
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
@@ -79,6 +79,16 @@ require_text "${readiness_creator}" 'read that report'
 require_text "${readiness_creator}" 'only from `origin/main`'
 require_text "${readiness_creator}" '`[readiness-review]`'
 require_text "${readiness_creator}" 'Limit issue creation to at most three issues per target repository per run'
-require_text "${readiness_creator}" 'open implementation PRs automatically'
+require_text "${readiness_creator}" 'Do not edit files, push branches, merge PRs, create implementation branches, or'
+require_text "${readiness_creator}" 'open implementation PRs automatically. This automation only creates focused'
+
+require_text "${contract_doc}" '| Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |'
+require_text "${contract_doc}" '| Maintain | `Kaizen Agents org monitor` | Check organization operation, sync, scheduler, CI, source-order, and drift health. | Yes, only focused `[monitor]` issues. | No. |'
+require_text "${contract_doc}" '| Readiness-check | `Kaizen Agents weekly readiness review` | Evaluate whether the system is closer to real operation and publish an approval-ready dated report. | No. | Yes, only readiness report PRs in `.github`. |'
+require_text "${contract_doc}" '| Readiness-check | `Kaizen Agents readiness issue creator` | Convert an approved readiness report on `main` into implementation backlog. | Yes, `[readiness-review]` issues. | No. |'
+require_text "${contract_doc}" '`repo-improvement-scout` owns proactive improvement discovery. It should create small, actionable repo-local issues backed by default-branch docs or code evidence. It must not file organization operation issues, readiness-review issues, or implementation PRs.'
+require_text "${contract_doc}" '| `repo-improvement-scout` | At most two issues per target repository per run. |'
+require_text "${contract_doc}" '| `org-monitor` | At most one issue per target repository per run. |'
+require_text "${contract_doc}" '| `readiness-issue-creator` | At most three issues per target repository per run. |'
 
 echo "Automation prompt contract is present."
