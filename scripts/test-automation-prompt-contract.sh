@@ -58,6 +58,12 @@ assert_rejected \
   "Use this prompt as a general repo-improvement scout"
 
 assert_rejected \
+  "monitor PR boundary" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Do not merge PRs, push changes, or make broad code changes automatically." \
+  "Merge PRs, push changes, and make broad code changes automatically."
+
+assert_rejected \
   "weekly review issue boundary" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   "issues=none" \

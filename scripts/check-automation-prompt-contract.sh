@@ -69,6 +69,7 @@ require_text "${scout}" 'Limit automatic issue creation to at most two issues pe
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
 require_text "${monitor}" 'Use concise issue titles prefixed with `[monitor]`.'
 require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per target repository per run.'
+require_text "${monitor}" 'Do not merge PRs, push changes, or make broad code changes automatically. The monitor may propose small, deterministic documentation, prompt, or configuration follow-ups that should be handled in a normal ready-for-review PR, but it must not edit repository files, create implementation branches, or open implementation PRs unless the user has explicitly asked for implementation in this thread.'
 
 require_text "${weekly_review}" 'normal ready-for-review PR'
 require_text "${weekly_review}" 'Do not create GitHub issues from this weekly review prompt.'
