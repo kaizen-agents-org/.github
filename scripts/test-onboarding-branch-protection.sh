@@ -152,6 +152,8 @@ assert_rejected_without_gh "malformed repository" \
   --repo owner --branch main --check test
 assert_rejected_without_gh "invalid branch" \
   --repo owner/repo --branch 'invalid..branch' --check test
+assert_rejected_without_gh "previous-checkout branch shorthand" \
+  --repo owner/repo --branch '@{-1}' --check test
 assert_rejected_without_gh "blank check" \
   --repo owner/repo --branch main --check '   '
 assert_rejected_without_gh "control-character check" \

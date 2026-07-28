@@ -82,8 +82,10 @@ done
 
 [[ "${repo}" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$ ]] \
   || fail "--repo must be an explicit owner/repo"
-git check-ref-format --branch "${branch}" >/dev/null 2>&1 \
+validated_branch="$(git check-ref-format --branch "${branch}" 2>/dev/null)" \
   || fail "--branch is not a valid branch name: ${branch}"
+[[ "${validated_branch}" == "${branch}" ]] \
+  || fail "--branch must be an explicit branch name, not checkout shorthand: ${branch}"
 [[ "${required_check}" =~ [^[:space:]] ]] \
   || fail "--check must contain a non-whitespace character"
 [[ ! "${required_check}" =~ [[:cntrl:]] ]] \
