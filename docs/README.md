@@ -38,6 +38,11 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Compatibility manifest ownership
    - Release and install verification checklist
 
+1. [Onboarding Contract Checker](../onboarding/README.md)
+   - Target repository and observation snapshot inputs
+   - Deterministic safety, branch-protection, smoke, and vendored-skill checks
+   - Exit behavior and focused fixture tests
+
 1. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
