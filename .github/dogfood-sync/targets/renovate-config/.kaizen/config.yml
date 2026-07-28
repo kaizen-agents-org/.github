@@ -13,6 +13,9 @@ run:
   maxAttemptsPerIssue: 3
   maxOpenPullRequests: 3
   latestStartHour: 7
+safety:
+  # This repository is part of the maintainer-controlled Kaizen Agents dogfood fleet.
+  operationMode: dogfood
 scheduler:
   jobs:
     maintenance:
@@ -93,6 +96,12 @@ report:
   issueComments: true
 issues:
   label: kaizen
+  selection:
+    # Public issue forms add only `kaizen`; a maintainer must queue execution.
+    mode: opt-in
+    includeLabel: kaizen:ready
+    excludeLabels:
+      - kaizen:needs-human
   priorityOrder:
     - kaizen:P0
     - kaizen:P1

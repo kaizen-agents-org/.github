@@ -8,7 +8,7 @@ The GitHub-managed source prompt for the Codex automation lives at [`../automati
 
 ## Runtime Cadence
 
-The monitor runs once daily at 04:15 in the local Codex automation schedule, after the nighttime [Repository Improvement Scout](./repo-improvement-scout.md) run.
+Exactly one organization-wide monitor runs once daily at 04:15 in the local Codex automation schedule, after the nighttime [Repository Improvement Scout](./repo-improvement-scout.md) run. Do not enable repository-scoped copies of the monitor.
 
 This timing reflects the monitor's conservative purpose: it checks organization-level coordination, sync health, and drift after the proactive scout has had a chance to discover repo-local improvement issues.
 
@@ -53,7 +53,7 @@ Each run produces a concise coordination report covering:
 - Documentation and implementation drift across the core and support components.
 - Whether local Kaizen Loop scheduler documentation and repository configs use the current `scheduler.jobs` model instead of stale fixed job fields.
 - Whether the [daily dogfood sync](./daily-dogfood-sync.md) workflow exists, runs on schedule, runs after managed source contract changes land on `main`, and stays limited to deterministic files it can update safely.
-- Whether local runner state can be refreshed after dogfood changes with `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --prune --verify`.
+- Whether reviewed, read-only fleet plan evidence exists from the machine-local inventory, for example `kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --dry-run --json`.
 - Whether `kaizen-loop`, `builder-agent`, and `verifier` still have clear responsibilities that match the organization profile and architecture docs.
 - Recommended next actions and follow-up work that should be handled through PRs.
 
@@ -66,9 +66,12 @@ After writing the report, the monitor may create GitHub issues for concrete foll
 Automatic issue creation is intentionally conservative:
 
 - Search existing open issues and PRs before creating anything.
+- For sync drift, derive a stable duplicate-ownership key from the target repository, managed path or component, and actionable follow-up. Store a SHA-256 digest of that normalized key in every created issue body as `<!-- monitor-ownership-key: sha256:<digest> -->`, and search both open issue and PR bodies for the exact marker before falling back to exact titles, paths or components, source refs, and conceptual action terms. Immediately before creation, repeat the search and acquire an atomic runtime claim for the same digest so overlapping runs cannot both create an issue. A newer ref does not make already-owned reconciliation work distinct, and failed or ambiguous searches or claims must keep the candidate report-only.
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
+- Before creating the first issue in a target repository, verify that `kaizen:authorized` and `kaizen:ready` exist and create either label when it is missing. Label creation requires write permission; triage is only sufficient to apply an existing label. Without write permission, require a maintainer to pre-provision missing labels. If either label cannot be created and verified, report the candidate as blocked and do not create an issue without both execution authorization and queue selection.
+- Add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels. Authorization and opt-in queue selection are separate gates. Automatic approval of both is limited to the `kaizen-agents-org` dogfooding policy, and the actor applying `kaizen:authorized` must have at least triage permission in the target repository so `kaizen-loop` accepts the label event. External operation mode keeps authorization and selection as explicit maintainer actions.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
 - Include a `Documentation basis` section anchored to [Documentation Sources](./documentation-sources.md), citing organization documents in that canonical source order before project-local docs, then cite the source that justifies the issue scope.
@@ -77,6 +80,8 @@ Automatic issue creation is intentionally conservative:
 - If ownership is unclear after investigation, create at most one coordination issue in `kaizen-agents-org/kaizen-loop` explaining the ambiguity.
 
 Speculative ideas, low-confidence observations, duplicate work, and broad cleanup suggestions should stay in the report instead of becoming issues.
+
+`scripts/check-org-monitor-contract.sh` keeps the source prompt's sync-drift duplicate-suppression rules under deterministic regression coverage. The daily dogfood contract check invokes it so the default contract-validation path cannot silently omit these rules.
 
 Daily dogfood sync drift should be reported when the monitor cannot resolve it deterministically, including a missing scheduled workflow, a broken shared-skill sync delegation, or changes outside the documented deterministic file list.
 
@@ -88,6 +93,8 @@ The monitor may report and file focused follow-up issues, but it must not:
 - Push branches or commits.
 - Edit repository files, create implementation branches, open implementation pull requests, or make broad code changes automatically.
 - Treat its report as approval to bypass human review.
+- Mutate production `registry.json`, fleet inventory, workspaces, scheduler jobs, or run locks.
+- Run a mutating `kaizen fleet` command from a repository checkout or Codex worktree.
 
 The monitor may recommend small, deterministic documentation, prompt, or configuration follow-ups, but any proposed coordination change that modifies repository behavior should still go through a normal ready-for-review pull request.
 
@@ -131,4 +138,4 @@ Daily sync workflows use fixed branch names and update existing open sync PRs in
 
 The organization monitor should check that the daily sync is working and report drift that cannot be fixed deterministically. It should not replace the daily sync or push cross-repository updates itself.
 
-The local runtime side of the same loop is refreshed with `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --prune --verify`, which rebuilds registry/workspace/scheduler state for the four active repositories and runs configured setup and verify commands in synced workspaces. The monitor may report fleet refresh failures as local observations, but issue creation still requires default-branch documentation support and duplicate checks.
+The local runtime side is reconciled separately by an operator from the authoritative machine-local `~/.kaizen/fleet.yml`. After confirming that the installed CLI advertises `--manifest` in `kaizen fleet --help`, the monitor may inspect `kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --dry-run --json` output, but must never apply it. If that option is unavailable, the monitor reports fleet plan evidence as unavailable without running a fleet command. After reviewing a supported plan, an operator can run the corresponding apply and verify commands outside the monitor. Fleet failures remain local observations; issue creation still requires default-branch documentation support and duplicate checks.

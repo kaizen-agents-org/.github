@@ -86,9 +86,37 @@ repo-local issue.
 Limit issue creation to at most three issues per target repository per run from
 the approved dated report. Do not apply an organization-wide cap, and do not let
 one repository's open `kaizen` issue count block another repository's eligible
-candidate. Use the `kaizen` label and prefix issue titles with
-`[readiness-review]` so it is clear they were created from the readiness review
-automation. Each issue body must include:
+candidate.
+
+Before creating the first issue in each target repository, verify both execution
+gate labels. Run `gh label list --repo kaizen-agents-org/<repo> --search
+"kaizen:authorized" --limit 100 --json name --jq 'any(.name ==
+"kaizen:authorized")'` and require an exact `true` result, then do the same for
+`kaizen:ready` with `--search "kaizen:ready"` and `any(.name ==
+"kaizen:ready")`. If a label is absent, bootstrap it with `gh label create
+"kaizen:authorized" --repo kaizen-agents-org/<repo> --color "5319E7"
+--description "Approved for Kaizen execution"` or `gh label create
+"kaizen:ready" --repo kaizen-agents-org/<repo> --color "0E8A16" --description
+"Eligible for scheduled Kaizen selection"`, as applicable, then re-run the same
+exact-name query. Label creation requires write permission; triage permission is
+sufficient only to apply an existing label. If the automation lacks write
+permission, report that a maintainer with write permission must pre-provision
+the labels. If either label cannot be created and verified, do not create the
+issue; report the candidate as blocked by missing execution-gate label setup.
+Never create an issue while allowing a missing `kaizen:authorized` or
+`kaizen:ready` label to be silently dropped.
+
+Add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels and prefix issue
+titles with `[readiness-review]` so it is clear they were created from the
+readiness review automation. Authorization and queue selection are separate
+gates: `kaizen:authorized` records trusted execution approval, while
+`kaizen:ready` makes the issue eligible for the fleet's opt-in scheduled
+selector. This automatic authorization and selection is the explicit
+`kaizen-agents-org` dogfooding policy documented in `docs/automation-roles.md`;
+do not generalize it to external operation mode, where human authorization and
+queue selection remain explicit maintainer actions. The actor applying
+`kaizen:authorized` must have at least triage permission in the target repository
+so `kaizen-loop` accepts the label event. Each issue body must include:
 
 - summary of the improvement;
 - source report path and review date;

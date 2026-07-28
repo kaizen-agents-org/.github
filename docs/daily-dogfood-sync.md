@@ -12,6 +12,24 @@ The synced contract covers the dogfooding files the monitored repositories depen
 - Target repositories: `builder-agent`, `verifier`, `kaizen-loop`, `coderabbit`, and `renovate-config`
 - Deterministic source of truth: `.github/dogfood-sync/manifest.json`
 
+These repositories form a maintainer-controlled self-organization fleet. Their
+runtime configs must explicitly set `safety.operationMode: dogfood`; relying on
+the `external` default would require a second execution-authorization label and
+silently leave maintainer-labeled `kaizen` work unprocessed. This exception is
+limited to the repositories named here: PR-only policy, verifier checks, intake
+gates, and opt-in selection remain in force. Public issue forms add only the
+base `kaizen` label; a maintainer must add `kaizen:ready` before scheduled work
+can run. Third-party or adopter repositories must keep the safer `external`
+mode and its explicit authorization gate.
+
+The three trusted organization issue creators are the narrow exception: they
+add `kaizen`, `kaizen:authorized`, and `kaizen:ready` together after their
+preflight checks, so their ready-to-run dogfood issues satisfy this selector.
+Authorization and selection remain separate gates. Existing automation-created
+backlog is queued through the deliberate maintainer triage described in
+[Automation Roles](./automation-roles.md#existing-issue-triage), not by bulk
+labeling public or external issues.
+
 The manifest enumerates every managed path. Three kinds of paths are managed today:
 
 - **Shared skills** copied identically into each target's `skills/` directory:
@@ -37,7 +55,8 @@ The called workflow:
 4. Runs `scripts/sync-daily-dogfood.sh` to copy only the manifest-managed paths, and refuses to continue if a target has drift outside those paths.
 5. Verifies that each target checkout now matches the manifest-managed sources.
 6. Opens or updates ready-for-review sync PRs on the fixed branch `codex/daily-dogfood-sync` targeting `main` in target repositories when managed files changed.
-7. Asserts that no target repository's `origin/main` still drifts from the managed contracts without an open sync PR targeting `main`, failing the run if it does.
+   Every generated PR carries `<!-- kaizen-pr-guardian:managed -->`; the local Kaizen durable guardian uses that marker together with the known branch, same-repository head, and expected base branch before adopting the PR for review convergence.
+7. Asserts that any remaining `origin/main` drift is covered by an open sync PR targeting `main` whose branch exactly matches every manifest-managed source path; a missing, stale, or incomplete sync PR fails the run.
 8. Reports the per-repository outcome in the workflow summary.
 
 The workflow must not merge PRs automatically.
@@ -72,8 +91,12 @@ The organization monitor should check that:
 - Push-triggered sync runs to managed source contract paths after merges to `main` are gated by `TOKEN_REQUIRED` and fail closed when `KAIZEN_SYNC_TOKEN` is absent; `workflow_call` runs also fail closed when called with `require_token: true`.
 - Push-triggered sync runs derive the source issue from the merged source PR when possible, and generated target PRs verify the issue linkage through `closingIssuesReferences`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
+- The source repository and every manifest target explicitly declare `safety.operationMode: dogfood` together with opt-in `kaizen:ready` selection.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
 `scripts/check-daily-dogfood-sync-contract.sh` encodes these checks as a regression test.
+`scripts/test-dogfood-selection-label-contract.sh` additionally proves that the
+contract rejects a trusted issue creator when its label set omits the configured
+selection label.
 
 If the daily workflow is missing, failing, or no longer limited to the manifest-managed files, the monitor should file or update a focused `[monitor]` issue.

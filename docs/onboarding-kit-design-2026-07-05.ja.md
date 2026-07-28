@@ -32,8 +32,8 @@
 | `kaizen init` | kaizen-loop `src/init/` | config 雛形生成・スタック検出(現状 Node のみ)・ラベル作成・issue テンプレート・workspace/registry 登録 |
 | `kaizen doctor` | kaizen-loop `src/commands/doctor.ts` | プリフライト(gh auth / ラベル / workspace / agent auth / builder・verifier 可用性 / builder runtime smoke)。`--repair` あり |
 | `kaizen smoke` | kaizen-loop `src/commands/smoke.ts` | sandbox Issue→PR の完走テスト + artifact 保存(受け入れゲートにそのまま使える) |
-| `.kaizen/config.yml` 契約 | kaizen-loop `src/config/schema.ts`、実例は `.github/dogfood-sync/targets/*/` | 導入の中心成果物。policy(pr-only / protectedPaths)・wipLimit・verify コマンド等 |
-| dogfood-sync targets | `.github/.github/dogfood-sync/` | **プロファイル(設定プリセット)の原型**。契約チェックスクリプト + そのテストという運用パターンも流用可能 |
+| `.kaizen/config.yml` 契約 | kaizen-loop `src/config/schema.ts`、構造上の実例は `.github/dogfood-sync/targets/*/` | 導入の中心成果物。dogfood targets は組織内専用なのでそのまま複製せず、外部導入では `safety.operationMode: external` を明示する。policy(pr-only / protectedPaths)・wipLimit・verify コマンド等 |
+| dogfood-sync targets | `.github/.github/dogfood-sync/` | **プロファイル(設定プリセット)の構造上の原型**。値は組織内dogfood専用であり、外部向けプロファイルへ `operationMode: dogfood` を継承しない。契約チェックスクリプト + そのテストという運用パターンは流用可能 |
 | shared skills sync | `.github/scripts/sync-kaizen-shared-skills.sh` | 対象リポジトリへのスキル配布の既存経路 |
 | branch protection 運用方針 | .github#106(文書化予定) | 対象リポジトリへ適用すべき protection プリセットの根拠 |
 

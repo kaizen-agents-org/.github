@@ -54,7 +54,7 @@
 
 ## 7. 投入手順の概要(パイロット開始時)
 
-1. 対象リポジトリに `.kaizen/config.yml` を配置(dogfood-sync targets の契約が雛形になる)。`policy.mode` は PR-only、`safety.wipLimit` は低め。
+1. 対象リポジトリに `.kaizen/config.yml` を配置する。dogfood-sync targets は構造と検証コマンドの参考に限定し、組織外・第三者導入では `safety.operationMode: external` を明示して `operationMode: dogfood` を複製しない。`policy.mode` は PR-only、`safety.wipLimit` は低め。
 2. branch protection を組織標準に揃える(required check + `required_conversation_resolution: true`。運用方針は .github#106 で文書化予定)。
 3. `kaizen smoke` を完走させ、artifact を記録(§4-2)。
 4. リスクの低い実 issue(ドキュメント/テスト/小リファクタ)から 2〜3 件流し、PR 品質と検証ログを確認。

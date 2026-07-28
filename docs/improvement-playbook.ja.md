@@ -18,6 +18,8 @@
 - **鮮度優先**: open PR が BEHIND になったら、新規作業より先に rebase する(放置すると builder のやり直しコストになる)。
 - **凍結**: kaizen-loop への新コマンド追加は Phase B 完了まで凍結(hardening は可)。自律マージ・Product Kaizen 層は着手しない。
 - **完了の定義**: 「PR を開いた」は完了ではない。**マージされて main に載り、元 issue が閉じた**ときに完了。
+- **事実主張には検証範囲を明記する**: 評価レポート・issue・レビューコメントで「このファイル/行は壊れている」「この機能は存在しない」のようにリポジトリの現在状態を主張するときは、**どの ref(通常は `origin/main` の HEAD SHA、または未マージ PR ブランチなら明示的にそのブランチ名)を検証したか**を書く。特に未マージ PR の内容を主張する場合は `origin/main` だけでなく該当ブランチを確認すること。2026-07-08 の外部適用準備レポートは `origin/main` の 3 日前の状態を根拠に「prompt.ts が生補間のまま」と書いたが、実際は 3 日前の PR で既に修正済みだった(stale citation)。同じ誤りは 2026-07-11〜12 のセッションでも、adviser レビューが `fixtures/corpus` の有無を `origin/main` のみで判定し「存在しない」と誤って結論づける形で再現した(実際は検証対象の未マージ PR ブランチにのみ存在)。
+- **eval/fixture の `expected` を実装の現在の出力に合わせて書き換えない**: 期待値はドキュメント上のground truth(例: verifier `docs/EVAL.md` のコーパス表)から導出する。現在のパイプラインがその値に到達できない場合は、`expected` を歪めて green にするのではなく、**赤いまま `knownGap: true`(または同等のフラグ)を立てて記録し、追跡 issue を残す**(例: verifier `fixtures/corpus/seeded/sb-001-authz-missing/case.json` の `knownGap` + verifier#104)。この規律がないと「verifier が見逃すべきでないセキュリティ回帰の期待値がこっそり緩められる」ような、テスト自体が壊れていることに気づけない状態が起こる(2026-07-11 verifier#102 レビューで発生・修正)。
 
 ---
 
@@ -90,7 +92,7 @@ readiness レビュー 2 回連続の最優先指摘。issue: kaizen-loop #131�
 
 1. ⬜ 各リポジトリで未コミット変更を確認し、必要なものは退避、不要なら破棄して `main` に戻し `git pull`。
 2. ⬜ `_pr-work/` 配下 12 ディレクトリを確認し、マージ済み PR に対応するものは削除。
-3. ⬜ `kaizen fleet --root .. --owner kaizen-agents-org --repo .github --repo builder-agent --repo kaizen-loop --repo verifier --repo coderabbit --repo renovate-config --prune --verify` を実行し、全 6 リポジトリの verify が通ることを確認(readiness の「fleet refresh 未証明」ギャップを閉じる)。
+3. ⬜ 安定した checkout を列挙した `~/.kaizen/fleet.yml` をレビューし、`.github` / `builder-agent` / `kaizen-loop` / `verifier` / `coderabbit` / `renovate-config` の全 6 リポジトリが含まれることを確認する。operator が `kaizen fleet --manifest ~/.kaizen/fleet.yml --prune --verify` を実行し、全 6 リポジトリの verify が通ることを確認して readiness の「fleet refresh 未証明」ギャップを閉じる。monitor automation 自身は `--dry-run` plan の確認までに留める。
 4. ⬜ 再発防止: sync/automation 完了時に checkout を main へ戻す(または作業を worktree に限定する)運用を automations プロンプトに明記。issue #87 #88(worktree 対応)がこの文脈なので優先度を上げる。
 
 **完了判定**: 6 リポジトリすべて `main`・clean・up-to-date。fleet --verify 成功のログが readiness に記録できる。
@@ -164,7 +166,9 @@ readiness レビュー 2 回連続の最優先指摘。issue: kaizen-loop #131�
 
 ### C-3. 外部プロダクト 1 件での実運用 ⬜
 
-- ⬜ 導入ドキュメント(第三者メンテナ向け)整備。
+- ⬜ **導入ガイド着手ゲート(.github#122)**: kaizen-loop#199/#198/#200 がすべて close され、.github#112 の実装が完了していることを各 issue で確認する。4 件の状態と #122 の着手可否は umbrella issue .github#121 に集約して更新し、いずれかが未完了なら #122 は着手しない。
+- ⬜ ゲート通過後は kaizen-loop リポジトリのセッション/エージェントへ kaizen-agents-org/.github#122 をルーティングし、導入ガイドの正本を `kaizen-loop/docs/` に作成する。`.github` 側には正本へのリンクだけを置く。
+- ⬜ kaizen-agents-org/.github#122 完了後、`.github` 側の参照リンクだけを正本 `kaizen-loop/docs/` に更新する。
 - ⬜ 外部プロダクトで Issue→PR→マージの継続運用を開始し、North-star メトリクスが自組織と同水準であることを確認。
 
 ### Phase C 出口条件
@@ -192,3 +196,5 @@ readiness レビュー 2 回連続の最優先指摘。issue: kaizen-loop #131�
 | 2026-07-06 | `.github/docs/` を評価レポート・プレイブックの正本として明記し、A-3/A-4 のチェック状態を 2026-07-05 v2 評価に合わせて更新 | 残る継続監視項目は scout カデンツ、WIP 超過スキップの実観測、週次 smoke ジョブ登録 |
 | 2026-07-08 | 外部適用準備状況を評価([external-readiness-2026-07-08.ja.md](./external-readiness-2026-07-08.ja.md))。結論: 万全ではない(非 Node 実績ゼロ / コーパス 23 件 / C-1 未着手かつ追跡消失 / 信頼境界が文言止まり / A-5 週次メトリクス未完)。新規 issue: kaizen-loop#198(prompt 信頼境界)、.github#119(A-5 メトリクス)、.github#120(B-4 非 Node dogfood)、.github#121(umbrella: Phase C 追跡復活) | kaizen-loop#173/#174 close で消えた Phase C 追跡は .github#121 に一元化 |
 | 2026-07-08 | Phase C を実行可能 issue 化: kaizen-loop#199(C-1 reusable workflow)、kaizen-loop#200(C-2 authorization ラベル必須化 + safety 監査)、verifier#97(B-1 コーパス 50+)、.github#122(C-3 導入ドキュメント — アウトラインを issue コメントに起案済み)、.github#123(C-3 外部実運用)。umbrella .github#121 に実施順序を記載 | 導入ガイドの骨子は .github#122 コメント参照。C-1 は kaizen-loop#198/#200 完了が前提 |
+| 2026-07-11〜12 | [evaluation-2026-07-11.ja.md](./evaluation-2026-07-11.ja.md) のアクションを実施。verifier#102 マージ(B-1 の fixture harness、timeout 配線バグ修正 + sb-001/sb-008 期待値修正 + `knownGap` フラグ機構を追加、verifier#104 発行、verifier#94 close)。kaizen-loop#198 は調査の結果 close(G4 の残指摘は既に kaizen-loop PR#176 で解消済み・stale citation と判明、goal-planner のプロンプトも untrusted content を取り込まないことを確認)。builder-agent の code-mode-host 環境障害 5 重複 issue(#115/#116/#118/#119/#120)を #115 に統合し他 4 件を close | 「事実主張には検証範囲を明記する」「expected を実装の出力に合わせない」の 2 原則を運用ルールに追加(本セッションで両方が実際に発生したため)。P1 環境問題(code-mode host バイナリ欠落)はコード修正範囲外のためスキップ |
+| 2026-07-12 | 再評価([evaluation-2026-07-12.ja.md](./evaluation-2026-07-12.ja.md))。評点: 設計 A / 運用の証明 B+(07-11 の B から復帰)。code-mode host 回帰は builder-agent#122/#124 の構造的緩和で 24h 内に収束しスループット回復(07-12 だけで org 全体 33 PR マージ)。**B-1 達成**(verifier#97 close、コーパス 51 ケース / 非 Node 約 19 件) | 残る最重要停滞は B-4(非 Node dogfood、4 レポート連続未着手)。他の次回確認点: W29 メトリクス(期限 07-13)、kaizen-loop#216/#217 close-out、intake dedup issue 化、文書正本同期(本コミットで評価レポート・playbook を .github/docs に再同期) |

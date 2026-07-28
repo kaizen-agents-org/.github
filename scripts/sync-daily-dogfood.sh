@@ -4,6 +4,7 @@ set -euo pipefail
 source_root="${1:-$(pwd)}"
 target_parent="${2:-${source_root}/..}"
 manifest="${source_root}/.github/dogfood-sync/manifest.json"
+guardian_contract_check="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-pr-guardian-contract.sh"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required to read ${manifest}" >&2
@@ -13,6 +14,10 @@ fi
 if [[ ! -f "${manifest}" ]]; then
   echo "missing daily dogfood sync manifest: ${manifest}" >&2
   exit 1
+fi
+
+if jq -e '.managedPaths[] | select((.source // "") == "skills/pr-guardian")' "${manifest}" >/dev/null; then
+  bash "${guardian_contract_check}" "${source_root}/skills/pr-guardian/SKILL.md"
 fi
 
 is_managed_path() {

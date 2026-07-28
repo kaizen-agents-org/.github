@@ -9,7 +9,7 @@ set -euo pipefail
 # regression coverage, a complete manifest, present managed source paths, and
 # the shared-skill fast path still callable.
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "${repo_root}"
 
 daily_workflow=".github/workflows/daily-dogfood-sync.yml"
@@ -17,6 +17,7 @@ dogfood_workflow=".github/workflows/sync-daily-dogfood.yml"
 shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
 sync_script="scripts/sync-daily-dogfood.sh"
 pr_link_test="scripts/test-sync-daily-dogfood-pr-link.sh"
+monitor_contract_check="scripts/check-org-monitor-contract.sh"
 manifest=".github/dogfood-sync/manifest.json"
 contract_doc="docs/daily-dogfood-sync.md"
 scout_prompt="automations/kaizen-agents-repo-improvement-scout.prompt.md"
@@ -35,6 +36,7 @@ for path in \
   "${shared_skill_workflow}" \
   "${sync_script}" \
   "${pr_link_test}" \
+  "${monitor_contract_check}" \
   "${manifest}" \
   "${contract_doc}" \
   "${scout_prompt}" \
@@ -47,6 +49,41 @@ for path in \
   fi
 done
 
+# All managed dogfood configs must agree on one opt-in selection label. The
+# trusted issue-creator contract below is derived from this value so changing
+# the fleet gate without updating creator labels fails deterministically.
+selection_label=""
+for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.yml; do
+  current_selection_label="$({
+    awk '
+      /^issues:$/ { in_issues=1; next }
+      in_issues && /^[^ ]/ { in_issues=0; in_selection=0 }
+      in_issues && /^  selection:$/ { in_selection=1; next }
+      in_selection && /^  [^ ]/ { in_selection=0 }
+      in_selection && /^    includeLabel:/ {
+        value=$0
+        sub(/^    includeLabel:[[:space:]]*/, "", value)
+        print value
+        found++
+      }
+      END { exit(found == 1 ? 0 : 1) }
+    ' "${config}"
+  } | tr -d "\"'[:space:]")" || {
+    echo "dogfood runtime config must declare exactly one issues.selection.includeLabel: ${config}" >&2
+    exit 1
+  }
+  if [[ -z "${current_selection_label}" ]]; then
+    echo "dogfood runtime selection label must not be empty: ${config}" >&2
+    exit 1
+  fi
+  if [[ -z "${selection_label}" ]]; then
+    selection_label="${current_selection_label}"
+  elif [[ "${current_selection_label}" != "${selection_label}" ]]; then
+    echo "dogfood runtime selection labels must agree: ${config} uses ${current_selection_label}, expected ${selection_label}" >&2
+    exit 1
+  fi
+done
+
 # Issue-creating prompts must preserve the closed-loop requirement: generated
 # implementation PRs close their source issues through GitHub-recognized links.
 for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}" "${bug_router_skill}"; do
@@ -54,6 +91,45 @@ for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_pr
   grep -q "Closes #<issue-number>" "${issue_creator}"
   grep -q "kaizen-agents-org/<repo>#<issue-number>" "${issue_creator}"
   grep -q "closingIssuesReferences" "${issue_creator}"
+done
+
+# Organization-owned issue creators must preserve the dogfooding execution
+# authorization policy, the configured queue-selection gate, and the normal
+# Kaizen intake label.
+for issue_creator in "${scout_prompt}" "${monitor_prompt}" "${readiness_issue_prompt}"; do
+  normalized_issue_creator="$(tr '\n' ' ' < "${issue_creator}")"
+  if ! grep -Fq "\`kaizen\`, \`kaizen:authorized\`, and \`${selection_label}\` labels" <<<"${normalized_issue_creator}"; then
+    echo "trusted issue creator must add configured selection label ${selection_label}: ${issue_creator}" >&2
+    exit 1
+  fi
+  grep -Fq 'at least triage permission' <<<"${normalized_issue_creator}"
+  grep -Fq 'external operation mode' <<<"${normalized_issue_creator}"
+  grep -Fq -- '--search "kaizen:authorized" --limit 100 --json name' <<<"${normalized_issue_creator}"
+  grep -Fq 'any(.name == "kaizen:authorized")' <<<"${normalized_issue_creator}"
+  grep -Fq -- "--search \"${selection_label}\"" <<<"${normalized_issue_creator}"
+  grep -Fq "any(.name == \"${selection_label}\")" <<<"${normalized_issue_creator}"
+  grep -Fq 'same exact-name query' <<<"${normalized_issue_creator}"
+  grep -Fq 'gh label create "kaizen:authorized"' <<<"${normalized_issue_creator}"
+  grep -Fq "gh label create \"${selection_label}\"" <<<"${normalized_issue_creator}"
+  grep -Fq 'Label creation requires write permission' <<<"${normalized_issue_creator}"
+  grep -Fq 'triage permission is sufficient only to apply an existing label' <<<"${normalized_issue_creator}"
+  grep -Fq 'maintainer with write permission must pre-provision the label' <<<"${normalized_issue_creator}"
+  grep -Fq 'do not create the issue' <<<"${normalized_issue_creator}"
+  grep -Fq 'silently dropped' <<<"${normalized_issue_creator}"
+done
+
+normalized_bug_router="$(tr '\n' ' ' < "${bug_router_skill}")"
+grep -Fq 'add both the repository' <<<"${normalized_bug_router}"
+grep -Fq '`kaizen:authorized` and `kaizen:ready`' <<<"${normalized_bug_router}"
+
+for managed_agents in .github/dogfood-sync/targets/*/AGENTS.md; do
+  if grep -Fq 'Treat GitHub Issues' "${managed_agents}"; then
+    normalized_agents="$(tr '\n' ' ' < "${managed_agents}")"
+    grep -Fq "both \`kaizen\` and \`${selection_label}\`" <<<"${normalized_agents}" || {
+      echo "managed AGENTS issue eligibility must include selection label ${selection_label}: ${managed_agents}" >&2
+      exit 1
+    }
+  fi
 done
 
 # Daily workflow: scheduled, manually runnable, delegates to the dogfood sync.
@@ -100,12 +176,20 @@ grep -q "Daily dogfood sync skipped" "${dogfood_workflow}"
 grep -q "Verify managed copies" "${dogfood_workflow}"
 grep -q "Assert no target drifts silently" "${dogfood_workflow}"
 grep -q "Dogfood drift unresolved" "${dogfood_workflow}"
+grep -q "Dogfood sync PR stale" "${dogfood_workflow}"
+grep -Fq 'archive "origin/${branch}"' "${dogfood_workflow}"
+grep -q "does not exactly match the manifest-managed source contracts" "${dogfood_workflow}"
 grep -q "Daily dogfood sync incomplete" "${dogfood_workflow}"
 grep -q "Report sync outcome" "${dogfood_workflow}"
 grep -Fq "base=\"\$(jq -r '.defaultBranch' \"\${manifest}\")\"" "${dogfood_workflow}"
 grep -Fq -- "--base \"\${base}\"" "${dogfood_workflow}"
 grep -Fq "pr_head=\"\${branch}\"" "${dogfood_workflow}"
 grep -q "gh pr ready" "${dogfood_workflow}"
+grep -Fq '<!-- kaizen-pr-guardian:managed -->' "${dogfood_workflow}"
+grep -q "ensure_existing_pr_contract" "${dogfood_workflow}"
+grep -q "find_same_repo_pr" "${dogfood_workflow}"
+grep -q "isCrossRepository,headRepositoryOwner" "${dogfood_workflow}"
+grep -Fq '.isCrossRepository == false and .headRepositoryOwner.login == $owner' "${dogfood_workflow}"
 grep -q "closingIssuesReferences" "${dogfood_workflow}"
 grep -Fq "Closes \${source_issue}" "${dogfood_workflow}"
 grep -q "Dogfood sync source issue not linked" "${dogfood_workflow}"
@@ -142,6 +226,11 @@ grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
 grep -q "Report sync outcome" "${shared_skill_workflow}"
 grep -q -- "--base main" "${shared_skill_workflow}"
+grep -Fq '<!-- kaizen-pr-guardian:managed -->' "${shared_skill_workflow}"
+grep -q "ensure_existing_pr_contract" "${shared_skill_workflow}"
+grep -q "find_same_repo_pr" "${shared_skill_workflow}"
+grep -q "isCrossRepository,headRepositoryOwner" "${shared_skill_workflow}"
+grep -Fq '.isCrossRepository == false and .headRepositoryOwner.login == $owner' "${shared_skill_workflow}"
 grep -q "closingIssuesReferences" "${shared_skill_workflow}"
 grep -Fq "Closes \${source_issue}" "${shared_skill_workflow}"
 grep -q "Shared skill sync source issue not linked" "${shared_skill_workflow}"
@@ -295,11 +384,63 @@ while IFS= read -r repo; do
   fi
 done < <(jq -r '.targets[].name' "${manifest}")
 
+# The trusted self-organization fleet must opt into dogfood mode explicitly.
+# A missing value falls back to external mode and silently skips every issue
+# without a separately applied execution-authorization label.
+for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.yml; do
+  if ! awk '
+    /^safety:$/ {
+      in_safety=1
+      next
+    }
+    in_safety && /^[^ ]/ {
+      in_safety=0
+    }
+    in_safety && /^  operationMode: dogfood$/ {
+      found=1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must explicitly set safety.operationMode: dogfood: ${config}" >&2
+    exit 1
+  fi
+
+  if ! awk '
+    /^issues:$/ {
+      in_issues=1
+      next
+    }
+    in_issues && /^[^ ]/ {
+      in_issues=0
+      in_selection=0
+    }
+    in_issues && /^  selection:$/ {
+      in_selection=1
+      next
+    }
+    in_selection && /^  [^ ]/ {
+      in_selection=0
+    }
+    in_selection && /^    mode: opt-in$/ { mode=1 }
+    in_selection && /^    includeLabel: ["'\'' ]*kaizen:ready["'\'' ]*$/ { label=1 }
+    END { exit(mode && label ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must require opt-in selection: ${config}" >&2
+    exit 1
+  fi
+done
+
+# Dogfood configs are useful structural examples, but adopter guidance must
+# preserve the external authorization boundary instead of copying dogfood mode.
+grep -Fq 'safety.operationMode: external' docs/onboarding-kit-design-2026-07-05.ja.md
+grep -Fq 'safety.operationMode: external' docs/product-adoption-plan-2026-07-05.ja.md
+
 # Documented managed skills are present.
 for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
   grep -q "skills/${skill}" "${contract_doc}"
 done
 
 "${pr_link_test}"
+"${monitor_contract_check}"
 
 echo "Daily dogfood sync contract is present."
