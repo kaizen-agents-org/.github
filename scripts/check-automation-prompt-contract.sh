@@ -63,15 +63,18 @@ require_contract_marker "${weekly_review}" '<!-- automation-contract: automation
 require_contract_marker "${readiness_creator}" '<!-- automation-contract: automation=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->'
 
 require_text "${scout}" 'prefix the title with `[scout]`'
+require_text "${scout}" 'Use the GitHub default branch, expected to be `origin/main` for these repositories, as the source of truth.'
 require_text "${scout}" 'Do not edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically.'
 require_text "${scout}" 'Limit automatic issue creation to at most two issues per target repository per run.'
 
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
+require_text "${monitor}" 'Use the GitHub default branch, expected to be `origin/main` for these repositories, as the source of truth for documentation-backed findings.'
 require_text "${monitor}" 'Use concise issue titles prefixed with `[monitor]`.'
 require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per target repository per run.'
 require_text "${monitor}" 'Do not merge PRs, push changes, or make broad code changes automatically. The monitor may propose small, deterministic documentation, prompt, or configuration follow-ups that should be handled in a normal ready-for-review PR, but it must not edit repository files, create implementation branches, or open implementation PRs unless the user has explicitly asked for implementation in this thread.'
 
 require_text "${weekly_review}" 'normal ready-for-review PR'
+require_text "${weekly_review}" 'Fetch `origin main` before writing. Base the branch on the updated default'
 require_text "${weekly_review}" 'Do not create GitHub issues from this weekly review prompt.'
 require_text "${weekly_review}" 'containing only these repository-relative paths:'
 
@@ -88,6 +91,9 @@ require_text "${contract_doc}" '| Maintain | `Kaizen Agents org monitor` | Check
 require_text "${contract_doc}" '| Readiness-check | `Kaizen Agents weekly readiness review` | Evaluate whether the system is closer to real operation and publish an approval-ready dated report. | No. | Yes, only readiness report PRs in `.github`. |'
 require_text "${contract_doc}" '| Readiness-check | `Kaizen Agents readiness issue creator` | Convert an approved readiness report on `main` into implementation backlog. | Yes, `[readiness-review]` issues. | No. |'
 require_text "${contract_doc}" '`repo-improvement-scout` owns proactive improvement discovery. It should create small, actionable repo-local issues backed by default-branch docs or code evidence. It must not file organization operation issues, readiness-review issues, or implementation PRs.'
+require_text "${contract_doc}" '`org-monitor` owns conservative maintenance. It should report broad state and create issues only for operational drift, sync failures, scheduler/fleet health, CI/check drift, documentation source-order gaps, or responsibility ambiguity that would make the automation system harder to operate. It must not become a general improvement scout.'
+require_text "${contract_doc}" '`weekly-readiness-review` owns readiness assessment. It should inspect evidence, write the dated report, update the readiness index, write or update the weekly metrics snapshot, open or update a normal ready-for-review PR containing only the report file, readiness index, and weekly metrics file, and run `pr-guardian` on that report PR until it is merge-ready or blocked. It must not create GitHub issues or implementation PRs.'
+require_text "${contract_doc}" '`readiness-issue-creator` owns approved-report issue creation. It runs as a daily post-merge poll and must read the latest dated readiness report from the `.github` default branch after the report PR is merged. It must not create issues from local-only reports, open PR contents, proposed report text, or previous automation memory.'
 require_text "${contract_doc}" '| `repo-improvement-scout` | At most two issues per target repository per run. |'
 require_text "${contract_doc}" '| `org-monitor` | At most one issue per target repository per run. |'
 require_text "${contract_doc}" '| `readiness-issue-creator` | At most three issues per target repository per run. |'

@@ -54,6 +54,12 @@ assert_rejected \
   "issues=[monitor]"
 
 assert_rejected \
+  "scout source of truth" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "Use the GitHub default branch, expected to be \`origin\\/main\` for these repositories, as the source of truth." \
+  "Use the current local feature branch for these repositories as the source of truth."
+
+assert_rejected \
   "scout per-repository limit" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   "per-repo-limit=2" \
@@ -70,6 +76,12 @@ assert_rejected \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "Do not use this prompt as a general repo-improvement scout" \
   "Use this prompt as a general repo-improvement scout"
+
+assert_rejected \
+  "monitor source of truth" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Use the GitHub default branch, expected to be \`origin\\/main\` for these repositories, as the source of truth for documentation-backed findings." \
+  "Use the current local feature branch for these repositories as the source of truth for documentation-backed findings."
 
 assert_rejected \
   "monitor PR boundary" \
@@ -90,10 +102,22 @@ assert_rejected \
   "prs=implementation"
 
 assert_rejected \
+  "weekly review source of truth" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "Fetch \`origin main\` before writing." \
+  "Use the current local feature branch before writing."
+
+assert_rejected \
   "readiness creator source" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "source=merged-default-branch-readiness-report" \
   "source=open-readiness-pr"
+
+assert_rejected \
+  "readiness creator report source prose" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "only from \`origin\\/main\`." \
+  "only from the current local feature branch."
 
 assert_rejected \
   "readiness creator issue prefix" \
@@ -124,6 +148,12 @@ assert_rejected \
   "docs/automation-roles.md" \
   "| Improve | \`Kaizen Agents repo improvement scout\` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, \`\[scout\]\` issues. | No. |" \
   "| Improve | \`Kaizen Agents repo improvement scout\` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, \`[scout]\` issues. | Yes. |"
+
+assert_rejected \
+  "role documentation monitor boundary" \
+  "docs/automation-roles.md" \
+  "It must not become a general improvement scout." \
+  "It must become a general improvement scout."
 
 assert_rejected \
   "role documentation scout limit" \
