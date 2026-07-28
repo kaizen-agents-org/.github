@@ -34,10 +34,28 @@ assert_rejected \
   "prs=implementation"
 
 assert_rejected \
+  "scout issue prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "issues=\\[scout\\]" \
+  "issues=[monitor]"
+
+assert_rejected \
+  "scout per-repository limit" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "per-repo-limit=2" \
+  "per-repo-limit=3"
+
+assert_rejected \
   "monitor issue prefix" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "issues=\\[monitor\\]" \
   "issues=[scout]"
+
+assert_rejected \
+  "monitor scout boundary" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Do not use this prompt as a general repo-improvement scout" \
+  "Use this prompt as a general repo-improvement scout"
 
 assert_rejected \
   "weekly review issue boundary" \
@@ -46,9 +64,33 @@ assert_rejected \
   "issues=[readiness-review]"
 
 assert_rejected \
+  "weekly review PR boundary" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "prs=readiness-report" \
+  "prs=implementation"
+
+assert_rejected \
   "readiness creator source" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "source=merged-default-branch-readiness-report" \
   "source=open-readiness-pr"
+
+assert_rejected \
+  "readiness creator issue prefix" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "issues=\\[readiness-review\\]" \
+  "issues=[scout]"
+
+assert_rejected \
+  "readiness creator per-repository limit" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "per-repo-limit=3" \
+  "per-repo-limit=4"
+
+assert_rejected \
+  "role documentation alignment" \
+  "docs/automation-roles.md" \
+  "automation=scout" \
+  "automation=repo-scout"
 
 echo "Automation prompt contract mutations are rejected."

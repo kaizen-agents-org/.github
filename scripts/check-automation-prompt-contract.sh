@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-roles_doc="${repo_root}/docs/automation-roles.md"
+contract_doc="${repo_root}/docs/automation-roles.md"
 
 scout="${repo_root}/automations/kaizen-agents-repo-improvement-scout.prompt.md"
 monitor="${repo_root}/automations/kaizen-agents-org-monitor.prompt.md"
@@ -32,14 +32,14 @@ require_contract_marker() {
   local doc_count
 
   prompt_count="$(grep -Fxc -- "${marker}" "${prompt}" || true)"
-  doc_count="$(grep -Fxc -- "${marker}" "${roles_doc}" || true)"
+  doc_count="$(grep -Fxc -- "${marker}" "${contract_doc}" || true)"
   [[ "${prompt_count}" == "1" ]] ||
     fail "${prompt} must contain exactly one matching contract marker"
   [[ "${doc_count}" == "1" ]] ||
-    fail "${roles_doc} must contain exactly one matching marker for ${prompt}"
+    fail "${contract_doc} must contain exactly one matching marker for ${prompt}"
 }
 
-for file in "${roles_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}"; do
+for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}"; do
   require_file "${file}"
 done
 
@@ -48,19 +48,19 @@ for prompt in "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}";
   [[ "${marker_count}" == "1" ]] ||
     fail "${prompt} must contain exactly one automation contract marker"
 done
-doc_marker_count="$(grep -c '^<!-- automation-contract:' "${roles_doc}" || true)"
+doc_marker_count="$(grep -c '^<!-- automation-contract:' "${contract_doc}" || true)"
 [[ "${doc_marker_count}" == "4" ]] ||
-  fail "${roles_doc} must contain exactly four automation contract markers"
+  fail "${contract_doc} must contain exactly four automation contract markers"
 
 require_text "${scout}" 'Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-repo-improvement-scout.prompt.md`.'
 require_text "${monitor}" 'Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-org-monitor.prompt.md`.'
 require_text "${weekly_review}" 'Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-readiness-review.prompt.md`.'
 require_text "${readiness_creator}" 'Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-readiness-issue-creator.prompt.md`.'
 
-require_contract_marker "${scout}" '<!-- automation-contract: role=scout; issues=[scout]; prs=none; per-repo-limit=2; source=default-branch; roles-doc=docs/automation-roles.md -->'
-require_contract_marker "${monitor}" '<!-- automation-contract: role=monitor; issues=[monitor]; prs=none; per-repo-limit=1; source=default-branch; roles-doc=docs/automation-roles.md -->'
-require_contract_marker "${weekly_review}" '<!-- automation-contract: role=weekly-readiness-review; issues=none; prs=readiness-report; per-repo-limit=0; source=default-branch; roles-doc=docs/automation-roles.md -->'
-require_contract_marker "${readiness_creator}" '<!-- automation-contract: role=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->'
+require_contract_marker "${scout}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; per-repo-limit=2; source=default-branch; roles-doc=docs/automation-roles.md -->'
+require_contract_marker "${monitor}" '<!-- automation-contract: automation=monitor; issues=[monitor]; prs=none; per-repo-limit=1; source=default-branch; roles-doc=docs/automation-roles.md -->'
+require_contract_marker "${weekly_review}" '<!-- automation-contract: automation=weekly-readiness-review; issues=none; prs=readiness-report; per-repo-limit=0; source=default-branch; roles-doc=docs/automation-roles.md -->'
+require_contract_marker "${readiness_creator}" '<!-- automation-contract: automation=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->'
 
 require_text "${scout}" 'prefix the title with `[scout]`'
 require_text "${scout}" 'open implementation PRs'
