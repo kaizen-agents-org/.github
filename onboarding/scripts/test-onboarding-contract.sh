@@ -18,7 +18,6 @@ make_fixture() {
   cat > "${target}/.kaizen/config.yml" <<'YAML'
 version: 1
 safety:
-  operationMode: external
   wipLimit: 5
 verifier:
   enabled: true
@@ -208,7 +207,7 @@ fi
 expect_failure invalid-schema 'not schema-valid' mutate_invalid_schema
 expect_failure policy-mode 'policy.mode must be pr-only' mutate_policy_mode
 expect_failure wip-limit 'safety.wipLimit must be an integer no greater than 5' mutate_wip_limit
-expect_failure verifier-disabled 'verifier.enabled cannot be false' mutate_verifier
+expect_failure verifier-disabled 'verifier.enabled must be true' mutate_verifier
 expect_failure protected-floor 'profile overlays cannot replace this check' mutate_protected_path
 expect_failure forbidden-git 'policy.forbiddenPaths is missing **/.git/**' mutate_forbidden_path
 expect_failure missing-label 'required repository label is not observed: kaizen:P2' mutate_label
