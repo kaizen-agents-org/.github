@@ -285,7 +285,7 @@ async function listFiles(directory, prefix = '') {
     const relative = path.posix.join(prefix, entry.name);
     const absolute = path.join(directory, ...relative.split('/'));
     if (entry.isDirectory()) result.push(...await listFiles(directory, relative));
-    else if (entry.isFile()) result.push(relative);
+    else result.push(relative);
   }
   return result;
 }
@@ -323,6 +323,14 @@ async function checkSkillsManifest(target, toolchainManifestOption) {
     }
     const absolute = path.join(target, ...relative.split('/'));
     try {
+      const stat = await fs.lstat(absolute);
+      if (!stat.isFile()) {
+        reportFailure(
+          `skills manifest path is not a regular file: ${relative}`,
+          'replace symlinks and other special entries with vendored regular files, then regenerate skills/skills-manifest.json'
+        );
+        continue;
+      }
       const actual = sha256(await fs.readFile(absolute));
       if (actual !== expected) {
         reportFailure(

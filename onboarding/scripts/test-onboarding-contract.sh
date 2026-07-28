@@ -64,6 +64,28 @@ sha256_file() {
   node -e 'const fs=require("fs"),crypto=require("crypto"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$1"
 }
 
+fixture_digest() {
+  node -e '
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const root = process.argv[1];
+const hash = crypto.createHash("sha256");
+function visit(directory) {
+  for (const entry of fs.readdirSync(directory, {withFileTypes: true}).sort((a, b) => a.name.localeCompare(b.name))) {
+    const absolute = path.join(directory, entry.name);
+    const relative = path.relative(root, absolute);
+    hash.update(`${entry.isDirectory() ? "d" : entry.isFile() ? "f" : "o"}:${relative}\0`);
+    if (entry.isDirectory()) visit(absolute);
+    else if (entry.isFile()) hash.update(fs.readFileSync(absolute));
+    else if (entry.isSymbolicLink()) hash.update(fs.readlinkSync(absolute));
+  }
+}
+visit(root);
+process.stdout.write(hash.digest("hex"));
+' "$1"
+}
+
 expect_failure() {
   local name="$1"
   local expected="$2"
@@ -148,6 +170,13 @@ mutate_skill_digest() {
   printf 'drifted skill\n' > "$1/skills/example/SKILL.md"
 }
 
+mutate_skill_symlink() {
+  local external_skill="${fixture_root}/external-skill.md"
+  printf 'example skill\n' > "${external_skill}"
+  rm "$1/skills/example/SKILL.md"
+  ln -s "${external_skill}" "$1/skills/example/SKILL.md"
+}
+
 mutate_toolchain() {
   node -e 'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.toolchain.verifier="v9.9.9";fs.writeFileSync(p,JSON.stringify(v))' \
     "$1/skills/skills-manifest.json"
@@ -155,7 +184,26 @@ mutate_toolchain() {
 
 positive="${fixture_root}/positive"
 make_fixture "${positive}"
-"${checker}" "${positive}"
+mkdir -p "${fixture_root}/bin"
+cat > "${fixture_root}/bin/gh" <<'SH'
+#!/usr/bin/env bash
+touch "${GH_INVOCATION_MARKER}"
+exit 99
+SH
+chmod +x "${fixture_root}/bin/gh"
+before_digest="$(fixture_digest "${positive}")"
+GH_INVOCATION_MARKER="${fixture_root}/gh-invoked" \
+  PATH="${fixture_root}/bin:${PATH}" \
+  "${checker}" "${positive}"
+after_digest="$(fixture_digest "${positive}")"
+if [[ "${before_digest}" != "${after_digest}" ]]; then
+  echo "FAIL: checker mutated the target repository" >&2
+  exit 1
+fi
+if [[ -e "${fixture_root}/gh-invoked" ]]; then
+  echo "FAIL: checker invoked gh instead of using the observation snapshot" >&2
+  exit 1
+fi
 
 expect_failure invalid-schema 'not schema-valid' mutate_invalid_schema
 expect_failure policy-mode 'policy.mode must be pr-only' mutate_policy_mode
@@ -170,6 +218,7 @@ expect_failure conversation-resolution 'branch protection must require conversat
 expect_failure admin-enforcement 'branch protection must enforce rules for administrators' mutate_admin_enforcement
 expect_failure missing-smoke 'no smoke artifact JSON file was found' mutate_smoke
 expect_failure skill-drift 'vendored skill does not match its manifest digest' mutate_skill_digest
+expect_failure skill-symlink 'skills manifest path is not a regular file' mutate_skill_symlink
 expect_failure toolchain-drift 'skills manifest toolchain mismatch for verifier' mutate_toolchain
 
 echo "PASS: onboarding contract checker fixtures cover every invariant"

@@ -59,7 +59,9 @@ Profile files are not merged by this checker. It deliberately checks the final
 ## Skills manifest
 
 If `skills/skills-manifest.json` is present, every regular file under `skills/`
-must be listed and match its lowercase SHA-256 digest:
+must be listed and match its lowercase SHA-256 digest. Symlinks and other
+special entries are rejected so a vendored path cannot resolve outside the
+target repository:
 
 ```json
 {
@@ -90,3 +92,6 @@ Run the positive fixture and focused negative fixtures with:
 ```sh
 onboarding/scripts/test-onboarding-contract.sh
 ```
+
+The fixture suite also verifies that the checker leaves the target unchanged
+and consumes the observation snapshot without invoking `gh`.
