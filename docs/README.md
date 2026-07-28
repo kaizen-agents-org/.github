@@ -38,6 +38,11 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Compatibility manifest ownership
    - Release and install verification checklist
 
+1. [Onboarding Administration](../onboarding/README.md)
+   - Explicit branch-protection preview and apply workflow
+   - Required administrator permissions
+   - Backup and rollback guidance
+
 1. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
