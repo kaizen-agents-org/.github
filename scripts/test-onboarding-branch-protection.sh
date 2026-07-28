@@ -148,6 +148,14 @@ assert_rejected_without_gh "missing check" \
   --repo owner/repo --branch main
 assert_rejected_without_gh "ambiguous check" \
   --repo owner/repo --branch main --check test --check lint
-echo "PASS: missing and ambiguous target inputs fail closed"
+assert_rejected_without_gh "malformed repository" \
+  --repo owner --branch main --check test
+assert_rejected_without_gh "invalid branch" \
+  --repo owner/repo --branch 'invalid..branch' --check test
+assert_rejected_without_gh "blank check" \
+  --repo owner/repo --branch main --check '   '
+assert_rejected_without_gh "control-character check" \
+  --repo owner/repo --branch main --check $'test\ninjected'
+echo "PASS: missing, ambiguous, and malformed target inputs fail closed"
 
 echo "All branch-protection helper tests passed."
