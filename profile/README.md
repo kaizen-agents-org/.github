@@ -4,6 +4,12 @@ Kaizen Agents turns GitHub Issues into high-quality, reviewable pull requests.
 
 The system is intentionally conservative: automation can build, verify, and open a PR, but human maintainers still own merge decisions.
 
+## Philosophy
+
+> Build systems where products keep improving, even when no one is actively tending them.
+
+Kaizen Agents aims to make continuous improvement self-sustaining: discover evidence-backed opportunities, implement them, verify the result, and present a reviewable change. “Unattended” means the improvement loop can keep moving without constant prompting; it does not mean bypassing human ownership or merge policy.
+
 ## Issue-To-PR Flow
 
 ```mermaid
