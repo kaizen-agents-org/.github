@@ -1,4 +1,5 @@
 Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-org-monitor.prompt.md`.
+<!-- automation-contract: automation=monitor; issues=[monitor]; prs=none; per-repo-limit=1; source=default-branch; roles-doc=docs/automation-roles.md -->
 
 Monitor the Kaizen Agents work across the local repositories and GitHub remotes as a cross-repo coordinator. Active GitHub repositories: kaizen-agents-org/.github, kaizen-agents-org/builder-agent, kaizen-agents-org/kaizen-loop, and kaizen-agents-org/verifier. `coderabbit` and `renovate-config` are not active monitor targets; mention them only as downstream sync targets when `.github` sync evidence requires it.
 

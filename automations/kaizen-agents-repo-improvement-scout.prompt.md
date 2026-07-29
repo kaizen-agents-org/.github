@@ -1,4 +1,5 @@
 Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-repo-improvement-scout.prompt.md`.
+<!-- automation-contract: automation=scout; issues=[scout]; prs=none; per-repo-limit=2; source=default-branch; roles-doc=docs/automation-roles.md -->
 
 Scout the active Kaizen Agents repositories for concrete repo-local improvement issues and create focused GitHub issues for the normal Kaizen issue-to-PR loop.
 
