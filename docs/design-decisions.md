@@ -14,6 +14,12 @@ The system is not designed to remove human ownership of the repository. It is de
 
 ## Core Philosophy
 
+Kaizen Agents is designed around this product philosophy:
+
+> Build systems where products keep improving, even when no one is actively tending them.
+
+The goal is a self-sustaining improvement loop that can discover grounded opportunities, implement changes, verify the result, and present reviewable work without constant prompting. “Unattended” does not mean ungoverned: human maintainers still own merge decisions and repository policy.
+
 ```mermaid
 flowchart LR
     Build["Build"] --> Verify["Verify"]
