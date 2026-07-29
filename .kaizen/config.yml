@@ -54,6 +54,7 @@ commands:
     - "test -f skills/gh-link-issue-pr/SKILL.md && test -f skills/kaizen-bug-router/SKILL.md && test -f skills/pr-guardian/SKILL.md"
     - "bash scripts/test-automation-prompt-contract.sh"
     - "onboarding/scripts/test-onboarding-contract.sh"
+    - "bash scripts/test-onboarding-branch-protection.sh"
   verifyTimeoutMinutes: 15
 
 builder:
