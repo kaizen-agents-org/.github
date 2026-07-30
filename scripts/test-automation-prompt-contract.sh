@@ -66,6 +66,24 @@ assert_rejected \
   "per-repo-limit=3"
 
 assert_rejected \
+  "scout queue-selection label verification" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'then do the same for `kaizen:ready` with `--search \"kaizen:ready\"` and `any(.name == \"kaizen:ready\")`' \
+  'then continue without verifying the queue-selection label'
+
+assert_rejected \
+  "scout queue-selection fail-closed behavior" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "If either label cannot be created and verified, do not create the issue" \
+  "If either label cannot be created and verified, create the issue without it"
+
+assert_rejected \
+  "scout queue-selection label application" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'When creating an issue, add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels' \
+  'When creating an issue, add the `kaizen` and `kaizen:authorized` labels'
+
+assert_rejected \
   "monitor issue prefix" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "issues=\\[monitor\\]" \
