@@ -13,7 +13,7 @@ Dir.chdir(root)
 broken = []
 
 Dir.glob("docs/**/*.md").sort.each do |file|
-  text = File.read(file)
+  text = File.read(file, encoding: "UTF-8")
   text.scan(/\[[^\]]*\]\(([^)]+)\)/).flatten.each do |raw_target|
     target = raw_target.strip.split(/[ \t]/, 2).first.to_s
     target = target[1...-1] if target.start_with?("<") && target.end_with?(">")
