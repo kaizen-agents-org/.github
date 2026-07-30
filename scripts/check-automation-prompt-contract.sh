@@ -14,6 +14,7 @@ fleet_validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
 readiness_readme="${repo_root}/docs/production-readiness/README.md"
 readiness_template="${repo_root}/docs/production-readiness/template.md"
 automations_readme="${repo_root}/automations/README.md"
+org_monitor_doc="${repo_root}/docs/org-monitor.md"
 
 fail() {
   echo "automation prompt contract check failed: $*" >&2
@@ -47,7 +48,7 @@ require_contract_marker() {
 
 for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
   "${scout_template}" "${fleet}" "${fleet_validator}" "${readiness_readme}" \
-  "${readiness_template}" "${automations_readme}"; do
+  "${readiness_template}" "${automations_readme}" "${org_monitor_doc}"; do
   require_file "${file}"
 done
 
@@ -127,6 +128,8 @@ require_text "${readiness_template}" 'Populate one row for every validated `week
 require_text "${readiness_template}" '`onboarding/fleet.json`; do not substitute a remembered repository list.'
 require_text "${automations_readme}" 'Entries with `monitor: true` in [`onboarding/fleet.json`](../onboarding/fleet.json)'
 require_text "${automations_readme}" 'Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json)'
+require_text "${org_monitor_doc}" 'every entry with `monitor: true`; there is no separately maintained repository'
+require_text "${org_monitor_doc}" 'An entry with `monitor: false` is not an active'
 
 require_text "${contract_doc}" '| Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |'
 require_text "${contract_doc}" '| Maintain | `Kaizen Agents org monitor` | Check organization operation, sync, scheduler, CI, source-order, and drift health. | Yes, only focused `[monitor]` issues. | No. |'

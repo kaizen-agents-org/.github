@@ -152,6 +152,16 @@ grep -Fq 'repository is duplicated' "${fixture}/fleet-case.out" \
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/fleet.json"
 node -e \
+  'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories.push({...v.repositories[0],repository:"other/repository",projectSlug:"checkout-case",localCheckout:v.repositories[0].localCheckout.toUpperCase()});fs.writeFileSync(p,JSON.stringify(v))' \
+  "${fixture}/fleet.json"
+if node "${validator}" "${fixture}/fleet.json" >"${fixture}/fleet-checkout-case.out" 2>&1; then
+  fail "case-insensitive duplicate local checkout passed validation"
+fi
+grep -Fq 'localCheckout is duplicated' "${fixture}/fleet-checkout-case.out" \
+  || fail "case-insensitive duplicate checkout failure was not specific"
+
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/fleet.json"
+node -e \
   'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories[0].unexpected=true;fs.writeFileSync(p,JSON.stringify(v))' \
   "${fixture}/fleet.json"
 if node "${validator}" "${fixture}/fleet.json" >"${fixture}/fleet-schema.out" 2>&1; then

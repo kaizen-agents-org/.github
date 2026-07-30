@@ -11,6 +11,7 @@ mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" \
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
+cp "${repo_root}/docs/org-monitor.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
   "${repo_root}/docs/production-readiness/template.md" \
   "${fixture}/docs/production-readiness/"
@@ -230,6 +231,12 @@ assert_rejected \
   "automations/README.md" \
   'Entries with `monitor: true` in \[`onboarding\/fleet.json`\](..\/onboarding\/fleet.json)' \
   '`.github`, `builder-agent`, `kaizen-loop`, `verifier`'
+
+assert_rejected \
+  "monitor documentation fleet scope" \
+  "docs/org-monitor.md" \
+  'every entry with `monitor: true`; there is no separately maintained repository' \
+  'only the original four repositories are monitored'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \
