@@ -185,6 +185,18 @@ assert_rejected \
   'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
   'Use a remembered repository list.'
 
+assert_rejected \
+  "readiness issue creator fleet registry source" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
+  'Use a remembered repository list.'
+
+assert_rejected \
+  "readiness issue creator preserves fleet repository owner" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "pass the active registry entry's complete \`repository\`" \
+  "reconstruct the repository from the local checkout"
+
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \
   'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories.push({...v.repositories[0]});fs.writeFileSync(p,JSON.stringify(v))' \

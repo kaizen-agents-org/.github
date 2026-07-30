@@ -8,17 +8,16 @@ This automation is a daily post-merge poll. It should create issues only after
 the weekly readiness report PR has been merged to `main`; if no new approved
 report is available, it should report that and create no issues.
 
-Repositories in scope:
-
-- `kaizen-agents-org/.github`
-- `kaizen-agents-org/kaizen-loop`
-- `kaizen-agents-org/builder-agent`
-- `kaizen-agents-org/verifier`
+Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.
+Repositories with `weeklyReadiness: true` are the complete issue-creation scope,
+matching the upstream weekly review. Validate the registry before use; if it is
+missing or invalid, report the scope as unavailable and create no issues. Never
+edit the registry or substitute a remembered or inferred repository list.
 
 Use the local checkouts or worktrees provided by the Codex automation runtime.
 Prefer running this issue creator in a Codex worktree execution environment.
-Expected local repository names are `.github`, `kaizen-loop`, `builder-agent`,
-and `verifier`. If a checkout is unavailable, report that observation and
+Resolve expected local repository names from each active registry entry's
+`localCheckout`. If a checkout is unavailable, report that observation and
 continue with GitHub remote checks.
 
 Path convention: when reading from the `kaizen-agents-org/.github` repository
@@ -52,9 +51,9 @@ new issues directly from findings, priorities, or previous automation memory.
 If the latest report has no `Issue Candidates` section, or every candidate is
 marked blocked, duplicate, unclear, or report-only, create no issues and explain
 why.
-Skip candidates targeting repositories outside the active scope above, including
-`kaizen-agents-org/coderabbit` and `kaizen-agents-org/renovate-config`; mention
-them as out of scope in the final report instead of creating issues.
+Skip candidates whose complete target `repository` value is not an active
+`weeklyReadiness: true` registry entry; mention them as out of scope in the final
+report instead of creating issues.
 
 For each candidate, verify all of the following before creating an issue:
 
@@ -73,10 +72,12 @@ For each candidate, verify all of the following before creating an issue:
   the candidate is a concrete closed-loop health finding about sync, scheduler,
   or CI drift.
 
-Before creating issues, establish current GitHub state per repository. Prefer
-`gh issue list` and `gh pr list` with explicit `--repo
-kaizen-agents-org/<repo>` queries, or cross-check GitHub connector results with
-equivalent `gh` queries when both are available. Search existing open issues and
+Before creating issues, establish current GitHub state per repository. For every
+GitHub query or mutation, pass the active registry entry's complete `repository`
+value unchanged as `--repo <repository>`; never reconstruct it from an owner and
+`localCheckout`. Prefer `gh issue list` and `gh pr list` with explicit `--repo
+<repository>` queries, or cross-check GitHub connector results with equivalent
+`gh` queries when both are available. Search existing open issues and
 PRs across all monitored repositories using the candidate title, affected
 component, file paths, and conceptual keywords. Treat duplicate prevention as
 repo-scoped by default: related work in another repository should be mentioned in
@@ -89,14 +90,14 @@ one repository's open `kaizen` issue count block another repository's eligible
 candidate.
 
 Before creating the first issue in each target repository, verify both execution
-gate labels. Run `gh label list --repo kaizen-agents-org/<repo> --search
+gate labels. Run `gh label list --repo <repository> --search
 "kaizen:authorized" --limit 100 --json name --jq 'any(.name ==
 "kaizen:authorized")'` and require an exact `true` result, then do the same for
 `kaizen:ready` with `--search "kaizen:ready"` and `any(.name ==
 "kaizen:ready")`. If a label is absent, bootstrap it with `gh label create
-"kaizen:authorized" --repo kaizen-agents-org/<repo> --color "5319E7"
+"kaizen:authorized" --repo <repository> --color "5319E7"
 --description "Approved for Kaizen execution"` or `gh label create
-"kaizen:ready" --repo kaizen-agents-org/<repo> --color "0E8A16" --description
+"kaizen:ready" --repo <repository> --color "0E8A16" --description
 "Eligible for scheduled Kaizen selection"`, as applicable, then re-run the same
 exact-name query. Label creation requires write permission; triage permission is
 sufficient only to apply an existing label. If the automation lacks write
@@ -130,7 +131,7 @@ so `kaizen-loop` accepts the label event. Each issue body must include:
 Each created issue must also include a `PR linkage requirement` section. State
 that the implementation PR for this issue must target the repository default
 branch, include `Closes #<issue-number>` for same-repository work or `Closes
-kaizen-agents-org/<repo>#<issue-number>` for cross-repository work in the PR
+<repository>#<issue-number>` for cross-repository work in the PR
 body, and verify `gh pr view <pr> --json baseRefName,closingIssuesReferences,isDraft`
 before reporting the PR ready. Do not rely on a PR title, branch name, or issue
 comment as proof that GitHub will close the issue on merge.
