@@ -271,6 +271,12 @@ assert_rejected \
   "reconstruct the repository from the local checkout"
 
 assert_rejected \
+  "readiness issue creator verifies checkout origin identity" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "Before using any located checkout, read its \`origin\` URL" \
+  "Trust any directory with the configured checkout name"
+
+assert_rejected \
   "readiness issue creator external write boundary" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "Fleet membership grants observation scope, not write authorization." \

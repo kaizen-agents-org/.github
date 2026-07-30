@@ -23,6 +23,14 @@ Resolve expected local repository names from each active registry entry's
 `localCheckout`. If a checkout is unavailable, report that observation and
 continue with GitHub remote checks.
 
+Before using any located checkout, read its `origin` URL, normalize supported
+HTTPS/SSH GitHub URL forms and casing, and require it to match the active
+entry's complete `repository` identity. Never accept a directory based only on
+its `localCheckout` name. If origin is missing, ambiguous, or belongs to a fork
+or different repository, do not use that checkout to validate a candidate's
+documentation basis; report the mismatch and use the configured repository's
+GitHub default-branch content instead.
+
 Path convention: when reading from the `kaizen-agents-org/.github` repository
 checkout or its default-branch ref, organization docs are repository-relative
 paths under `docs/...`. When referring to those same files from another
