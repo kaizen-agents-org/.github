@@ -185,6 +185,12 @@ assert_rejected \
   "reconstruct \`--repo\` from the local checkout name"
 
 assert_rejected \
+  "monitor verifies checkout origin identity" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Before using any located checkout, read its \`origin\` URL" \
+  "Trust any directory with the configured checkout name"
+
+assert_rejected \
   "monitor external write boundary" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "Fleet membership grants observation scope, not write authorization." \
@@ -199,8 +205,14 @@ assert_rejected \
 assert_rejected \
   "weekly fleet registry source" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
-  'updated `origin\/main` ref, not from the current checkout.' \
+  'updated `origin\/main` ref, not from the current checkout' \
   'current checkout before fetching.'
+
+assert_rejected \
+  "weekly review prevents mixed source scope" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "restart the full review; never publish outputs derived from mixed source SHAs." \
+  "continue publishing outputs derived from the earlier scope."
 
 assert_rejected \
   "readiness issue creator fleet registry source" \

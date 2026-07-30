@@ -6,7 +6,8 @@ repositories and GitHub remotes.
 
 Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet
 registry or source-managed readiness docs. Read `onboarding/fleet.json` from the
-updated `origin/main` ref, not from the current checkout. Repositories with
+updated `origin/main` ref, not from the current checkout, and record that commit
+as `<sourceSha>`. Repositories with
 `weeklyReadiness: true` are the complete review scope. Validate that fetched
 registry before use; if it is missing or invalid, report scope collection as
 blocked and do not substitute a remembered or inferred list. The registry is
@@ -121,8 +122,12 @@ After producing the report, create or update a normal ready-for-review PR in
 - `docs/production-readiness-log.md`
 - `docs/metrics/<ISO-week>.md`
 
-Fetch `origin main` again immediately before writing. Base the branch on the updated default
-branch. Use a deterministic branch name such as
+Fetch `origin main` again immediately before writing and compare its commit to
+`<sourceSha>`. If it changed, discard the derived report, metrics, and candidate
+scope, reload the registry and readiness sources from the new commit, and
+restart the full review; never publish outputs derived from mixed source SHAs.
+Only after the final fetch still matches `<sourceSha>`, base the branch on that
+updated default branch. Use a deterministic branch name such as
 `codex/weekly-readiness-review-YYYY-MM-DD`. If a same-date readiness report PR
 already exists, update that branch and PR instead of opening a duplicate. If the
 same dated report already exists on `origin/main`, report that no report PR is
