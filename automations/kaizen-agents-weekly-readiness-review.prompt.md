@@ -21,6 +21,12 @@ blocked and do not substitute a remembered or inferred list. The registry is
 reviewed configuration and is read-only to this automation; never edit it from a
 readiness review.
 
+Read the registry, every source-managed readiness document listed below, the
+readiness index, and the prior report from exactly `<sourceSha>` using `git show
+<sourceSha>:<path>` or a detached worktree created at `<sourceSha>`. Never read
+those inputs from the current working tree. Treat a missing file at that commit
+as unavailable source evidence rather than falling back to local content.
+
 Use the local checkouts or worktrees provided by the Codex automation runtime.
 Prefer running this review in a Codex worktree execution environment. Resolve
 expected local repository names from each scoped registry entry's
@@ -34,6 +40,15 @@ its `localCheckout` name. If origin is missing, ambiguous, or belongs to a fork
 or different repository, do not run status or verification commands there;
 report the mismatch and use the configured repository's GitHub default-branch
 content and CI evidence instead.
+
+For every scoped repository, resolve its current default branch with `gh repo
+view <repository> --json defaultBranchRef --jq '.defaultBranchRef.name'` and
+record the corresponding remote head as `<targetSha>`. For a verified checkout,
+fetch that branch and run verification only in an isolated detached worktree at
+`<targetSha>`, never in its current working tree. Otherwise cite only current
+GitHub CI/check evidence explicitly tied to `<targetSha>`. If neither
+commit-pinned verification path is available, mark verification unavailable;
+do not attribute stale or feature-branch results to the fleet target.
 
 Path convention: when reading or writing files in the `kaizen-agents-org/.github`
 repository checkout or its default-branch ref, use repository-relative paths

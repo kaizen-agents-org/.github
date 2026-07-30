@@ -223,6 +223,18 @@ assert_rejected \
   "Trust the current .github origin"
 
 assert_rejected \
+  "weekly review pins readiness source documents" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "from exactly \`<sourceSha>\` using \`git show" \
+  "from the current working tree"
+
+assert_rejected \
+  "weekly review pins target verification commit" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "record the corresponding remote head as \`<targetSha>\`." \
+  "run verification on the current local branch."
+
+assert_rejected \
   "weekly review prevents mixed source scope" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   "restart the full review; never publish outputs derived from mixed source SHAs." \
