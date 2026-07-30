@@ -31,6 +31,15 @@ or different repository, do not use that checkout to validate a candidate's
 documentation basis; report the mismatch and use the configured repository's
 GitHub default-branch content instead.
 
+For every candidate target, resolve its current default branch with `gh repo
+view <repository> --json defaultBranchRef --jq '.defaultBranchRef.name'` and
+require a non-empty result. When a verified checkout is available, fetch that
+branch with `git -C <localCheckout> fetch origin <defaultBranch>` and validate
+documentation only from the updated `origin/<defaultBranch>` ref, never from the
+working tree. If resolution or fetch fails, use current GitHub default-branch
+content for the configured repository; if that content also cannot be verified,
+keep the candidate report-only and create no issue from stale local evidence.
+
 Path convention: when reading from the `kaizen-agents-org/.github` repository
 checkout or its default-branch ref, organization docs are repository-relative
 paths under `docs/...`. When referring to those same files from another

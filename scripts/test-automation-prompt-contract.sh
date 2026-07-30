@@ -277,6 +277,12 @@ assert_rejected \
   "Trust any directory with the configured checkout name"
 
 assert_rejected \
+  "readiness issue creator refreshes target default branch" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "branch with \`git -C <localCheckout> fetch origin <defaultBranch>\`" \
+  "trust the checkout's existing remote-tracking branch"
+
+assert_rejected \
   "readiness issue creator external write boundary" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "Fleet membership grants observation scope, not write authorization." \
