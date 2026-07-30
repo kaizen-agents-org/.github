@@ -63,6 +63,22 @@ grep -Fq '`kaizen`, `team:maintenance`' "${fixture}/dry-1.out" \
 grep -Fq 'Create no more than `2` issues' "${fixture}/dry-1.out" \
   || fail "creation limit placeholder was not rendered"
 
+touch "${fixture}/existing.md"
+if "${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/existing.md" \
+  --dry-run >"${fixture}/dry-existing.out" 2>&1; then
+  fail "dry-run accepted an existing output"
+fi
+if "${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/missing/scout.md" \
+  --dry-run >"${fixture}/dry-missing-parent.out" 2>&1; then
+  fail "dry-run accepted a missing output directory"
+fi
+
 if "${enable}" \
   --repo owner/repository \
   --readiness-evidence "${fixture}/readiness.json" \
@@ -123,6 +139,16 @@ if node "${validator}" "${fixture}/fleet.json" >"${fixture}/fleet.out" 2>&1; the
 fi
 grep -Fq 'repository is duplicated' "${fixture}/fleet.out" \
   || fail "duplicate fleet failure was not specific"
+
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/fleet.json"
+node -e \
+  'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories.push({...v.repositories[0],repository:v.repositories[0].repository.toUpperCase(),projectSlug:"case-variant",localCheckout:"case-variant"});fs.writeFileSync(p,JSON.stringify(v))' \
+  "${fixture}/fleet.json"
+if node "${validator}" "${fixture}/fleet.json" >"${fixture}/fleet-case.out" 2>&1; then
+  fail "case-insensitive duplicate fleet repository passed validation"
+fi
+grep -Fq 'repository is duplicated' "${fixture}/fleet-case.out" \
+  || fail "case-insensitive duplicate fleet failure was not specific"
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/fleet.json"
 node -e \

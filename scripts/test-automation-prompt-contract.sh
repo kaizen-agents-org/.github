@@ -9,6 +9,7 @@ trap 'rm -rf "${fixture}"' EXIT
 mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" \
   "${fixture}/onboarding/automations" "${fixture}/onboarding/scripts"
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
+cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
   "${repo_root}/docs/production-readiness/template.md" \
@@ -223,6 +224,12 @@ assert_rejected \
   "docs/production-readiness/template.md" \
   'Populate one row for every validated `weeklyReadiness: true` entry' \
   'Populate rows for the original four repositories'
+
+assert_rejected \
+  "runtime monitor fleet scope" \
+  "automations/README.md" \
+  'Entries with `monitor: true` in \[`onboarding\/fleet.json`\](..\/onboarding\/fleet.json)' \
+  '`.github`, `builder-agent`, `kaizen-loop`, `verifier`'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \

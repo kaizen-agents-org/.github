@@ -206,6 +206,11 @@ printf 'Readiness evidence: %s\n' "${evidence}"
 printf 'Output: %s\n' "${output}"
 printf 'Rendered scout prompt:\n%s\n' "${rendered}"
 
+[[ ! -e "${output}" && ! -L "${output}" ]] \
+  || fail "output already exists; remove it explicitly before reinstalling: ${output}"
+[[ -d "$(dirname -- "${output}")" ]] \
+  || fail "output directory does not exist: $(dirname -- "${output}")"
+
 if [[ "${dry_run}" == true ]]; then
   echo "Dry run: scout remains disabled and no file was written."
   exit 0
@@ -213,10 +218,6 @@ fi
 
 [[ "${confirmation}" == "${repo}" ]] \
   || fail "--confirm must exactly match --repo before scout enablement"
-[[ ! -e "${output}" && ! -L "${output}" ]] \
-  || fail "output already exists; remove it explicitly before reinstalling: ${output}"
-[[ -d "$(dirname -- "${output}")" ]] \
-  || fail "output directory does not exist: $(dirname -- "${output}")"
 
 (umask 077; set -o noclobber; printf '%s\n' "${rendered}" > "${output}") \
   || fail "output appeared during enablement and was not overwritten: ${output}"

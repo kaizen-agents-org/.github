@@ -74,10 +74,11 @@ for (const [index, entry] of fleet.repositories.entries()) {
   }
 
   for (const key of Object.keys(seen)) {
-    if (seen[key].has(entry[key])) {
+    const identity = key === 'repository' ? entry[key].toLowerCase() : entry[key];
+    if (seen[key].has(identity)) {
       fail(`${key} is duplicated: ${entry[key]}`);
     }
-    seen[key].add(entry[key]);
+    seen[key].add(identity);
   }
 }
 
