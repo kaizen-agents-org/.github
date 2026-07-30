@@ -227,6 +227,12 @@ assert_rejected \
   'Populate rows for the original four repositories'
 
 assert_rejected \
+  "readiness candidate full repository identity" \
+  "docs/production-readiness/template.md" \
+  "Use each candidate's complete \`<owner\\/repository>\` fleet identity as" \
+  "Use each candidate's repository name only as"
+
+assert_rejected \
   "runtime monitor fleet scope" \
   "automations/README.md" \
   'Entries with `monitor: true` in \[`onboarding\/fleet.json`\](..\/onboarding\/fleet.json)' \

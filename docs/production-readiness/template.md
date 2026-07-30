@@ -90,11 +90,12 @@ Recommended order:
 
 These candidates are the only inputs the readiness issue-creator automation may
 turn into GitHub issues. Created issue titles use the `[readiness-review]`
-prefix.
+prefix. Use each candidate's complete `<owner/repository>` fleet identity as
+the target; do not reconstruct it with a fixed organization prefix.
 
 | Candidate | Target repository | Status | Evidence | Documentation basis |
 | --- | --- | --- | --- | --- |
-| <short issue title> | `kaizen-agents-org/<repo>` | ready / blocked / duplicate / unclear / report-only | <report evidence> | <docs and headings> |
+| <short issue title> | `<owner/repository>` | ready / blocked / duplicate / unclear / report-only | <report evidence> | <docs and headings> |
 
 ## Current Readiness Judgment
 
