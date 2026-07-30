@@ -107,6 +107,12 @@ done
   || fail "--repo must be an explicit owner/repo"
 repo_owner="${repo%%/*}"
 repo_owner_lower="$(printf '%s' "${repo_owner}" | tr '[:upper:]' '[:lower:]')"
+repo_lower="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
+case "${repo_lower}" in
+  kaizen-agents-org/.github|kaizen-agents-org/builder-agent|kaizen-agents-org/kaizen-loop|kaizen-agents-org/verifier)
+    fail "--repo is already covered by the fixed organization-wide scout"
+    ;;
+esac
 if [[ "${labels_seen}" == false && "${repo_owner_lower}" == "kaizen-agents-org" ]]; then
   labels="kaizen,kaizen:authorized,kaizen:ready"
 fi

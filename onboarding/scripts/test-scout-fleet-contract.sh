@@ -103,6 +103,26 @@ if "${enable}" \
   fail "organization scout accepted labels without execution gates"
 fi
 
+for fixed_target in \
+  KAIZEN-AGENTS-ORG/.GITHUB \
+  kaizen-agents-org/builder-agent \
+  kaizen-agents-org/kaizen-loop \
+  kaizen-agents-org/verifier; do
+  fixed_slug="${fixed_target##*/}"
+  node -e \
+    'const fs=require("fs"),v=JSON.parse(fs.readFileSync(process.argv[1]));v.repository=process.argv[3];fs.writeFileSync(process.argv[2],JSON.stringify(v))' \
+    "${fixture}/readiness.json" \
+    "${fixture}/fixed-${fixed_slug}.json" \
+    "${fixed_target}"
+  if "${enable}" \
+    --repo "${fixed_target}" \
+    --readiness-evidence "${fixture}/fixed-${fixed_slug}.json" \
+    --output "${fixture}/fixed-${fixed_slug}.md" \
+    --dry-run >"${fixture}/fixed-${fixed_slug}.out" 2>&1; then
+    fail "per-repository scout accepted fixed organization target ${fixed_target}"
+  fi
+done
+
 touch "${fixture}/existing.md"
 if "${enable}" \
   --repo owner/repository \

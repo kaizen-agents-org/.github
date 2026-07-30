@@ -190,6 +190,8 @@ require_text "${scout_doc}" 'An opt-in per-repository scout rendered from'
 require_text "${scout_doc}" 'scans exactly its explicitly configured `owner/repository`.'
 require_text "${scout_doc}" 'That target may be a'
 require_text "${scout_doc}" 'newly onboarded organization repository or an external repository'
+require_text "${scout_doc}" 'The four fixed targets'
+require_text "${scout_doc}" 'cannot also be enabled as per-repository scouts'
 require_text "${scout_doc}" 'An external'
 require_text "${scout_doc}" 'opt-in scout never bootstraps these labels automatically.'
 

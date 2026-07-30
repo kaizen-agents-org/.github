@@ -63,6 +63,9 @@ labels remain explicit owner choices. For `kaizen-agents-org` repositories, the
 default is `kaizen,kaizen:authorized,kaizen:ready`, and any custom `--labels`
 list must retain all three organization dogfood labels. Supply a comma-separated
 custom list only after confirming the target repository's label policy.
+The four fixed organization-wide scout targets—`.github`, `builder-agent`,
+`kaizen-loop`, and `verifier`—cannot also be enabled through this per-repository
+flow; duplicate installations are rejected case-insensitively.
 
 The script installs only the reviewed prompt artifact. Scheduling and runner
 credentials remain runner-owner responsibilities. It refuses to overwrite an

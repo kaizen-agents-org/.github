@@ -34,7 +34,10 @@ and enabled through [`../onboarding/scripts/enable-scout.sh`](../onboarding/scri
 scans exactly its explicitly configured `owner/repository`. That target may be a
 newly onboarded organization repository or an external repository; it does not
 need to appear in the fixed organization-wide list. Enabling one target does not
-expand the fixed scout or authorize any other repository.
+expand the fixed scout or authorize any other repository. The four fixed targets
+cannot also be enabled as per-repository scouts; enablement rejects those
+repository identities case-insensitively to prevent duplicate discovery and
+issue creation.
 
 ## What It Looks For
 
