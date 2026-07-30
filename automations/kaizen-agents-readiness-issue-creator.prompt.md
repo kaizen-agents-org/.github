@@ -8,6 +8,14 @@ This automation is a daily post-merge poll. It should create issues only after
 the weekly readiness report PR has been merged to `main`; if no new approved
 report is available, it should report that and create no issues.
 
+Before any source fetch, verify that the `.github` checkout's `origin` URL.
+After normalizing supported HTTPS/SSH GitHub forms and casing, the source
+repository identity must be exactly `kaizen-agents-org/.github`. If the
+canonical source checkout or origin cannot be verified, report organization
+scope and approved-report provenance as
+unavailable and create no issues; never load the fleet or report from an
+unverified remote.
+
 Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet
 registry, readiness docs, or report index. Read `onboarding/fleet.json` from the
 updated `origin/main` ref, not from the current checkout.

@@ -105,6 +105,9 @@ done
 
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
 require_text "${monitor}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet registry'
+require_text "${monitor}" 'Before any source fetch, verify that the `.github` checkout'\''s `origin` URL'
+require_text "${monitor}" 'is exactly `kaizen-agents-org/.github`.'
+require_text "${monitor}" 'never load the fleet or source docs from an unverified remote.'
 require_text "${monitor}" 'Read `onboarding/fleet.json` from the updated `origin/main` ref, not from the current checkout'
 require_text "${monitor}" 'this monitor must never edit it'
 require_text "${monitor}" 'Before using any located checkout, read its `origin` URL'
@@ -123,6 +126,9 @@ require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per
 require_text "${monitor}" 'Do not merge PRs, push changes, or make broad code changes automatically. The monitor may propose small, deterministic documentation, prompt, or configuration follow-ups that should be handled in a normal ready-for-review PR, but it must not edit repository files, create implementation branches, or open implementation PRs unless the user has explicitly asked for implementation in this thread.'
 
 require_text "${weekly_review}" 'normal ready-for-review PR'
+require_text "${weekly_review}" 'Before any source fetch, verify that the `.github` checkout'\''s `origin` URL'
+require_text "${weekly_review}" 'repository identity must be exactly `kaizen-agents-org/.github`.'
+require_text "${weekly_review}" 'publish a report PR from an unverified remote.'
 require_text "${weekly_review}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet'
 require_text "${weekly_review}" 'updated `origin/main` ref, not from the current checkout'
 require_text "${weekly_review}" 'record that commit'
@@ -138,6 +144,10 @@ require_text "${weekly_review}" 'Do not create GitHub issues from this weekly re
 require_text "${weekly_review}" 'containing only these repository-relative paths:'
 
 require_text "${readiness_creator}" 'weekly readiness report PR has been merged to `main`'
+require_text "${readiness_creator}" 'Before any source fetch, verify that the `.github` checkout'\''s `origin` URL'
+require_text "${readiness_creator}" 'repository identity must be exactly `kaizen-agents-org/.github`.'
+require_text "${readiness_creator}" 'never load the fleet or report from an'
+require_text "${readiness_creator}" 'unverified remote.'
 require_text "${readiness_creator}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet'
 require_text "${readiness_creator}" 'Read `onboarding/fleet.json` from the'
 require_text "${readiness_creator}" 'updated `origin/main` ref, not from the current checkout.'

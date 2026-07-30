@@ -181,6 +181,12 @@ assert_rejected \
   'current checkout before fetching'
 
 assert_rejected \
+  "monitor verifies canonical organization source" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Before any source fetch, verify that the \`.github\` checkout's \`origin\` URL" \
+  "Trust the current .github origin"
+
+assert_rejected \
   "monitor preserves fleet repository owner" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "pass the active registry entry's complete \`repository\` value unchanged as \`--repo <repository>\`" \
@@ -211,6 +217,12 @@ assert_rejected \
   'current checkout before fetching.'
 
 assert_rejected \
+  "weekly review verifies canonical organization source" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "Before any source fetch, verify that the \`.github\` checkout's \`origin\` URL" \
+  "Trust the current .github origin"
+
+assert_rejected \
   "weekly review prevents mixed source scope" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   "restart the full review; never publish outputs derived from mixed source SHAs." \
@@ -239,6 +251,12 @@ assert_rejected \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   'updated `origin\/main` ref, not from the current checkout.' \
   'current checkout before fetching.'
+
+assert_rejected \
+  "readiness issue creator verifies canonical organization source" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "Before any source fetch, verify that the \`.github\` checkout's \`origin\` URL" \
+  "Trust the current .github origin"
 
 assert_rejected \
   "scout template refreshes default branch" \

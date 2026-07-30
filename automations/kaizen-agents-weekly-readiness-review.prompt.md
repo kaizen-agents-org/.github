@@ -4,6 +4,13 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-read
 Run the weekly Kaizen Agents production-readiness review across the local
 repositories and GitHub remotes.
 
+Before any source fetch, verify that the `.github` checkout's `origin` URL.
+After normalizing supported HTTPS/SSH GitHub forms and casing, the source
+repository identity must be exactly `kaizen-agents-org/.github`. If the
+canonical source checkout or origin cannot be verified, report the review as
+blocked and do not derive fleet scope or
+publish a report PR from an unverified remote.
+
 Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet
 registry or source-managed readiness docs. Read `onboarding/fleet.json` from the
 updated `origin/main` ref, not from the current checkout, and record that commit
