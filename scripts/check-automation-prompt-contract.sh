@@ -80,6 +80,9 @@ require_text "${scout}" 'Limit automatic issue creation to at most two issues pe
 
 require_text "${scout_template}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->'
 require_text "${scout_template}" 'Created issue titles must start with `[scout]`.'
+require_text "${scout_template}" 'resolve the current default branch with'
+require_text "${scout_template}" 'read documentation and code from the updated'
+require_text "${scout_template}" '`origin/<defaultBranch>` ref rather than the current checkout'
 require_text "${scout_template}" 'Create no more than `{{CREATION_LIMIT}}` issues in one run.'
 require_text "${scout_template}" 'Do not edit files, push branches, merge pull requests, create implementation'
 for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
@@ -109,7 +112,9 @@ require_text "${weekly_review}" 'Do not create GitHub issues from this weekly re
 require_text "${weekly_review}" 'containing only these repository-relative paths:'
 
 require_text "${readiness_creator}" 'weekly readiness report PR has been merged to `main`'
-require_text "${readiness_creator}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.'
+require_text "${readiness_creator}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet'
+require_text "${readiness_creator}" 'Read `onboarding/fleet.json` from the'
+require_text "${readiness_creator}" 'updated `origin/main` ref, not from the current checkout.'
 require_text "${readiness_creator}" 'Repositories with `weeklyReadiness: true` are the complete issue-creation scope'
 require_text "${readiness_creator}" 'pass the active registry entry'\''s complete `repository`'
 require_text "${readiness_creator}" 'Fleet membership grants observation scope, not write authorization.'

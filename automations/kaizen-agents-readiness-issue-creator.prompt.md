@@ -8,11 +8,14 @@ This automation is a daily post-merge poll. It should create issues only after
 the weekly readiness report PR has been merged to `main`; if no new approved
 report is available, it should report that and create no issues.
 
-Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.
+Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet
+registry, readiness docs, or report index. Read `onboarding/fleet.json` from the
+updated `origin/main` ref, not from the current checkout.
 Repositories with `weeklyReadiness: true` are the complete issue-creation scope,
-matching the upstream weekly review. Validate the registry before use; if it is
-missing or invalid, report the scope as unavailable and create no issues. Never
-edit the registry or substitute a remembered or inferred repository list.
+matching the upstream weekly review. Validate that fetched registry before use;
+if it is missing or invalid, report the scope as unavailable and create no
+issues. Never edit the registry or substitute a remembered or inferred
+repository list.
 
 Use the local checkouts or worktrees provided by the Codex automation runtime.
 Prefer running this issue creator in a Codex worktree execution environment.
@@ -36,10 +39,11 @@ Read these source-managed readiness docs first:
 - `docs/production-readiness/template.md`
 - `docs/production-readiness-log.md`
 
-Fetch `origin main` for `kaizen-agents-org/.github` before selecting a report.
-Use only `docs/production-readiness-log.md` from the updated
-`origin/main` ref as the readiness index. Locate the latest dated report linked
-from that index, normally under
+Using the already fetched `origin/main`, select the report only after the fleet
+registry and source-managed readiness docs have been read from that same ref.
+Use only `docs/production-readiness-log.md` from the updated `origin/main` ref
+as the readiness index. Locate the latest dated report linked from that index,
+normally under
 `docs/production-readiness/logs/YYYY-MM-DD.md`, and read that report
 only from `origin/main`. Do not create issues from local-only reports, open PR
 contents, proposed report text, unmerged branches, or previous automation

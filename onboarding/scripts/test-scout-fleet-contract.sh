@@ -200,4 +200,14 @@ fi
 grep -Fq 'must contain exactly' "${fixture}/fleet-schema.out" \
   || fail "fleet schema failure was not specific"
 
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/fleet.json"
+node -e \
+  'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories[0].monitor=false;v.repositories[0].weeklyReadiness=false;fs.writeFileSync(p,JSON.stringify(v))' \
+  "${fixture}/fleet.json"
+if node "${validator}" "${fixture}/fleet.json" >"${fixture}/fleet-no-consumer.out" 2>&1; then
+  fail "fleet entry without a read-only consumer passed validation"
+fi
+grep -Fq 'must enable at least one read-only fleet consumer' "${fixture}/fleet-no-consumer.out" \
+  || fail "missing read-only-consumer failure was not specific"
+
 echo "PASS: scout enablement and fleet registry contracts are enforced"

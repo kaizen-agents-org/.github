@@ -23,8 +23,9 @@ monitor run's scope.
 
 The local automation may inspect local checkouts for active entries as well as
 their GitHub remotes. Adding, removing, enabling, or disabling a target requires
-a reviewed registry change. The monitor never edits the registry and does not
-infer a fallback scope when validation fails.
+a separate normal ready-for-review pull request for the registry change. The
+monitor never edits the registry and does not infer a fallback scope when
+validation fails.
 
 ## Local Kaizen Loop Scheduler
 

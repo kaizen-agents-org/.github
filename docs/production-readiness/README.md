@@ -21,7 +21,8 @@ The readiness loop has three phases:
 The repository denominator is the set of entries with `weeklyReadiness: true`
 in [`../../onboarding/fleet.json`](../../onboarding/fleet.json). The weekly
 review validates and reads that reviewed registry but never edits it. A fleet
-addition or removal is handled in a separate normal pull request.
+addition or removal is handled in a separate normal ready-for-review pull
+request.
 
 ## Documents
 

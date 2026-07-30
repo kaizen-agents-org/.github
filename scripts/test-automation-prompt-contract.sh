@@ -205,8 +205,14 @@ assert_rejected \
 assert_rejected \
   "readiness issue creator fleet registry source" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
-  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
-  'Use a remembered repository list.'
+  'updated `origin\/main` ref, not from the current checkout.' \
+  'current checkout before fetching.'
+
+assert_rejected \
+  "scout template refreshes default branch" \
+  "onboarding/automations/scout.prompt.template.md" \
+  "resolve the current default branch with" \
+  "reuse the current local branch"
 
 assert_rejected \
   "readiness issue creator preserves fleet repository owner" \

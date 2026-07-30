@@ -5,6 +5,13 @@ Scout `{{REPOSITORY}}` for small, evidence-backed repository-local improvements.
 Use the repository default branch as the source of truth. Do not create work
 from local-only, feature-branch-only, dirty, or stale unmerged content.
 
+Before collecting evidence, resolve the current default branch with
+`gh repo view {{REPOSITORY}} --json defaultBranchRef --jq
+'.defaultBranchRef.name'` and require a non-empty result. Fetch that branch from
+`origin`, then read documentation and code from the updated
+`origin/<defaultBranch>` ref rather than the current checkout. If the default
+branch cannot be resolved or fetched, fail closed and create no issue.
+
 Created issue titles must start with `[scout]`. Apply exactly these configured
 labels: {{LABELS}}. If every configured label cannot be verified and applied,
 fail closed without creating the issue. Labels do not grant permission to edit

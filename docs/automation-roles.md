@@ -17,7 +17,8 @@ Consumers validate the registry and read only the entries enabled for their
 role; the issue creator consumes the same `weeklyReadiness: true` entries as its
 upstream weekly review. They must not infer missing targets, mutate the registry,
 or use it as permission to write to a target repository. Adding or removing a
-fleet entry is a normal reviewed change to this repository.
+fleet entry requires a separate normal ready-for-review pull request to this
+repository.
 
 Fleet membership is observation scope, not write authorization. Organization
 automations may automatically create issues or bootstrap/apply execution labels

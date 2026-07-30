@@ -29,6 +29,9 @@ onboarding/scripts/enable-scout.sh \
   --dry-run
 ```
 
+`--dry-run` enforces the same output-path preconditions as a real run: the
+`--output` path must not already exist, and its parent directory must exist.
+
 The evidence is a snapshot produced or reviewed by the repository owner:
 
 ```json
