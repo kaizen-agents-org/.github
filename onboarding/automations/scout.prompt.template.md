@@ -7,10 +7,18 @@ from local-only, feature-branch-only, dirty, or stale unmerged content.
 
 Before collecting evidence, resolve the current default branch with
 `gh repo view {{REPOSITORY}} --json defaultBranchRef --jq
-'.defaultBranchRef.name'` and require a non-empty result. Fetch that branch from
-`origin`, then read documentation and code from the updated
-`origin/<defaultBranch>` ref rather than the current checkout. If the default
-branch cannot be resolved or fetched, fail closed and create no issue.
+'.defaultBranchRef.name'` and require a non-empty result. Never assume the
+runner's current directory is the target repository. Locate a target checkout
+whose `origin` URL resolves to `{{REPOSITORY}}` case-insensitively, call it
+`<targetCheckout>`, and use `git -C <targetCheckout>` for every git operation.
+Fetch the resolved branch there, then read documentation and code from its
+updated `origin/<defaultBranch>` ref rather than its current checkout. If a
+verified target checkout is unavailable, read the configured repository's
+default-branch content directly through GitHub with explicit
+`--repo {{REPOSITORY}}` or repository API parameters. If the default branch or
+authoritative target content cannot be resolved, fail closed and create no
+issue. Every issue or pull-request query and every mutation must pass explicit
+`--repo {{REPOSITORY}}`; never inherit a repository from the runner cwd.
 
 Created issue titles must start with `[scout]`. Apply exactly these configured
 labels: {{LABELS}}. If every configured label cannot be verified and applied,

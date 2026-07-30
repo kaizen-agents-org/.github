@@ -215,6 +215,18 @@ assert_rejected \
   "reuse the current local branch"
 
 assert_rejected \
+  "scout template binds git operations to target checkout" \
+  "onboarding/automations/scout.prompt.template.md" \
+  "use \`git -C <targetCheckout>\` for every git operation." \
+  "run git operations from the current directory."
+
+assert_rejected \
+  "scout template binds GitHub operations to target repository" \
+  "onboarding/automations/scout.prompt.template.md" \
+  "Every issue or pull-request query and every mutation must pass explicit" \
+  "Issue and pull-request operations may infer the repository."
+
+assert_rejected \
   "readiness issue creator preserves fleet repository owner" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \

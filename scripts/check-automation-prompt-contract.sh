@@ -81,8 +81,11 @@ require_text "${scout}" 'Limit automatic issue creation to at most two issues pe
 require_text "${scout_template}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->'
 require_text "${scout_template}" 'Created issue titles must start with `[scout]`.'
 require_text "${scout_template}" 'resolve the current default branch with'
-require_text "${scout_template}" 'read documentation and code from the updated'
-require_text "${scout_template}" '`origin/<defaultBranch>` ref rather than the current checkout'
+require_text "${scout_template}" 'Never assume the'
+require_text "${scout_template}" 'runner'\''s current directory is the target repository.'
+require_text "${scout_template}" 'use `git -C <targetCheckout>` for every git operation.'
+require_text "${scout_template}" 'Every issue or pull-request query and every mutation must pass explicit'
+require_text "${scout_template}" '`--repo {{REPOSITORY}}`'
 require_text "${scout_template}" 'Create no more than `{{CREATION_LIMIT}}` issues in one run.'
 require_text "${scout_template}" 'Do not edit files, push branches, merge pull requests, create implementation'
 for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
