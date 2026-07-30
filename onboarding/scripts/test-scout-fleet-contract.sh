@@ -13,6 +13,13 @@ fail() {
   exit 1
 }
 
+grep -Fq 'organization monitor, weekly readiness review, and downstream readiness issue' \
+  "${repo_root}/onboarding/README.md" \
+  || fail "onboarding docs omit the downstream readiness issue creator"
+grep -Fq '`weeklyReadiness: true` both adds the repository to the read-only weekly review' \
+  "${repo_root}/onboarding/README.md" \
+  || fail "onboarding docs omit the weeklyReadiness consumer effects"
+
 node -e '
 const fs = require("fs");
 const now = new Date();

@@ -73,19 +73,24 @@ the same explicit confirmation flow.
 ## Organization fleet registry
 
 [`fleet.json`](./fleet.json) is the reviewed scope registry for the
-organization monitor and weekly readiness review. Each entry names the GitHub
-repository, its Kaizen metrics project slug, its expected local checkout name,
-and whether each read-only consumer includes it. Validate changes with:
+organization monitor, weekly readiness review, and downstream readiness issue
+creator. Each entry names the GitHub repository, its Kaizen metrics project
+slug, its expected local checkout name, and which consumers include it.
+`weeklyReadiness: true` both adds the repository to the read-only weekly review
+and permits the post-merge issue creator to process approved candidates for
+that repository. For organization-owned targets, that downstream consumer may
+create issues under the documented write-authorization policy. Validate changes
+with:
 
 ```sh
 node onboarding/scripts/validate-fleet.mjs onboarding/fleet.json
 ```
 
-Adding or removing a repository is a normal reviewed change to this repository;
-the monitor and weekly review never edit the registry. Removing an entry stops
-future registry-driven observation but does not delete repository data, local
-workspaces, schedules, issues, pull requests, or previously rendered scout
-prompts.
+Adding, removing, enabling, or disabling a repository requires a separate normal
+ready-for-review pull request to this repository; none of the consumers edits
+the registry. Removing an entry stops future registry-driven observation and
+readiness issue creation but does not delete repository data, local workspaces,
+schedules, issues, pull requests, or previously rendered scout prompts.
 
 ## Apply the standard branch protection
 
