@@ -88,11 +88,12 @@ value unchanged as `--repo <repository>`; never reconstruct it from an owner and
 `localCheckout`. Prefer `gh issue list` and `gh pr list` with explicit `--repo
 <repository>` queries, or cross-check GitHub connector results with equivalent
 `gh` queries when both are available. Search existing open issues and
-PRs across all monitored repositories using the candidate title, affected
-component, file paths, and conceptual keywords. Treat duplicate prevention as
-repo-scoped by default: related work in another repository should be mentioned in
-the duplicate-check summary, but it must not by itself block a concrete
-repo-local issue.
+PRs across every validated `weeklyReadiness: true` fleet entry, including the
+candidate's target repository, using the candidate title, affected component,
+file paths, and conceptual keywords. Treat duplicate prevention as repo-scoped
+by default: related work in another repository should be mentioned in the
+duplicate-check summary, but it must not by itself block a concrete repo-local
+issue.
 
 Limit issue creation to at most three issues per target repository per run from
 the approved dated report. Do not apply an organization-wide cap, and do not let

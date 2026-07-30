@@ -227,6 +227,12 @@ assert_rejected \
   "compare the owner segment of"
 
 assert_rejected \
+  "readiness issue creator duplicate-search fleet scope" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "every validated \`weeklyReadiness: true\` fleet entry" \
+  "only monitored fleet entries"
+
+assert_rejected \
   "readiness cadence fleet denominator" \
   "docs/production-readiness/README.md" \
   "for every repository in that same validated" \
