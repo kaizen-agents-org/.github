@@ -4,9 +4,11 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 manifest="${repo_root}/onboarding/versions.json"
-tmp_manifest="$(mktemp)"
-tmp_error="$(mktemp)"
-trap 'rm -f "${tmp_manifest}" "${tmp_error}"' EXIT
+fixture_base="${KAIZEN_TEST_TMPDIR:-/tmp}"
+fixture_root="$(mktemp -d "${fixture_base%/}/onboarding-versions.XXXXXX")"
+tmp_manifest="${fixture_root}/manifest.json"
+tmp_error="${fixture_root}/error.log"
+trap 'rm -rf "${fixture_root}"' EXIT
 
 node "${repo_root}/scripts/validate-onboarding-versions.mjs" "${manifest}"
 
