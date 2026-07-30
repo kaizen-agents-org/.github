@@ -72,6 +72,12 @@ assert_rejected \
   'then continue without verifying the queue-selection label'
 
 assert_rejected \
+  "scout authorization-label exact-name query" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "--limit 100 --json name --jq 'any(.name == \"kaizen:authorized\")'" \
+  "--limit 100"
+
+assert_rejected \
   "scout queue-selection fail-closed behavior" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   "If either label cannot be created and verified, do not create the issue" \
