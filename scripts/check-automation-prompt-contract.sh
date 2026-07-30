@@ -16,6 +16,7 @@ readiness_checklist="${repo_root}/docs/production-readiness/checklist.md"
 readiness_template="${repo_root}/docs/production-readiness/template.md"
 automations_readme="${repo_root}/automations/README.md"
 org_monitor_doc="${repo_root}/docs/org-monitor.md"
+scout_doc="${repo_root}/docs/repo-improvement-scout.md"
 
 fail() {
   echo "automation prompt contract check failed: $*" >&2
@@ -49,7 +50,8 @@ require_contract_marker() {
 
 for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
   "${scout_template}" "${fleet}" "${fleet_validator}" "${readiness_readme}" \
-  "${readiness_checklist}" "${readiness_template}" "${automations_readme}" "${org_monitor_doc}"; do
+  "${readiness_checklist}" "${readiness_template}" "${automations_readme}" "${org_monitor_doc}" \
+  "${scout_doc}"; do
   require_file "${file}"
 done
 
@@ -170,6 +172,14 @@ require_text "${automations_readme}" 'Entries with `monitor: true` in [`onboardi
 require_text "${automations_readme}" 'Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json)'
 require_text "${org_monitor_doc}" 'every entry with `monitor: true`; there is no separately maintained repository'
 require_text "${org_monitor_doc}" 'An entry with `monitor: false` is not an active'
+require_text "${scout_doc}" 'There are two supported scout deployment modes.'
+require_text "${scout_doc}" 'The fixed organization-wide scout'
+require_text "${scout_doc}" 'An opt-in per-repository scout rendered from'
+require_text "${scout_doc}" 'scans exactly its explicitly configured `owner/repository`.'
+require_text "${scout_doc}" 'That target may be a'
+require_text "${scout_doc}" 'newly onboarded organization repository or an external repository'
+require_text "${scout_doc}" 'An external'
+require_text "${scout_doc}" 'opt-in scout never bootstraps these labels automatically.'
 
 require_text "${contract_doc}" '| Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |'
 require_text "${contract_doc}" '| Maintain | `Kaizen Agents org monitor` | Check organization operation, sync, scheduler, CI, source-order, and drift health. | Yes, only focused `[monitor]` issues. | No. |'

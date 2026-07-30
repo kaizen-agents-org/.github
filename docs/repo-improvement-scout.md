@@ -14,7 +14,10 @@ This cadence is intentionally higher than the organization monitor because the s
 
 ## Scope
 
-The scout actively scans the four implementation and coordination repositories:
+There are two supported scout deployment modes.
+
+The fixed organization-wide scout actively scans these four implementation and
+coordination repositories:
 
 | Area | Repository |
 | --- | --- |
@@ -24,6 +27,14 @@ The scout actively scans the four implementation and coordination repositories:
 | Independent verifier component | `kaizen-agents-org/verifier` |
 
 `coderabbit` and `renovate-config` are downstream shared-configuration repositories. They are not scout targets. They may appear only as sync context for a `.github` finding.
+
+An opt-in per-repository scout rendered from
+[`../onboarding/automations/scout.prompt.template.md`](../onboarding/automations/scout.prompt.template.md)
+and enabled through [`../onboarding/scripts/enable-scout.sh`](../onboarding/scripts/enable-scout.sh)
+scans exactly its explicitly configured `owner/repository`. That target may be a
+newly onboarded organization repository or an external repository; it does not
+need to appear in the fixed organization-wide list. Enabling one target does not
+expand the fixed scout or authorize any other repository.
 
 ## What It Looks For
 
@@ -40,28 +51,31 @@ The scout should not create operation, sync, scheduler, CI, source-order, or rea
 
 The scout may create `[scout]` issues when all of these are true:
 
-- the target is one of the four active repositories;
+- the target is either one of the fixed organization-wide scout repositories or
+  the explicit target of a reviewed opt-in per-repository scout installation;
 - default-branch docs or code provide concrete evidence;
 - the work is not already covered by an open issue or PR in that target repository;
 - the issue is ready for the next Kaizen run without human clarification;
 - the target repository has fewer than four open issues labeled `kaizen`.
 
-The scout adds the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels to
-created issues. Execution authorization and opt-in queue selection are separate
-gates, and this automatic approval of both is an explicit `kaizen-agents-org`
-dogfooding policy. The actor applying the authorization label must have at least
-triage permission in the target repository because `kaizen-loop` validates the
-label event actor's permission. External operation mode keeps authorization and
-queue selection as explicit maintainer actions and must not inherit this bypass
-implicitly.
+For organization-owned targets, the scout adds the `kaizen`,
+`kaizen:authorized`, and `kaizen:ready` labels to created issues. Execution
+authorization and opt-in queue selection are separate gates, and this automatic
+approval of both is an explicit `kaizen-agents-org` dogfooding policy. The actor
+applying the authorization label must have at least triage permission in the
+target repository because `kaizen-loop` validates the label event actor's
+permission. External opt-in scouts apply only their explicitly configured labels;
+authorization and queue selection remain maintainer actions and must not inherit
+the organization bypass implicitly.
 
-Before creating the first issue for a target repository, the scout verifies
-that `kaizen:authorized` and `kaizen:ready` exist and creates either label when
-it is missing. Bootstrap requires write permission; triage permission is only
-sufficient to apply an existing label. Without write permission, a maintainer
-must pre-provision missing labels. If either label cannot be created and
-verified, the scout keeps the candidate in its report and does not create an
-issue without both execution authorization and queue selection.
+Before creating the first issue for an organization-owned target, the scout
+verifies that `kaizen:authorized` and `kaizen:ready` exist and creates either
+label when it is missing. Bootstrap requires write permission; triage permission
+is only sufficient to apply an existing label. Without write permission, a
+maintainer must pre-provision missing labels. If either label cannot be created
+and verified, the scout keeps the candidate in its report and does not create an
+issue without both execution authorization and queue selection. An external
+opt-in scout never bootstraps these labels automatically.
 
 The scout creates at most two issues per target repository per run. There is no organization-wide issue creation cap because each repository already has its own per-run and open-issue limits. Additional eligible findings for a repository stay in the report. Each created issue must include a PR linkage requirement telling the implementer to put a GitHub closing keyword in the implementation PR body and verify `closingIssuesReferences` before reporting the PR ready.
 

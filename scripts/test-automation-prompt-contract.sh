@@ -12,6 +12,7 @@ cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
 cp "${repo_root}/docs/org-monitor.md" "${fixture}/docs/"
+cp "${repo_root}/docs/repo-improvement-scout.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
   "${repo_root}/docs/production-readiness/checklist.md" \
   "${repo_root}/docs/production-readiness/template.md" \
@@ -316,6 +317,12 @@ assert_rejected \
   "docs/org-monitor.md" \
   'every entry with `monitor: true`; there is no separately maintained repository' \
   'only the original four repositories are monitored'
+
+assert_rejected \
+  "scout documentation opt-in scope" \
+  "docs/repo-improvement-scout.md" \
+  'scans exactly its explicitly configured `owner\/repository`.' \
+  'is limited to the original four repositories.'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \
