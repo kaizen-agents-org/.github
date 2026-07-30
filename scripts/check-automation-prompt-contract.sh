@@ -11,6 +11,8 @@ readiness_creator="${repo_root}/automations/kaizen-agents-readiness-issue-creato
 scout_template="${repo_root}/onboarding/automations/scout.prompt.template.md"
 fleet="${repo_root}/onboarding/fleet.json"
 fleet_validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
+readiness_readme="${repo_root}/docs/production-readiness/README.md"
+readiness_template="${repo_root}/docs/production-readiness/template.md"
 
 fail() {
   echo "automation prompt contract check failed: $*" >&2
@@ -43,7 +45,8 @@ require_contract_marker() {
 }
 
 for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
-  "${scout_template}" "${fleet}" "${fleet_validator}"; do
+  "${scout_template}" "${fleet}" "${fleet_validator}" "${readiness_readme}" \
+  "${readiness_template}"; do
   require_file "${file}"
 done
 
@@ -109,6 +112,12 @@ require_text "${readiness_creator}" '`[readiness-review]`'
 require_text "${readiness_creator}" 'Limit issue creation to at most three issues per target repository per run'
 require_text "${readiness_creator}" 'Do not edit files, push branches, merge PRs, create implementation branches, or'
 require_text "${readiness_creator}" 'open implementation PRs automatically. This automation only creates focused'
+
+require_text "${readiness_readme}" 'for every validated'
+require_text "${readiness_readme}" '`weeklyReadiness: true` fleet entry'
+require_text "${readiness_readme}" 'for every repository in that same validated'
+require_text "${readiness_template}" 'Populate one row for every validated `weeklyReadiness: true` entry'
+require_text "${readiness_template}" '`onboarding/fleet.json`; do not substitute a remembered repository list.'
 
 require_text "${contract_doc}" '| Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |'
 require_text "${contract_doc}" '| Maintain | `Kaizen Agents org monitor` | Check organization operation, sync, scheduler, CI, source-order, and drift health. | Yes, only focused `[monitor]` issues. | No. |'

@@ -12,10 +12,10 @@ entry and latest summary row.
 
 Reviewed repositories:
 
-- `kaizen-agents-org/.github`
-- `kaizen-agents-org/kaizen-loop`
-- `kaizen-agents-org/builder-agent`
-- `kaizen-agents-org/verifier`
+<!-- Populate one row for every validated `weeklyReadiness: true` entry in
+`onboarding/fleet.json`; do not substitute a remembered repository list. -->
+
+- `<owner/repository>`
 
 ## Summary
 

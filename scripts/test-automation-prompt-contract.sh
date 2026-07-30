@@ -6,10 +6,13 @@ checker="${repo_root}/scripts/check-automation-prompt-contract.sh"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/automation-prompt-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
 
-mkdir -p "${fixture}/automations" "${fixture}/docs" \
+mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" \
   "${fixture}/onboarding/automations" "${fixture}/onboarding/scripts"
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
+cp "${repo_root}/docs/production-readiness/README.md" \
+  "${repo_root}/docs/production-readiness/template.md" \
+  "${fixture}/docs/production-readiness/"
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/"
 cp "${repo_root}/onboarding/automations/scout.prompt.template.md" \
   "${fixture}/onboarding/automations/"
@@ -196,6 +199,18 @@ assert_rejected \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \
   "reconstruct the repository from the local checkout"
+
+assert_rejected \
+  "readiness cadence fleet denominator" \
+  "docs/production-readiness/README.md" \
+  "for every repository in that same validated" \
+  "for only the original four repositories in the"
+
+assert_rejected \
+  "readiness template fleet scope" \
+  "docs/production-readiness/template.md" \
+  'Populate one row for every validated `weeklyReadiness: true` entry' \
+  'Populate rows for the original four repositories'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \

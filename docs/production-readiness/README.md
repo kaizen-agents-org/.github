@@ -41,11 +41,12 @@ Run the readiness review once per week. Each review should:
 1. Read the previous readiness log entry.
 2. Read the latest weekly metrics snapshot under `../metrics/` when present.
 3. Inspect the current repository, CI, issue, PR, and automation state.
-4. Run or cite available verification for `kaizen-loop`, `builder-agent`, and
-   `verifier`.
+4. Run or cite available verification for every validated
+   `weeklyReadiness: true` fleet entry, using each entry's complete `repository`
+   value.
 5. Collect or update `../metrics/<ISO-week>.md` with denominator-bearing
-   `kaizen status --metrics` results for `.github`, `kaizen-loop`,
-   `builder-agent`, and `verifier`.
+   `kaizen status --metrics` results for every repository in that same validated
+   fleet scope.
 6. Compare the current state with the previous week.
 7. Produce a concise dated report and structured issue candidates that cite the
    weekly metrics snapshot.
