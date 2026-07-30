@@ -134,11 +134,7 @@ mutate_wip_limit() {
 }
 
 mutate_verifier() {
-  sed -i.bak \
-    -e 's/^safety:$/safety:\
-  operationMode: dogfood/' \
-    -e 's/enabled: true/enabled: false/' \
-    "$1/.kaizen/config.yml"
+  sed -i.bak 's/enabled: true/enabled: false/' "$1/.kaizen/config.yml"
   rm "$1/.kaizen/config.yml.bak"
 }
 
