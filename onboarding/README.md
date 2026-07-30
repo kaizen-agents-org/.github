@@ -55,9 +55,11 @@ marks the scout eligible. The metrics week must match that review week or the
 immediately preceding week.
 `--wip-limit` is limited to 1–4 and `--creation-limit` to 1–2 so a rendered
 prompt cannot exceed the shared `[scout]` role boundaries. The default label is
-only `kaizen`; authorization and scheduled queue labels remain explicit owner
-choices outside the organization dogfood policy. Supply a comma-separated
-`--labels` list only after confirming the target repository's label policy.
+`kaizen` for external repositories, where authorization and scheduled queue
+labels remain explicit owner choices. For `kaizen-agents-org` repositories, the
+default is `kaizen,kaizen:authorized,kaizen:ready`, and any custom `--labels`
+list must retain all three organization dogfood labels. Supply a comma-separated
+custom list only after confirming the target repository's label policy.
 
 The script installs only the reviewed prompt artifact. Scheduling and runner
 credentials remain runner-owner responsibilities. It refuses to overwrite an

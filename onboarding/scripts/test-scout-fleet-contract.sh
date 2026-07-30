@@ -72,6 +72,27 @@ if "${enable}" \
   fail "scout accepted labels without the mandatory kaizen intake label"
 fi
 
+node -e \
+  'const fs=require("fs"),v=JSON.parse(fs.readFileSync(process.argv[1]));v.repository=process.argv[3];fs.writeFileSync(process.argv[2],JSON.stringify(v))' \
+  "${fixture}/readiness.json" \
+  "${fixture}/org-readiness.json" \
+  "KAIZEN-AGENTS-ORG/repository"
+"${enable}" \
+  --repo KAIZEN-AGENTS-ORG/repository \
+  --readiness-evidence "${fixture}/org-readiness.json" \
+  --output "${fixture}/org-scout.md" \
+  --dry-run >"${fixture}/org-dry.out"
+grep -Fq '`kaizen`, `kaizen:authorized`, `kaizen:ready`' "${fixture}/org-dry.out" \
+  || fail "organization scout defaults omitted execution-gate labels"
+if "${enable}" \
+  --repo KAIZEN-AGENTS-ORG/repository \
+  --readiness-evidence "${fixture}/org-readiness.json" \
+  --output "${fixture}/org-missing-gates.md" \
+  --labels "kaizen" \
+  --dry-run >"${fixture}/org-missing-gates.out" 2>&1; then
+  fail "organization scout accepted labels without execution gates"
+fi
+
 touch "${fixture}/existing.md"
 if "${enable}" \
   --repo owner/repository \

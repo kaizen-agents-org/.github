@@ -105,6 +105,11 @@ done
 [[ -n "${output}" ]] || fail "--output is required"
 [[ "${repo}" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$ ]] \
   || fail "--repo must be an explicit owner/repo"
+repo_owner="${repo%%/*}"
+repo_owner_lower="$(printf '%s' "${repo_owner}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${labels_seen}" == false && "${repo_owner_lower}" == "kaizen-agents-org" ]]; then
+  labels="kaizen,kaizen:authorized,kaizen:ready"
+fi
 [[ "${wip_limit}" =~ ^[1-4]$ ]] \
   || fail "--wip-limit must be an integer from 1 through 4"
 [[ "${creation_limit}" =~ ^[1-2]$ ]] \
@@ -116,13 +121,23 @@ done
 
 IFS=',' read -r -a label_values <<< "${labels}"
 kaizen_label_present=false
+authorized_label_present=false
+ready_label_present=false
 for label in "${label_values[@]}"; do
   [[ "${label}" =~ ^[A-Za-z0-9][A-Za-z0-9:._\ -]*$ ]] \
     || fail "invalid label: ${label}"
   [[ "${label}" != "kaizen" ]] || kaizen_label_present=true
+  [[ "${label}" != "kaizen:authorized" ]] || authorized_label_present=true
+  [[ "${label}" != "kaizen:ready" ]] || ready_label_present=true
 done
 [[ "${kaizen_label_present}" == true ]] \
   || fail "--labels must include the mandatory kaizen intake label"
+if [[ "${repo_owner_lower}" == "kaizen-agents-org" ]]; then
+  [[ "${authorized_label_present}" == true ]] \
+    || fail "--labels for kaizen-agents-org repositories must include kaizen:authorized"
+  [[ "${ready_label_present}" == true ]] \
+    || fail "--labels for kaizen-agents-org repositories must include kaizen:ready"
+fi
 
 rendered="$(node --input-type=module - "${template}" "${evidence}" "${repo}" \
   "${labels}" "${wip_limit}" "${creation_limit}" <<'NODE'
