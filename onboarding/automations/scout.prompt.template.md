@@ -25,6 +25,19 @@ labels: {{LABELS}}. If every configured label cannot be verified and applied,
 fail closed without creating the issue. Labels do not grant permission to edit
 the repository, create implementation branches, or open pull requests.
 
+For a target whose lowercased owner is `kaizen-agents-org`, before creating the
+first issue verify the exact `kaizen:authorized` and `kaizen:ready` label names
+with `gh label list --repo {{REPOSITORY}}`. If either is missing, bootstrap it
+with `gh label create "kaizen:authorized" --repo {{REPOSITORY}} --color
+"5319E7" --description "Approved for Kaizen execution"` or `gh label create
+"kaizen:ready" --repo {{REPOSITORY}} --color "0E8A16" --description "Eligible
+for scheduled Kaizen selection"`, as applicable, then repeat the exact-name
+verification. Label creation requires write permission; if either label cannot
+be created and reverified, fail closed and report that a maintainer must
+pre-provision it. For any other owner, never bootstrap execution labels
+automatically; keep authorization and queue selection as explicit maintainer
+actions under the configured label policy.
+
 Before creating an issue:
 
 - search open issues and pull requests using the title, affected paths,

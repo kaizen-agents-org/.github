@@ -227,6 +227,18 @@ assert_rejected \
   "Issue and pull-request operations may infer the repository."
 
 assert_rejected \
+  "scout template bootstraps organization execution labels" \
+  "onboarding/automations/scout.prompt.template.md" \
+  "with \`gh label create \"kaizen:authorized\" --repo {{REPOSITORY}}" \
+  "without creating the missing label"
+
+assert_rejected \
+  "scout template preserves external authorization boundary" \
+  "onboarding/automations/scout.prompt.template.md" \
+  "For any other owner, never bootstrap execution labels" \
+  "owner, bootstrap execution labels automatically"
+
+assert_rejected \
   "readiness issue creator preserves fleet repository owner" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \

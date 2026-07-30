@@ -86,6 +86,12 @@ require_text "${scout_template}" 'runner'\''s current directory is the target re
 require_text "${scout_template}" 'use `git -C <targetCheckout>` for every git operation.'
 require_text "${scout_template}" 'Every issue or pull-request query and every mutation must pass explicit'
 require_text "${scout_template}" '`--repo {{REPOSITORY}}`'
+require_text "${scout_template}" 'For a target whose lowercased owner is `kaizen-agents-org`'
+require_text "${scout_template}" 'bootstrap it'
+require_text "${scout_template}" 'with `gh label create "kaizen:authorized" --repo {{REPOSITORY}}'
+require_text "${scout_template}" '`gh label create'
+require_text "${scout_template}" '"kaizen:ready" --repo {{REPOSITORY}}'
+require_text "${scout_template}" 'For any other owner, never bootstrap execution labels'
 require_text "${scout_template}" 'Create no more than `{{CREATION_LIMIT}}` issues in one run.'
 require_text "${scout_template}" 'Do not edit files, push branches, merge pull requests, create implementation'
 for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
