@@ -4,12 +4,14 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-read
 Run the weekly Kaizen Agents production-readiness review across the local
 repositories and GitHub remotes.
 
-Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.
-Repositories with `weeklyReadiness: true` are the complete review scope. Validate
-the registry before use; if it is missing or invalid, report scope collection as
+Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet
+registry or source-managed readiness docs. Read `onboarding/fleet.json` from the
+updated `origin/main` ref, not from the current checkout. Repositories with
+`weeklyReadiness: true` are the complete review scope. Validate that fetched
+registry before use; if it is missing or invalid, report scope collection as
 blocked and do not substitute a remembered or inferred list. The registry is
-reviewed configuration and is read-only to this automation; never edit it from
-a readiness review.
+reviewed configuration and is read-only to this automation; never edit it from a
+readiness review.
 
 Use the local checkouts or worktrees provided by the Codex automation runtime.
 Prefer running this review in a Codex worktree execution environment. Resolve
@@ -119,7 +121,7 @@ After producing the report, create or update a normal ready-for-review PR in
 - `docs/production-readiness-log.md`
 - `docs/metrics/<ISO-week>.md`
 
-Fetch `origin main` before writing. Base the branch on the updated default
+Fetch `origin main` again immediately before writing. Base the branch on the updated default
 branch. Use a deterministic branch name such as
 `codex/weekly-readiness-review-YYYY-MM-DD`. If a same-date readiness report PR
 already exists, update that branch and PR instead of opening a duplicate. If the

@@ -115,7 +115,7 @@ assert_rejected \
 assert_rejected \
   "weekly review source of truth" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
-  "Fetch \`origin main\` before writing." \
+  "Fetch \`origin main\` again immediately before writing." \
   "Use the current local feature branch before writing."
 
 assert_rejected \
@@ -175,8 +175,8 @@ assert_rejected \
 assert_rejected \
   "monitor fleet registry source" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
-  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch' \
-  'Use an inferred repository list'
+  'updated `origin\/main` ref, not from the current checkout' \
+  'current checkout before fetching'
 
 assert_rejected \
   "monitor preserves fleet repository owner" \
@@ -199,8 +199,8 @@ assert_rejected \
 assert_rejected \
   "weekly fleet registry source" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
-  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
-  'Use a remembered repository list.'
+  'updated `origin\/main` ref, not from the current checkout.' \
+  'current checkout before fetching.'
 
 assert_rejected \
   "readiness issue creator fleet registry source" \

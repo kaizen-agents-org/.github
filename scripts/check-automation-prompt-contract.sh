@@ -92,7 +92,8 @@ for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
 done
 
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
-require_text "${monitor}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch'
+require_text "${monitor}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet registry'
+require_text "${monitor}" 'Read `onboarding/fleet.json` from the updated `origin/main` ref, not from the current checkout'
 require_text "${monitor}" 'this monitor must never edit it'
 require_text "${monitor}" 'For every GitHub query or mutation, pass the active registry entry'\''s complete `repository` value unchanged as `--repo <repository>`'
 require_text "${monitor}" 'Resolve each active entry'\''s default branch with `gh repo view <repository> --json defaultBranchRef'
@@ -105,9 +106,10 @@ require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per
 require_text "${monitor}" 'Do not merge PRs, push changes, or make broad code changes automatically. The monitor may propose small, deterministic documentation, prompt, or configuration follow-ups that should be handled in a normal ready-for-review PR, but it must not edit repository files, create implementation branches, or open implementation PRs unless the user has explicitly asked for implementation in this thread.'
 
 require_text "${weekly_review}" 'normal ready-for-review PR'
-require_text "${weekly_review}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.'
+require_text "${weekly_review}" 'Fetch `origin main` for `kaizen-agents-org/.github` before reading the fleet'
+require_text "${weekly_review}" 'updated `origin/main` ref, not from the current checkout.'
 require_text "${weekly_review}" 'never edit it from'
-require_text "${weekly_review}" 'Fetch `origin main` before writing. Base the branch on the updated default'
+require_text "${weekly_review}" 'Fetch `origin main` again immediately before writing. Base the branch on the updated default'
 require_text "${weekly_review}" 'Do not create GitHub issues from this weekly review prompt.'
 require_text "${weekly_review}" 'containing only these repository-relative paths:'
 
