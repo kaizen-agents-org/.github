@@ -4,8 +4,9 @@ Use this checklist for each weekly readiness review.
 
 ## Repository State
 
-- Confirm local checkout availability for `.github`, `kaizen-loop`,
-  `builder-agent`, and `verifier`.
+- From the validated registry, confirm local checkout availability for every
+  `weeklyReadiness: true` entry; record unavailable or mismatched checkouts
+  rather than substituting a fixed repository list.
 - Record local branch and upstream state.
 - Distinguish local-only observations from default-branch facts.
 - Check open PR and open `kaizen` issue counts per repository.
@@ -13,12 +14,11 @@ Use this checklist for each weekly readiness review.
 
 ## Verification
 
-- Run or cite the latest available verification for `kaizen-loop`:
-  `npm test`, `npm run typecheck`, and `npm run build`.
-- Run or cite the latest available verification for `builder-agent`:
-  `npm test` and `npm run validate:json`.
-- Run or cite the latest available verification for `verifier`:
-  `pnpm typecheck`, `pnpm test`, and `pnpm schema:check`.
+- For every validated `weeklyReadiness: true` entry, derive its canonical
+  verification commands from default-branch CI configuration, package/build
+  metadata, and repository documentation, then run or cite those commands.
+- Record the exact repository-specific commands and do not assume a Node.js
+  stack or reuse another repository's verification contract.
 - Record exact failures, including whether they are environment/setup failures
   or product failures.
 

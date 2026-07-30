@@ -12,6 +12,7 @@ scout_template="${repo_root}/onboarding/automations/scout.prompt.template.md"
 fleet="${repo_root}/onboarding/fleet.json"
 fleet_validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
 readiness_readme="${repo_root}/docs/production-readiness/README.md"
+readiness_checklist="${repo_root}/docs/production-readiness/checklist.md"
 readiness_template="${repo_root}/docs/production-readiness/template.md"
 automations_readme="${repo_root}/automations/README.md"
 org_monitor_doc="${repo_root}/docs/org-monitor.md"
@@ -48,7 +49,7 @@ require_contract_marker() {
 
 for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
   "${scout_template}" "${fleet}" "${fleet_validator}" "${readiness_readme}" \
-  "${readiness_template}" "${automations_readme}" "${org_monitor_doc}"; do
+  "${readiness_checklist}" "${readiness_template}" "${automations_readme}" "${org_monitor_doc}"; do
   require_file "${file}"
 done
 
@@ -124,6 +125,10 @@ require_text "${weekly_review}" 'Fetch `origin main` for `kaizen-agents-org/.git
 require_text "${weekly_review}" 'updated `origin/main` ref, not from the current checkout'
 require_text "${weekly_review}" 'record that commit'
 require_text "${weekly_review}" 'as `<sourceSha>`'
+require_text "${weekly_review}" 'Before using any located checkout, read its `origin` URL'
+require_text "${weekly_review}" 'require it to match the scoped'
+require_text "${weekly_review}" 'entry'\''s complete `repository` identity.'
+require_text "${weekly_review}" 'repository-specific verification for every scoped registry entry'
 require_text "${weekly_review}" 'never edit it from'
 require_text "${weekly_review}" 'Fetch `origin main` again immediately before writing and compare its commit to'
 require_text "${weekly_review}" 'restart the full review; never publish outputs derived from mixed source SHAs.'
@@ -153,6 +158,10 @@ require_text "${readiness_creator}" 'open implementation PRs automatically. This
 require_text "${readiness_readme}" 'for every validated'
 require_text "${readiness_readme}" '`weeklyReadiness: true` fleet entry'
 require_text "${readiness_readme}" 'for every repository in that same validated'
+require_text "${readiness_checklist}" 'confirm local checkout availability for every'
+require_text "${readiness_checklist}" '`weeklyReadiness: true` entry'
+require_text "${readiness_checklist}" 'For every validated `weeklyReadiness: true` entry, derive its canonical'
+require_text "${readiness_checklist}" 'do not assume a Node.js'
 require_text "${readiness_template}" 'Populate one row for every validated `weeklyReadiness: true` entry'
 require_text "${readiness_template}" '`onboarding/fleet.json`; do not substitute a remembered repository list.'
 require_text "${readiness_template}" 'Use each candidate'\''s complete `<owner/repository>` fleet identity as'

@@ -20,6 +20,14 @@ expected local repository names from each scoped registry entry's
 `localCheckout`. If a checkout is unavailable, report that observation and
 continue with GitHub remote checks.
 
+Before using any located checkout, read its `origin` URL, normalize supported
+HTTPS/SSH GitHub URL forms and casing, and require it to match the scoped
+entry's complete `repository` identity. Never accept a directory based only on
+its `localCheckout` name. If origin is missing, ambiguous, or belongs to a fork
+or different repository, do not run status or verification commands there;
+report the mismatch and use the configured repository's GitHub default-branch
+content and CI evidence instead.
+
 Path convention: when reading or writing files in the `kaizen-agents-org/.github`
 repository checkout or its default-branch ref, use repository-relative paths
 such as `docs/production-readiness-log.md`. When referring to those same files
@@ -62,10 +70,10 @@ Collect evidence for:
 - open PR counts and open `kaizen` issue counts per repository;
 - existing readiness, monitor, sync, CI, verifier, or safety-hardening issues;
 - CI/check status where available;
-- `kaizen-loop` verification: `npm test`, `npm run typecheck`, `npm run build`;
-- `builder-agent` verification: `npm test`, `npm run validate:json`;
-- `verifier` verification: `pnpm typecheck`, `pnpm test`,
-  `pnpm schema:check`;
+- repository-specific verification for every scoped registry entry: derive the
+  canonical commands from that repository's default-branch CI configuration,
+  package/build metadata, and documentation, then run or cite those commands;
+  do not assume a Node.js stack or reuse another repository's commands;
 - real sandbox or dogfood E2E evidence for issue-to-PR completion;
 - `builder-agent` contract health: result artifact quality, self-review report
   usefulness, adapter/CLI reproducibility, backend/model selection behavior,

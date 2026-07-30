@@ -13,6 +13,7 @@ cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
 cp "${repo_root}/docs/org-monitor.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
+  "${repo_root}/docs/production-readiness/checklist.md" \
   "${repo_root}/docs/production-readiness/template.md" \
   "${fixture}/docs/production-readiness/"
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/"
@@ -213,6 +214,18 @@ assert_rejected \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   "restart the full review; never publish outputs derived from mixed source SHAs." \
   "continue publishing outputs derived from the earlier scope."
+
+assert_rejected \
+  "weekly review verifies checkout origin identity" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  "Before using any located checkout, read its \`origin\` URL" \
+  "Trust any directory with the configured checkout name"
+
+assert_rejected \
+  "readiness checklist fleet verification scope" \
+  "docs/production-readiness/checklist.md" \
+  "For every validated \`weeklyReadiness: true\` entry, derive its canonical" \
+  "Verify only the original runtime repositories"
 
 assert_rejected \
   "readiness issue creator fleet registry source" \
