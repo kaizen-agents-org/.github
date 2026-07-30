@@ -64,8 +64,9 @@ Use this checklist for each weekly readiness review.
 - Include structured issue candidates with target repository, evidence,
   documentation basis, and skip reason when the finding is not ready for issue
   creation.
-- Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md` and
-  updates [Production Readiness Log](../production-readiness-log.md).
+- Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md`, updates
+  [Production Readiness Log](../production-readiness-log.md), and adds or
+  updates exactly one `../metrics/<ISO-week>.md` weekly metrics snapshot.
 - Run `pr-guardian` on the report PR until it is merge-ready or blocked.
 - Let the issue-creator automation create at most three focused issues per
   target repository after that report PR is merged to `main`. The issue creator

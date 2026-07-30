@@ -12,7 +12,8 @@ The readiness loop has three phases:
 
 1. The weekly review produces a dated report and structured issue candidates.
 2. The weekly review opens or updates a normal ready-for-review PR containing
-   only the dated report and the readiness log index update.
+   only the dated report, the readiness log index update, and one weekly metrics
+   snapshot under `../metrics/<ISO-week>.md`.
 3. After a human merges that report PR, the issue-creator automation's daily
    post-merge poll consumes the latest dated report from `main` and creates
    focused, duplicate-free `kaizen` issues with the `[readiness-review]` title

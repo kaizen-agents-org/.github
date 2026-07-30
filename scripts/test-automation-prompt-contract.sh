@@ -229,6 +229,12 @@ assert_rejected \
   "Verify only the original runtime repositories"
 
 assert_rejected \
+  "readiness checklist three-file output contract" \
+  "docs/production-readiness/checklist.md" \
+  "updates exactly one \`..\\/metrics\\/<ISO-week>.md\` weekly metrics snapshot." \
+  "omits the weekly metrics snapshot."
+
+assert_rejected \
   "readiness issue creator fleet registry source" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   'updated `origin\/main` ref, not from the current checkout.' \

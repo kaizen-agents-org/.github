@@ -76,11 +76,14 @@ the same explicit confirmation flow.
 organization monitor, weekly readiness review, and downstream readiness issue
 creator. Each entry names the GitHub repository, its Kaizen metrics project
 slug, its expected local checkout name, and which consumers include it.
-`weeklyReadiness: true` both adds the repository to the read-only weekly review
-and permits the post-merge issue creator to process approved candidates for
-that repository. For organization-owned targets, that downstream consumer may
-create issues under the documented write-authorization policy. Validate changes
-with:
+`weeklyReadiness: true` adds the repository to the read-only weekly review and
+makes candidates listed in the merged readiness report eligible for downstream
+consideration; fleet membership is not write authorization. Issue creation also
+requires repository ownership authorization, candidate provenance, required
+labels, duplicate suppression, and all configured limits. Organization-owned
+targets may create issues only when those checks pass, while external targets
+remain report-only without separate explicit human authorization. Validate
+changes with:
 
 ```sh
 node onboarding/scripts/validate-fleet.mjs onboarding/fleet.json
