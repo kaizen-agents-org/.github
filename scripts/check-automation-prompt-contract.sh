@@ -8,6 +8,9 @@ scout="${repo_root}/automations/kaizen-agents-repo-improvement-scout.prompt.md"
 monitor="${repo_root}/automations/kaizen-agents-org-monitor.prompt.md"
 weekly_review="${repo_root}/automations/kaizen-agents-weekly-readiness-review.prompt.md"
 readiness_creator="${repo_root}/automations/kaizen-agents-readiness-issue-creator.prompt.md"
+scout_template="${repo_root}/onboarding/automations/scout.prompt.template.md"
+fleet="${repo_root}/onboarding/fleet.json"
+fleet_validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
 
 fail() {
   echo "automation prompt contract check failed: $*" >&2
@@ -39,9 +42,12 @@ require_contract_marker() {
     fail "${contract_doc} must contain exactly one matching marker for ${prompt}"
 }
 
-for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}"; do
+for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
+  "${scout_template}" "${fleet}" "${fleet_validator}"; do
   require_file "${file}"
 done
+
+node "${fleet_validator}" "${fleet}" >/dev/null
 
 for prompt in "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}"; do
   marker_count="$(grep -c '^[[:space:]]*<!-- automation-contract:' "${prompt}" || true)"
@@ -67,13 +73,27 @@ require_text "${scout}" 'Use the GitHub default branch, expected to be `origin/m
 require_text "${scout}" 'Do not edit files, push branches, merge PRs, create implementation branches, open implementation PRs, or make broad code changes automatically.'
 require_text "${scout}" 'Limit automatic issue creation to at most two issues per target repository per run.'
 
+require_text "${scout_template}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->'
+require_text "${scout_template}" 'Created issue titles must start with `[scout]`.'
+require_text "${scout_template}" 'Create no more than `{{CREATION_LIMIT}}` issues in one run.'
+require_text "${scout_template}" 'Do not edit files, push branches, merge pull requests, create implementation'
+for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
+  placeholder_count="$(grep -o "{{${placeholder}}}" "${scout_template}" | wc -l | tr -d ' ')"
+  [[ "${placeholder_count}" -ge 1 ]] ||
+    fail "${scout_template} must contain {{${placeholder}}}"
+done
+
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
+require_text "${monitor}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch'
+require_text "${monitor}" 'this monitor must never edit it'
 require_text "${monitor}" 'Use the GitHub default branch, expected to be `origin/main` for these repositories, as the source of truth for documentation-backed findings.'
 require_text "${monitor}" 'Use concise issue titles prefixed with `[monitor]`.'
 require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per target repository per run.'
 require_text "${monitor}" 'Do not merge PRs, push changes, or make broad code changes automatically. The monitor may propose small, deterministic documentation, prompt, or configuration follow-ups that should be handled in a normal ready-for-review PR, but it must not edit repository files, create implementation branches, or open implementation PRs unless the user has explicitly asked for implementation in this thread.'
 
 require_text "${weekly_review}" 'normal ready-for-review PR'
+require_text "${weekly_review}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.'
+require_text "${weekly_review}" 'never edit it from'
 require_text "${weekly_review}" 'Fetch `origin main` before writing. Base the branch on the updated default'
 require_text "${weekly_review}" 'Do not create GitHub issues from this weekly review prompt.'
 require_text "${weekly_review}" 'containing only these repository-relative paths:'
@@ -94,6 +114,8 @@ require_text "${contract_doc}" '`repo-improvement-scout` owns proactive improvem
 require_text "${contract_doc}" '`org-monitor` owns conservative maintenance. It should report broad state and create issues only for operational drift, sync failures, scheduler/fleet health, CI/check drift, documentation source-order gaps, or responsibility ambiguity that would make the automation system harder to operate. It must not become a general improvement scout.'
 require_text "${contract_doc}" '`weekly-readiness-review` owns readiness assessment. It should inspect evidence, write the dated report, update the readiness index, write or update the weekly metrics snapshot, open or update a normal ready-for-review PR containing only the report file, readiness index, and weekly metrics file, and run `pr-guardian` on that report PR until it is merge-ready or blocked. It must not create GitHub issues or implementation PRs.'
 require_text "${contract_doc}" '`readiness-issue-creator` owns approved-report issue creation. It runs as a daily post-merge poll and must read the latest dated readiness report from the `.github` default branch after the report PR is merged. It must not create issues from local-only reports, open PR contents, proposed report text, or previous automation memory.'
+require_text "${contract_doc}" 'The reviewed repository scope for the organization monitor and weekly readiness'
+require_text "${contract_doc}" 'They must not infer missing'
 require_text "${contract_doc}" '| `repo-improvement-scout` | At most two issues per target repository per run. |'
 require_text "${contract_doc}" '| `org-monitor` | At most one issue per target repository per run. |'
 require_text "${contract_doc}" '| `readiness-issue-creator` | At most three issues per target repository per run. |'

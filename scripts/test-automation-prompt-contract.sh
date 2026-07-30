@@ -6,9 +6,15 @@ checker="${repo_root}/scripts/check-automation-prompt-contract.sh"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/automation-prompt-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
 
-mkdir -p "${fixture}/automations" "${fixture}/docs"
+mkdir -p "${fixture}/automations" "${fixture}/docs" \
+  "${fixture}/onboarding/automations" "${fixture}/onboarding/scripts"
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/"
+cp "${repo_root}/onboarding/automations/scout.prompt.template.md" \
+  "${fixture}/onboarding/automations/"
+cp "${repo_root}/onboarding/scripts/validate-fleet.mjs" \
+  "${fixture}/onboarding/scripts/"
 
 bash "${checker}" "${fixture}" >/dev/null
 
@@ -161,6 +167,28 @@ assert_rejected \
   "At most two issues per target repository per run." \
   "At most twenty issues per target repository per run."
 
+assert_rejected \
+  "monitor fleet registry source" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch' \
+  'Use an inferred repository list'
+
+assert_rejected \
+  "weekly fleet registry source" \
+  "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
+  'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
+  'Use a remembered repository list.'
+
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
+node -e \
+  'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories.push({...v.repositories[0]});fs.writeFileSync(p,JSON.stringify(v))' \
+  "${fixture}/onboarding/fleet.json"
+if bash "${checker}" "${fixture}" >/dev/null 2>&1; then
+  echo "mutation was not rejected: duplicate fleet repository" >&2
+  exit 1
+fi
+cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
+
 assert_append_rejected \
   "indented duplicate prompt marker" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
@@ -172,3 +200,4 @@ assert_append_rejected \
   "<!-- automation-contract: automation=scout; issues=[monitor]; prs=implementation; per-repo-limit=9; source=default-branch; roles-doc=docs/automation-roles.md -->"
 
 echo "Automation prompt contract mutations are rejected."
+bash "${repo_root}/onboarding/scripts/test-scout-fleet-contract.sh"

@@ -18,6 +18,11 @@ The readiness loop has three phases:
    focused, duplicate-free `kaizen` issues with the `[readiness-review]` title
    prefix when the candidates pass validation.
 
+The repository denominator is the set of entries with `weeklyReadiness: true`
+in [`../../onboarding/fleet.json`](../../onboarding/fleet.json). The weekly
+review validates and reads that reviewed registry but never edits it. A fleet
+addition or removal is handled in a separate normal pull request.
+
 ## Documents
 
 - [Checklist](./checklist.md): review areas and evidence to collect each week.

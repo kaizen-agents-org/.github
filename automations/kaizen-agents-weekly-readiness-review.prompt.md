@@ -4,18 +4,18 @@ Managed source: `kaizen-agents-org/.github/automations/kaizen-agents-weekly-read
 Run the weekly Kaizen Agents production-readiness review across the local
 repositories and GitHub remotes.
 
-Repositories in scope:
-
-- `kaizen-agents-org/.github`
-- `kaizen-agents-org/kaizen-loop`
-- `kaizen-agents-org/builder-agent`
-- `kaizen-agents-org/verifier`
+Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch.
+Repositories with `weeklyReadiness: true` are the complete review scope. Validate
+the registry before use; if it is missing or invalid, report scope collection as
+blocked and do not substitute a remembered or inferred list. The registry is
+reviewed configuration and is read-only to this automation; never edit it from
+a readiness review.
 
 Use the local checkouts or worktrees provided by the Codex automation runtime.
-Prefer running this review in a Codex worktree execution environment. Expected
-local repository names are `.github`, `kaizen-loop`, `builder-agent`, and
-`verifier`. If a checkout is unavailable, report that observation and continue
-with GitHub remote checks.
+Prefer running this review in a Codex worktree execution environment. Resolve
+expected local repository names from each scoped registry entry's
+`localCheckout`. If a checkout is unavailable, report that observation and
+continue with GitHub remote checks.
 
 Path convention: when reading or writing files in the `kaizen-agents-org/.github`
 repository checkout or its default-branch ref, use repository-relative paths
@@ -41,14 +41,9 @@ observations. Before citing a document as issue basis, verify it exists on the
 repository default branch when practical.
 
 Read the latest weekly metrics file under `docs/metrics/` when one exists. For
-the current review, collect `kaizen status --project <slug> --metrics --json`
-for these slugs and write or update `docs/metrics/<ISO-week>.md` before writing
-the dated readiness report:
-
-- `kaizen-agents-org-.github`
-- `kaizen-agents-org-kaizen-loop`
-- `kaizen-agents-org-builder-agent`
-- `kaizen-agents-org-verifier`
+the current review, collect `kaizen status --project <projectSlug> --metrics
+--json` for every scoped registry entry, using its `projectSlug`, and write or
+update `docs/metrics/<ISO-week>.md` before writing the dated readiness report.
 
 The weekly metrics file must include denominators for human-edit-free merge
 rate, time-to-merge, Issue-to-PR success rate, verifier block rate,
@@ -97,8 +92,8 @@ Produce a concise weekly readiness report with:
 9. Issue candidates suitable for the follow-up issue-creator automation,
    grouped by target repository and including target repository, evidence,
    documentation basis, and skip reason when a finding is not ready for issue
-   creation. The `builder-agent` row must be present even when it has no ready
-   candidate.
+   creation. Every scoped registry entry must have a row even when it has no
+   ready candidate.
 10. The Markdown content written to
    `docs/production-readiness/logs/YYYY-MM-DD.md` using
    `docs/production-readiness/template.md`.
@@ -113,9 +108,9 @@ selection/fallback, build-result schema fidelity, or outputs consumed by
 policy, verification command execution, PR creation, scheduling, and run
 metrics. Use `verifier` for independent review depth and verdict quality. Use
 `.github` for organization documentation, automations, and sync source docs.
-`coderabbit` and `renovate-config` are not weekly readiness targets; they may
-appear only as downstream sync targets when `.github` sync evidence requires
-mentioning them.
+Repositories not enabled for weekly readiness in the registry may appear only
+as downstream or cross-repository context when evidence requires mentioning
+them.
 
 After producing the report, create or update a normal ready-for-review PR in
 `kaizen-agents-org/.github` containing only these repository-relative paths:

@@ -14,7 +14,9 @@ This timing reflects the monitor's conservative purpose: it checks organization-
 
 ## Scope
 
-The monitor reviews the active organization repositories:
+The reviewed scope source is [`../onboarding/fleet.json`](../onboarding/fleet.json).
+The monitor validates that file from the `.github` default branch and reviews
+entries with `monitor: true`:
 
 | Area | Repositories |
 | --- | --- |
@@ -23,7 +25,12 @@ The monitor reviews the active organization repositories:
 | Orchestrator component | `kaizen-agents-org/kaizen-loop` |
 | Independent verifier component | `kaizen-agents-org/verifier` |
 
-The local automation may inspect local checkouts for these repositories as well as their GitHub remotes. `coderabbit` and `renovate-config` are downstream shared-configuration repositories, not active monitor targets; they are mentioned only when `.github` sync evidence requires it.
+The local automation may inspect local checkouts for these repositories as well
+as their GitHub remotes. Adding or removing a target requires a reviewed
+registry change. The monitor never edits the registry and does not infer a
+fallback scope when validation fails. `coderabbit` and `renovate-config` are
+downstream shared-configuration repositories, not active monitor targets; they
+are mentioned only when `.github` sync evidence requires it.
 
 ## Local Kaizen Loop Scheduler
 

@@ -11,6 +11,13 @@ The comments above are stable machine-readable summaries used by
 `scripts/check-automation-prompt-contract.sh`. Keep each marker aligned with
 the prose below and with the matching managed prompt.
 
+The reviewed repository scope for the organization monitor and weekly readiness
+review lives in `onboarding/fleet.json`. Consumers validate the registry and
+read only the entries enabled for their role. They must not infer missing
+targets, mutate the registry, or use it as permission to write to a target
+repository. Adding or removing a fleet entry is a normal reviewed change to
+this repository.
+
 | Layer | Automation | Responsibility | May create issues | May create PRs |
 | --- | --- | --- | --- | --- |
 | Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |
