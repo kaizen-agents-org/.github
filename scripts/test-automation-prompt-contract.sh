@@ -191,6 +191,12 @@ assert_rejected \
   "Fleet membership grants write authorization."
 
 assert_rejected \
+  "monitor normalizes owner for write boundary" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "normalize the owner segment of \`<repository>\` to lowercase" \
+  "compare the owner segment of \`<repository>\` exactly as written"
+
+assert_rejected \
   "weekly fleet registry source" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
@@ -213,6 +219,12 @@ assert_rejected \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "Fleet membership grants observation scope, not write authorization." \
   "Fleet membership grants write authorization."
+
+assert_rejected \
+  "readiness issue creator normalizes owner for write boundary" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "normalize the owner segment of" \
+  "compare the owner segment of"
 
 assert_rejected \
   "readiness cadence fleet denominator" \
