@@ -63,6 +63,15 @@ grep -Fq '`kaizen`, `team:maintenance`' "${fixture}/dry-1.out" \
 grep -Fq 'Create no more than `2` issues' "${fixture}/dry-1.out" \
   || fail "creation limit placeholder was not rendered"
 
+if "${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/missing-kaizen.md" \
+  --labels "team:maintenance" \
+  --dry-run >"${fixture}/missing-kaizen.out" 2>&1; then
+  fail "scout accepted labels without the mandatory kaizen intake label"
+fi
+
 touch "${fixture}/existing.md"
 if "${enable}" \
   --repo owner/repository \

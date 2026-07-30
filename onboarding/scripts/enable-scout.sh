@@ -115,10 +115,14 @@ done
   || fail "--labels must be a comma-separated list without empty entries"
 
 IFS=',' read -r -a label_values <<< "${labels}"
+kaizen_label_present=false
 for label in "${label_values[@]}"; do
   [[ "${label}" =~ ^[A-Za-z0-9][A-Za-z0-9:._\ -]*$ ]] \
     || fail "invalid label: ${label}"
+  [[ "${label}" != "kaizen" ]] || kaizen_label_present=true
 done
+[[ "${kaizen_label_present}" == true ]] \
+  || fail "--labels must include the mandatory kaizen intake label"
 
 rendered="$(node --input-type=module - "${template}" "${evidence}" "${repo}" \
   "${labels}" "${wip_limit}" "${creation_limit}" <<'NODE'
