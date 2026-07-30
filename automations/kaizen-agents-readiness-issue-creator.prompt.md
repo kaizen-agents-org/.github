@@ -72,6 +72,13 @@ For each candidate, verify all of the following before creating an issue:
   the candidate is a concrete closed-loop health finding about sync, scheduler,
   or CI drift.
 
+Fleet membership grants observation scope, not write authorization. Automatically
+create issues, bootstrap labels, or apply authorization/queue labels only when
+the owner segment of `<repository>` is exactly `kaizen-agents-org`. For any other
+owner, keep the candidate report-only and never perform a GitHub mutation, even
+when the automation credentials happen to have write access; external operation
+requires explicit human authorization outside this automation.
+
 Before creating issues, establish current GitHub state per repository. For every
 GitHub query or mutation, pass the active registry entry's complete `repository`
 value unchanged as `--repo <repository>`; never reconstruct it from an owner and

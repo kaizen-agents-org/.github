@@ -19,6 +19,11 @@ upstream weekly review. They must not infer missing targets, mutate the registry
 or use it as permission to write to a target repository. Adding or removing a
 fleet entry is a normal reviewed change to this repository.
 
+Fleet membership is observation scope, not write authorization. Organization
+automations may automatically create issues or bootstrap/apply execution labels
+only for repositories whose owner is exactly `kaizen-agents-org`; entries owned
+elsewhere remain report-only and require an explicit external human action.
+
 | Layer | Automation | Responsibility | May create issues | May create PRs |
 | --- | --- | --- | --- | --- |
 | Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |

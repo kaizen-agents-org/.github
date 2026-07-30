@@ -87,10 +87,10 @@ assert_rejected \
   "Use this prompt as a general repo-improvement scout"
 
 assert_rejected \
-  "monitor source of truth" \
+  "monitor default branch resolution" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
-  "Use the GitHub default branch, expected to be \`origin\\/main\` for these repositories, as the source of truth for documentation-backed findings." \
-  "Use the current local feature branch for these repositories as the source of truth for documentation-backed findings."
+  "do not assume it is \`main\`" \
+  "assume it is \`main\`"
 
 assert_rejected \
   "monitor PR boundary" \
@@ -183,6 +183,12 @@ assert_rejected \
   "reconstruct \`--repo\` from the local checkout name"
 
 assert_rejected \
+  "monitor external write boundary" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "Fleet membership grants observation scope, not write authorization." \
+  "Fleet membership grants write authorization."
+
+assert_rejected \
   "weekly fleet registry source" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
@@ -199,6 +205,12 @@ assert_rejected \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \
   "reconstruct the repository from the local checkout"
+
+assert_rejected \
+  "readiness issue creator external write boundary" \
+  "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
+  "Fleet membership grants observation scope, not write authorization." \
+  "Fleet membership grants write authorization."
 
 assert_rejected \
   "readiness cadence fleet denominator" \
