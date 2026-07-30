@@ -86,6 +86,7 @@ done
 require_text "${monitor}" 'Do not use this prompt as a general repo-improvement scout'
 require_text "${monitor}" 'Read `onboarding/fleet.json` from the `kaizen-agents-org/.github` default branch'
 require_text "${monitor}" 'this monitor must never edit it'
+require_text "${monitor}" 'For every GitHub query or mutation, pass the active registry entry'\''s complete `repository` value unchanged as `--repo <repository>`'
 require_text "${monitor}" 'Use the GitHub default branch, expected to be `origin/main` for these repositories, as the source of truth for documentation-backed findings.'
 require_text "${monitor}" 'Use concise issue titles prefixed with `[monitor]`.'
 require_text "${monitor}" 'Limit automatic issue creation to at most 1 issue per target repository per run.'

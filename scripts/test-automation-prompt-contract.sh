@@ -174,6 +174,12 @@ assert_rejected \
   'Use an inferred repository list'
 
 assert_rejected \
+  "monitor preserves fleet repository owner" \
+  "automations/kaizen-agents-org-monitor.prompt.md" \
+  "pass the active registry entry's complete \`repository\` value unchanged as \`--repo <repository>\`" \
+  "reconstruct \`--repo\` from the local checkout name"
+
+assert_rejected \
   "weekly fleet registry source" \
   "automations/kaizen-agents-weekly-readiness-review.prompt.md" \
   'Read `onboarding\/fleet.json` from the `kaizen-agents-org\/.github` default branch.' \
