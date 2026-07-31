@@ -4,6 +4,100 @@ The onboarding directory contains organization-owned assets for adopting the
 Kaizen workflow. Administrative repository changes are explicit operations:
 `kaizen init` does not invoke the branch-protection helper.
 
+## Opt in to the repository scout
+
+Scout automation is disabled by default. Enabling it requires an explicit
+repository, a reviewed readiness evidence file, an output path owned by the
+automation runner, and confirmation matching the repository:
+
+```sh
+onboarding/scripts/enable-scout.sh \
+  --repo owner/repository \
+  --readiness-evidence /path/to/scout-readiness.json \
+  --output /path/to/runner/prompts/repository-scout.md \
+  --confirm owner/repository
+```
+
+Use `--dry-run` first. It validates the evidence and prints the deterministic
+rendered prompt without writing the output file or enabling anything:
+
+```sh
+onboarding/scripts/enable-scout.sh \
+  --repo owner/repository \
+  --readiness-evidence /path/to/scout-readiness.json \
+  --output /path/to/runner/prompts/repository-scout.md \
+  --dry-run
+```
+
+`--dry-run` enforces the same output-path preconditions as a real run: the
+`--output` path must not already exist, and its parent directory must exist.
+
+The evidence is a snapshot produced or reviewed by the repository owner:
+
+```json
+{
+  "version": 1,
+  "repository": "owner/repository",
+  "metrics": {
+    "isoWeek": "2026-W30",
+    "processed": 8,
+    "prsCreated": 3,
+    "openPullRequests": 1
+  },
+  "readiness": {
+    "reviewedAt": "2026-07-30",
+    "scoutEligible": true
+  }
+}
+```
+
+Enablement fails closed unless the repository matches, the weekly window has
+positive and consistent processing/PR throughput, open pull requests are below
+the configured WIP limit, and a review no more than 14 days old explicitly
+marks the scout eligible. The metrics week must match that review week or the
+immediately preceding week.
+`--wip-limit` is limited to 1–4 and `--creation-limit` to 1–2 so a rendered
+prompt cannot exceed the shared `[scout]` role boundaries. The default label is
+`kaizen` for external repositories, where authorization and scheduled queue
+labels remain explicit owner choices. For `kaizen-agents-org` repositories, the
+default is `kaizen,kaizen:authorized,kaizen:ready`, and any custom `--labels`
+list must retain all three organization dogfood labels. Supply a comma-separated
+custom list only after confirming the target repository's label policy.
+The four fixed organization-wide scout targets—`.github`, `builder-agent`,
+`kaizen-loop`, and `verifier`—cannot also be enabled through this per-repository
+flow; duplicate installations are rejected case-insensitively.
+
+The script installs only the reviewed prompt artifact. Scheduling and runner
+credentials remain runner-owner responsibilities. It refuses to overwrite an
+existing output. To disable the scout, disable its runner schedule first, then
+remove that exact rendered prompt file. Re-enabling requires fresh evidence and
+the same explicit confirmation flow.
+
+## Organization fleet registry
+
+[`fleet.json`](./fleet.json) is the reviewed scope registry for the
+organization monitor, weekly readiness review, and downstream readiness issue
+creator. Each entry names the GitHub repository, its Kaizen metrics project
+slug, its expected local checkout name, and which consumers include it.
+`weeklyReadiness: true` adds the repository to the read-only weekly review and
+makes candidates listed in the merged readiness report eligible for downstream
+consideration; fleet membership is not write authorization. Issue creation also
+requires repository ownership authorization, candidate provenance, required
+labels, duplicate suppression, and all configured limits. Organization-owned
+targets may create issues only when those checks pass, while external targets
+remain report-only without separate explicit human authorization. Validate
+changes with:
+
+```sh
+node onboarding/scripts/validate-fleet.mjs onboarding/fleet.json
+```
+
+Adding, removing, enabling, or disabling a repository requires a separate normal
+ready-for-review pull request to this repository; none of the consumers edits
+the registry. Removing an entry stops future registry-driven observation and
+readiness issue creation but does not delete repository data, local workspaces,
+schedules, issues, pull requests, or previously rendered scout prompts.
+
 ## Apply the standard branch protection
 
 An administrator must name the repository, branch, and CI check explicitly:

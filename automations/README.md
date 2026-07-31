@@ -24,9 +24,9 @@ The runtime schedule is configured in the Codex app and should preserve this spl
 | Automation | Cadence | Runtime | Target repositories | Purpose |
 | --- | --- | --- | --- | --- |
 | Kaizen Agents repo improvement scout | Daily at 02:45, 10:45, and 18:45 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Frequent proactive repo-local issue discovery. |
-| Kaizen Agents org monitor | Daily at 04:15 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Conservative coordination check after the nighttime scout run. |
-| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Open or update a readiness report PR. |
-| Kaizen Agents readiness issue creator | Daily at 10:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create readiness issues from the latest merged report on `main`. |
+| Kaizen Agents org monitor | Daily at 04:15 | Worktree | Entries with `monitor: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Conservative coordination check after the nighttime scout run. |
+| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Open or update a readiness report PR. |
+| Kaizen Agents readiness issue creator | Daily at 10:30 | Worktree | Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Create readiness issues from the latest merged report on `main`. |
 
 ## Responsibility Model
 

@@ -6,13 +6,10 @@ is named by ISO week, for example `2026-W28.md`.
 ## Collection Contract
 
 The weekly readiness review automation owns this directory. Before it writes the
-dated readiness report, it should collect `kaizen status --project <slug> --metrics --json`
-for each active readiness repository:
-
-- `kaizen-agents-org/.github`
-- `kaizen-agents-org/kaizen-loop`
-- `kaizen-agents-org/builder-agent`
-- `kaizen-agents-org/verifier`
+dated readiness report, it validates `onboarding/fleet.json` and collects
+`kaizen status --project <slug> --metrics --json` for every entry with
+`weeklyReadiness: true`, using that entry's `projectSlug` as `<slug>`. The fleet
+registry is the reviewed denominator and is read-only to the metrics consumer.
 
 The review PR should add or update exactly one weekly metrics file for the ISO
 week under review, then cite that file from

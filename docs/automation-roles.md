@@ -11,6 +11,22 @@ The comments above are stable machine-readable summaries used by
 `scripts/check-automation-prompt-contract.sh`. Keep each marker aligned with
 the prose below and with the matching managed prompt.
 
+The reviewed repository scope for the organization monitor, weekly readiness
+review, and downstream readiness issue creator lives in `onboarding/fleet.json`.
+Consumers validate the registry and read only the entries enabled for their
+role; the issue creator consumes the same `weeklyReadiness: true` entries as its
+upstream weekly review. They must not infer missing targets, mutate the registry,
+or use it as permission to write to a target repository. Adding or removing a
+fleet entry requires a separate normal ready-for-review pull request to this
+repository.
+
+Fleet membership is observation scope, not write authorization. Organization
+automations may automatically create issues or bootstrap/apply execution labels
+only for repositories whose lowercased owner is exactly `kaizen-agents-org`.
+This comparison must not alter the complete repository identity passed to GitHub;
+entries owned elsewhere remain report-only and require an explicit external
+human action.
+
 | Layer | Automation | Responsibility | May create issues | May create PRs |
 | --- | --- | --- | --- | --- |
 | Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |
