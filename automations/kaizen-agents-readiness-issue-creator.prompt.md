@@ -171,7 +171,7 @@ so `kaizen-loop` accepts the label event. Each issue body must include:
 Each created issue must also include a `PR linkage requirement` section. State
 that the implementation PR for this issue must target the repository default
 branch, include `Closes #<issue-number>` for same-repository work or `Closes
-<repository>#<issue-number>` for cross-repository work in the PR
+kaizen-agents-org/<repo>#<issue-number>` for cross-repository work in the PR
 body, and verify `gh pr view <pr> --json baseRefName,closingIssuesReferences,isDraft`
 before reporting the PR ready. Do not rely on a PR title, branch name, or issue
 comment as proof that GitHub will close the issue on merge.
