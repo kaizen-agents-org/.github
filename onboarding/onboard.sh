@@ -109,11 +109,11 @@ echo "Checkout:              $repo_root"
 echo "Manifest:              $manifest"
 
 # ---------------------------------------------------------------- 1. toolchain
-step "1/7 Install or update the pinned toolchain"
+step "1/8 Install or update the pinned toolchain"
 sh "$script_dir/scripts/install-kaizen.sh" --manifest "$manifest"
 
 # ------------------------------------------------------- 2. detect and confirm
-step "2/7 Propose setup and verification commands"
+step "2/8 Propose setup and verification commands"
 if [ -f .kaizen/config.yml ]; then
   echo ".kaizen/config.yml already exists; keeping its commands."
   echo "Edit it directly to change what verification runs."
@@ -145,7 +145,7 @@ else
 fi
 
 # ------------------------------------------------------------------- 3. init
-step "3/7 Initialize Kaizen in this repository"
+step "3/8 Initialize Kaizen in this repository"
 if [ -f .kaizen/config.yml ]; then
   echo "Configuration already present; skipping kaizen init."
 else
@@ -156,7 +156,7 @@ else
 fi
 
 # ------------------------------------------------------------- 4. protection
-step "4/7 Apply branch protection"
+step "4/8 Apply branch protection"
 if [ "$skip_protection" -eq 1 ]; then
   echo "Skipped by --skip-protection."
 else
@@ -180,15 +180,25 @@ else
   fi
 fi
 
-# ----------------------------------------------------------------- 5. doctor
-step "5/7 Check the local setup"
+# -------------------------------------------------------------- 5. scheduler
+step "5/8 Register the scheduled runs"
+# kaizen init writes the job definitions into .kaizen/config.yml but does not
+# register them with launchd or cron, so without this the loop would never run
+# on its own.
+kaizen scheduler sync || {
+  echo "error: could not register the scheduled jobs; fix the problem above and re-run" >&2
+  exit 1
+}
+
+# ----------------------------------------------------------------- 6. doctor
+step "6/8 Check the local setup"
 kaizen doctor --repair || {
   echo "error: kaizen doctor reported problems; fix them and re-run onboard.sh" >&2
   exit 1
 }
 
-# ------------------------------------------------------------------ 6. smoke
-step "6/7 Run the acceptance smoke pass"
+# ------------------------------------------------------------------ 7. smoke
+step "7/8 Run the acceptance smoke pass"
 if [ "$skip_smoke" -eq 1 ]; then
   echo "Skipped by --skip-smoke."
 elif ls docs/smoke-runs/*.json >/dev/null 2>&1; then
@@ -203,8 +213,8 @@ else
   fi
 fi
 
-# --------------------------------------------------------------- 7. contract
-step "7/7 Check the onboarding contract"
+# --------------------------------------------------------------- 8. contract
+step "8/8 Check the onboarding contract"
 observations=.kaizen/onboarding-observations.json
 if [ ! -f "$observations" ] && command -v gh >/dev/null 2>&1; then
   echo "Capturing repository observations..."

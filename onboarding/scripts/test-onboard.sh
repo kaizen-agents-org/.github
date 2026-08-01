@@ -94,10 +94,11 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   if grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG" &&
      grep -q "kaizen init --profile pilot-node" "$KAIZEN_TEST_LOG" &&
      grep -q "apply-branch-protection.sh .*--check test" "$KAIZEN_TEST_LOG" &&
+     grep -q "kaizen scheduler sync" "$KAIZEN_TEST_LOG" &&
      grep -q "kaizen doctor --repair" "$KAIZEN_TEST_LOG" &&
      grep -q "kaizen smoke --yes" "$KAIZEN_TEST_LOG" &&
      grep -q "^contract " "$KAIZEN_TEST_LOG"; then
-    pass "a full pass runs install, init, protection, doctor, smoke, contract"
+    pass "a full pass runs install, init, protection, scheduler, doctor, smoke, contract"
   else
     fail "a full pass did not run every step (log: $(tr '\n' '|' < "$KAIZEN_TEST_LOG"))"
   fi
@@ -126,6 +127,11 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG" \
     && pass "re-run still checks the pinned toolchain" \
     || fail "re-run skipped the toolchain update"
+  # scheduler sync is idempotent and must keep running, so a schedule changed
+  # in config.yml is re-registered on the next update.
+  grep -q "kaizen scheduler sync" "$KAIZEN_TEST_LOG" \
+    && pass "re-run re-registers the scheduled jobs" \
+    || fail "re-run skipped scheduler sync"
 else
   fail "the idempotent re-run failed: $(cat "$work/out4")"
 fi
