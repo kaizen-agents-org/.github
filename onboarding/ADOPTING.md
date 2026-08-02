@@ -14,19 +14,30 @@ for you.
 
 ## Install
 
-Run this from inside the repository you want to onboard:
+`onboard.sh` needs its sibling assets — `versions.json`, `profiles/`, and the
+helper scripts — so run it from a checkout of this repository, pointed at the
+repository you are onboarding. Piping it straight from `curl` does **not** work:
+the script would look for those files inside your target repository and stop at
+the first missing one.
 
 ```sh
-onboarding/onboard.sh
+git clone https://github.com/kaizen-agents-org/.github kaizen-onboarding
+cd /path/to/my-product
+sh /path/to/kaizen-onboarding/onboarding/onboard.sh
 ```
+
+Pin the clone to a release tag once one exists, so the kit you onboard with is
+reproducible.
 
 It walks seven steps and stops to ask you three things. Those three are the
 decisions you own; everything else is mechanical:
 
 1. **The verification commands.** Kaizen proposes them from your manifests
-   (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `Gemfile`), but
-   what counts as "verified" here is the root of the whole trust model, so you
-   confirm it. Review the generated `.kaizen/config.yml` before committing.
+   (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `Gemfile`), then
+   prints the generated commands and waits. What counts as "verified" here is
+   the root of the whole trust model, so you approve the actual commands after
+   reading them, not the idea of generating them. Decline to stop the run, edit
+   `.kaizen/config.yml`, and re-run; your edits are kept.
 2. **Branch protection.** This uses administrator rights, so it is a separate,
    explicit yes. Skip it with `--skip-protection` and apply your own policy
    instead; the contract check will report it as missing until an equivalent
@@ -99,15 +110,24 @@ own repositories want and almost certainly not what you want.
 
 ## Staying up to date
 
-**Re-run the same command.** There is no separate upgrade procedure:
+**Re-run the same command with `--refresh-manifest`.** There is no separate
+upgrade procedure:
 
 ```sh
-onboarding/onboard.sh --profile <your-profile>
+onboarding/onboard.sh --profile <your-profile> --refresh-manifest
 ```
 
-It is idempotent. Steps already done are skipped, components move to the newly
-pinned versions, and the contract is re-checked afterwards. Because a compatible
-set is published as a unit, you never end up with a half-updated toolchain.
+`--refresh-manifest` is what makes an update converge. Your checkout records the
+set you installed, so without it the re-run reinstalls exactly those versions.
+With it, the upstream pinned set is fetched and validated first, and your
+`onboarding/versions.json` is updated — commit it along with the run's other
+changes.
+
+The run is otherwise idempotent. Steps already done are skipped, components move
+to the newly pinned versions, and the contract is re-checked afterwards. Because
+a compatible set is published as a unit, you never end up with a half-updated
+toolchain. A malformed or unreachable upstream manifest aborts the run and
+leaves your working set untouched.
 
 To be told when an update exists, schedule the update check against your
 repository:

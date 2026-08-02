@@ -120,15 +120,21 @@ A newer pinned Kaizen toolchain set is available upstream.
 
 $summary
 
-To follow it, re-run the onboarding command from a checkout of this repository:
+To follow it, re-run the onboarding command from a checkout of this repository
+with \`--refresh-manifest\`:
 
 \`\`\`sh
-onboarding/onboard.sh --profile <your-profile>
+onboarding/onboard.sh --profile <your-profile> --refresh-manifest
 \`\`\`
 
-Re-running is the supported update path: steps that are already done are
-skipped, the pinned components are updated to the set above, and the onboarding
-contract is re-checked afterwards.
+\`--refresh-manifest\` is required. Without it the run reads the pinned set
+already recorded in this repository and would reinstall the versions you have
+now, not the ones above.
+
+Re-running is otherwise the supported update path: steps that are already done
+are skipped, the pinned components move to the set above, and the onboarding
+contract is re-checked afterwards. Commit the updated
+\`onboarding/versions.json\` along with anything else the run changes.
 
 This issue was opened by the scheduled Kaizen toolchain update check. Nothing
 has been changed in this repository.

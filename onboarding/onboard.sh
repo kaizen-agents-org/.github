@@ -19,6 +19,9 @@ skip_smoke=0
 branch=''
 check_name=''
 manifest=''
+refresh_manifest=0
+upstream_ref=${KAIZEN_ONBOARDING_REF:-main}
+upstream_manifest_url=''
 
 usage() {
   cat >&2 <<'USAGE'
@@ -33,6 +36,10 @@ Run from inside the repository you want to onboard.
   --branch NAME        Default branch for protection (default: origin's HEAD).
   --check NAME         Required status-check context for protection.
   --manifest FILE      Version manifest (default: onboarding/versions.json).
+  --refresh-manifest   Fetch the upstream pinned set before installing, so a
+                       re-run follows a newer release instead of reinstalling
+                       the set already recorded locally.
+  --ref REF            Upstream ref to refresh the manifest from (default: main).
   --skip-protection    Do not apply branch protection.
   --skip-smoke         Do not run the smoke pass. The onboarding contract is
                        not satisfied without a smoke artifact.
@@ -46,6 +53,9 @@ while [ "$#" -gt 0 ]; do
     --branch) [ "$#" -ge 2 ] || { echo "error: --branch requires a value" >&2; exit 2; }; branch=$2; shift 2 ;;
     --check) [ "$#" -ge 2 ] || { echo "error: --check requires a value" >&2; exit 2; }; check_name=$2; shift 2 ;;
     --manifest) [ "$#" -ge 2 ] || { echo "error: --manifest requires a value" >&2; exit 2; }; manifest=$2; shift 2 ;;
+    --refresh-manifest) refresh_manifest=1; shift ;;
+    --ref) [ "$#" -ge 2 ] || { echo "error: --ref requires a value" >&2; exit 2; }; upstream_ref=$2; shift 2 ;;
+    --upstream-manifest-url) [ "$#" -ge 2 ] || { echo "error: --upstream-manifest-url requires a value" >&2; exit 2; }; upstream_manifest_url=$2; shift 2 ;;
     --yes) assume_yes=1; shift ;;
     --skip-protection) skip_protection=1; shift ;;
     --skip-smoke) skip_smoke=1; shift ;;
@@ -61,6 +71,29 @@ fi
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 [ -n "$manifest" ] || manifest="$script_dir/versions.json"
+
+# This script is not self-bootstrapping: it needs versions.json, profiles/, and
+# its sibling scripts. Piping it from curl would resolve script_dir into the
+# target repository and fail confusingly on the first missing file, so say so
+# once, up front.
+for required_asset in "$script_dir/versions.json" "$script_dir/profiles" "$script_dir/scripts"; do
+  [ -e "$required_asset" ] && continue
+  cat >&2 <<EOF
+error: onboarding assets are missing next to this script
+
+  Expected: $required_asset
+
+  Run onboard.sh from a checkout of kaizen-agents-org/.github, pointed at the
+  repository you are onboarding:
+
+    git clone https://github.com/kaizen-agents-org/.github kaizen-onboarding
+    cd /path/to/your-repository
+    sh /path/to/kaizen-onboarding/onboarding/onboard.sh
+
+  Piping this script from curl does not work; it cannot fetch its own assets.
+EOF
+  exit 2
+done
 
 step() {
   echo
@@ -110,6 +143,43 @@ echo "Manifest:              $manifest"
 
 # ---------------------------------------------------------------- 1. toolchain
 step "1/8 Install or update the pinned toolchain"
+# Without this, a re-run reinstalls whatever the local manifest already pins, so
+# an adopter told that a newer set exists could never actually reach it.
+if [ "$refresh_manifest" -eq 1 ]; then
+  [ -n "$upstream_manifest_url" ] || upstream_manifest_url="https://raw.githubusercontent.com/kaizen-agents-org/.github/$upstream_ref/onboarding/versions.json"
+  command -v curl >/dev/null 2>&1 || { echo "error: --refresh-manifest requires curl" >&2; exit 2; }
+  echo "Refreshing the pinned set from $upstream_manifest_url"
+  refreshed=$(mktemp)
+  if ! curl -fsSL "$upstream_manifest_url" -o "$refreshed"; then
+    rm -f "$refreshed"
+    echo "error: could not read the upstream manifest: $upstream_manifest_url" >&2
+    exit 1
+  fi
+  # Validate before overwriting: a truncated or malformed download must not
+  # replace a working manifest.
+  if ! MANIFEST="$refreshed" node -e '
+    const fs = require("node:fs");
+    const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, "utf8"));
+    for (const component of ["kaizen-loop", "builder-agent", "verifier"]) {
+      const value = manifest?.[component];
+      if (typeof value !== "string" || !/^v0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value)) {
+        throw new Error(`upstream manifest does not pin ${component} to a v0.x.y tag`);
+      }
+    }
+  ' 2>/dev/null; then
+    rm -f "$refreshed"
+    echo "error: the upstream manifest is not a valid pinned set; keeping the local one" >&2
+    exit 1
+  fi
+  if cmp -s "$refreshed" "$manifest"; then
+    echo "Already on the upstream pinned set."
+    rm -f "$refreshed"
+  else
+    cat "$refreshed" > "$manifest"
+    rm -f "$refreshed"
+    echo "Updated $manifest to the upstream pinned set. Commit it with the rest of the run."
+  fi
+fi
 sh "$script_dir/scripts/install-kaizen.sh" --manifest "$manifest"
 
 # ------------------------------------------------------- 2. detect and confirm
@@ -136,12 +206,8 @@ else
   echo "Using profile: $profile"
   echo
   echo "kaizen init will propose setup and verification commands from the"
-  echo "manifests in this repository. Review them in .kaizen/config.yml before"
-  echo "committing: they decide what counts as a verified change here."
-  confirm "Generate .kaizen/config.yml with profile '$profile'?" || {
-    echo "Stopped before writing any configuration."
-    exit 1
-  }
+  echo "manifests in this repository. You approve them in the next step, once"
+  echo "they exist and can actually be read."
 fi
 
 # ------------------------------------------------------------------- 3. init
@@ -151,8 +217,33 @@ if [ -f .kaizen/config.yml ]; then
 else
   kaizen init --profile "$profile"
   echo
-  echo "Review the generated commands now:"
-  echo "  \$EDITOR .kaizen/config.yml"
+  # The approval that matters is this one, not the one before generation: these
+  # are the commands the smoke run and every later run will execute, and they
+  # did not exist until now.
+  echo "Generated verification commands for this repository:"
+  if command -v node >/dev/null 2>&1; then
+    CONFIG=.kaizen/config.yml node -e '
+      const fs = require("node:fs");
+      const text = fs.readFileSync(process.env.CONFIG, "utf8");
+      const lines = text.split("\n");
+      const start = lines.findIndex((line) => /^commands:/.test(line));
+      if (start === -1) { console.log("  (none found; review .kaizen/config.yml)"); process.exit(0); }
+      for (const line of lines.slice(start, start + 12)) {
+        if (line && !/^\s/.test(line) && !/^commands:/.test(line)) break;
+        console.log(`  ${line}`);
+      }
+    ' 2>/dev/null || sed -n '/^commands:/,/^[a-z]/p' .kaizen/config.yml
+  else
+    sed -n '/^commands:/,/^[a-z]/p' .kaizen/config.yml
+  fi
+  echo
+  echo "These decide what counts as a verified change here. Edit"
+  echo ".kaizen/config.yml in another terminal now if they are wrong."
+  confirm "Accept these verification commands?" || {
+    echo "Stopped. Edit .kaizen/config.yml and re-run this command; the"
+    echo "generated configuration is kept, so the re-run picks it up."
+    exit 1
+  }
 fi
 
 # ------------------------------------------------------------- 4. protection
@@ -216,7 +307,11 @@ fi
 # --------------------------------------------------------------- 8. contract
 step "8/8 Check the onboarding contract"
 observations=.kaizen/onboarding-observations.json
-if [ ! -f "$observations" ] && command -v gh >/dev/null 2>&1; then
+# Always recapture. Keeping an earlier snapshot means a maintainer who fixes the
+# labels or protection it reported as missing would see the same failure
+# forever, which contradicts the resume-and-re-run path this script promises.
+# The snapshot is read-only GitHub state, so re-reading it costs two API calls.
+if command -v gh >/dev/null 2>&1; then
   echo "Capturing repository observations..."
   mkdir -p .kaizen
   if ! gh api "repos/$slug/labels?per_page=100" --jq '[.[].name]' > "$observations.labels" 2>/dev/null; then
@@ -244,10 +339,35 @@ if [ ! -f "$observations" ] && command -v gh >/dev/null 2>&1; then
     ' > "$observations"
     rm -f "$observations.labels"
   fi
+elif [ -f "$observations" ]; then
+  echo "warning: gh is unavailable, so $observations was not refreshed." >&2
+  echo "warning: the contract below is judged against a possibly stale snapshot." >&2
 fi
 
 contract_status=0
-sh "$script_dir/scripts/check-onboarding-contract.sh" "$repo_root" || contract_status=$?
+# The checker validates vendored skills against the pinned toolchain, so it
+# needs the manifest this run installed from. It only demands a skill bundle
+# manifest once the target actually has skills/skills-manifest.json; pass one
+# when the installed toolchain exports it so that path is satisfied rather than
+# failing the moment skills vendoring lands.
+set -- "$repo_root" --toolchain-manifest "$manifest"
+if [ -f "$repo_root/skills/skills-manifest.json" ]; then
+  bundle_manifest=${KAIZEN_SKILL_BUNDLE_MANIFEST:-}
+  if [ -z "$bundle_manifest" ]; then
+    kaizen_bin=$(command -v kaizen 2>/dev/null || true)
+    if [ -n "$kaizen_bin" ]; then
+      kaizen_root=$(CDPATH= cd -- "$(dirname -- "$(dirname -- "$(readlink -f "$kaizen_bin" 2>/dev/null || printf '%s' "$kaizen_bin")")")" && pwd)
+      [ -f "$kaizen_root/skills/skills-manifest.json" ] && bundle_manifest="$kaizen_root/skills/skills-manifest.json"
+    fi
+  fi
+  if [ -n "$bundle_manifest" ] && [ -f "$bundle_manifest" ]; then
+    set -- "$@" --skill-bundle-manifest "$bundle_manifest"
+  else
+    echo "warning: this repository vendors skills but no pinned skill bundle manifest was found." >&2
+    echo "warning: set KAIZEN_SKILL_BUNDLE_MANIFEST to the manifest exported by the installed toolchain." >&2
+  fi
+fi
+sh "$script_dir/scripts/check-onboarding-contract.sh" "$@" || contract_status=$?
 
 echo
 if [ "$contract_status" -eq 0 ]; then
