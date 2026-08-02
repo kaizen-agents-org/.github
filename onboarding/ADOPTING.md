@@ -1,16 +1,18 @@
 # Adopting the Kaizen harness in your repository
 
 This guide is for a maintainer adding the Kaizen issue-to-pull-request loop to a
-repository they own. You need `git`, `gh` (authenticated), Node 20 or newer, and
-administrator rights on the repository if you want the branch protection applied
-for you.
+repository they own. You need `git`, `gh` (authenticated), Node 20 or newer,
+`pnpm`, and administrator rights on the repository if you want the branch
+protection applied for you.
 
-> **Status: waiting on the first release.** `onboarding/versions.json` pins all
-> three components to `v0.1.0`, and none of those tags has been published yet,
-> so `install-kaizen.sh` stops with a "no tag" error by design rather than
-> installing unreleased code. Everything below is the intended flow; it becomes
-> runnable once a compatible set is tagged (see
-> [`docs/release-tags.md`](../docs/release-tags.md)).
+The toolchain is built from source at its pinned tags rather than installed as
+prebuilt packages, so the first install compiles three repositories and takes a
+few minutes. `pnpm` is needed because one of them is a pnpm workspace.
+
+> **Status: v0.1.0 is published.** All three components are tagged and
+> `install-kaizen.sh` installs them. This flow has been verified end to end on
+> macOS; it has not yet been exercised by a third-party maintainer on a machine
+> nobody here controls, so expect rough edges and please report them.
 
 ## Install
 
@@ -158,8 +160,13 @@ weakened safety floor past it. Every failure prints a remediation line.
 
 ## If something goes wrong
 
-- **"no tag vX.Y.Z"** — the pinned release has not been published. This is
-  expected today; see the status note at the top.
+- **"no tag vX.Y.Z"** — `versions.json` pins a release that was never
+  published. The installer stops rather than falling back to a branch, because
+  that would run unreleased code behind a pinned manifest.
+- **A command runs but behaves like an old version** — check what it resolves
+  to with `readlink "$(npm prefix -g)/lib/node_modules/kaizen-loop"`. It should
+  point into `$KAIZEN_HOME/toolchain/`. An older global install left on `PATH`
+  can shadow the pinned one.
 - **Contract check fails after install** — read the remediation lines; the
   usual causes are a skipped smoke run (no artifact) or skipped branch
   protection.

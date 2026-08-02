@@ -100,9 +100,115 @@ EOF
   return 0
 }
 
-installed_version() {
-  command -v "$1" >/dev/null 2>&1 || return 1
-  "$1" --version 2>/dev/null | head -1 || return 1
+toolchain_root=${KAIZEN_HOME:-"$HOME/.kaizen"}/toolchain
+
+# Serialize installs of one component. Each checkout lives at a single path per
+# machine and re-running is the documented update path, so scheduled jobs for
+# different repositories can otherwise land here together and corrupt it.
+acquire_lock() {
+  lock_dir="$1.lock"
+  attempts=0
+  until mkdir "$lock_dir" 2>/dev/null; do
+    lock_pid=''
+    [ -f "$lock_dir/pid" ] && lock_pid=$(cat "$lock_dir/pid" 2>/dev/null)
+    if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+      echo "  removing a stale install lock from pid $lock_pid" >&2
+      rm -rf "$lock_dir"
+      continue
+    fi
+    attempts=$((attempts + 1))
+    if [ "$attempts" -gt 60 ]; then
+      echo "error: another install has held $lock_dir for too long" >&2
+      exit 1
+    fi
+    echo "  waiting for another install to finish..." >&2
+    sleep 5
+  done
+  printf '%s\n' "$$" > "$lock_dir/pid"
+}
+
+release_lock() {
+  rm -rf "$1.lock"
+}
+
+# Check out a component at its pinned tag. Reset rather than checkout: these
+# checkouts are disposable build output, and a build can leave tracked files
+# modified, which would abort a plain checkout on the next update.
+fetch_component() {
+  home=$1
+  component=$2
+  version=$3
+  if [ ! -d "$home/.git" ]; then
+    rm -rf "$home"
+    git clone --branch "$version" --depth 1 \
+      "https://github.com/$owner/$component.git" "$home" >&2
+  else
+    git -C "$home" fetch --depth 1 origin \
+      "+refs/tags/$version:refs/tags/$version" >&2
+    git -C "$home" reset --hard "refs/tags/$version" >&2
+    git -C "$home" clean -fd >&2
+  fi
+}
+
+# Install one component from a pinned checkout.
+#
+# Deliberately not `npm install -g "github:owner/repo#tag"`. For a git
+# dependency npm installs devDependencies, runs `prepare`, and packs the
+# *result*, discarding build output committed in the tag. Components that ship
+# a built dist/ therefore install with an empty dist/ and a dangling bin. All
+# three components use this path so the install story is one story.
+install_from_source() {
+  component=$1
+  version=$2
+  probe=$3
+  package_manager=$4
+  link_dir=$5
+
+  home="$toolchain_root/$component"
+  stamp="$home/.installed-version"
+
+  if [ "$force" -eq 0 ] && [ -f "$stamp" ] &&
+     [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] &&
+     command -v "$probe" >/dev/null 2>&1; then
+    echo "  $component already at $version; skipping"
+    return 0
+  fi
+
+  command -v "$package_manager" >/dev/null 2>&1 || {
+    echo "error: $component requires $package_manager; install it first" >&2
+    exit 2
+  }
+
+  echo "  installing $component $version from source"
+  mkdir -p "$toolchain_root"
+  acquire_lock "$home"
+  # shellcheck disable=SC2064
+  trap "release_lock '$home'" EXIT INT TERM HUP
+
+  fetch_component "$home" "$component" "$version"
+  (
+    cd "$home"
+    case "$package_manager" in
+      pnpm) pnpm install --frozen-lockfile && pnpm build ;;
+      *) npm ci && npm run build ;;
+    esac
+    cd "$link_dir"
+    # npm link leaves an existing global link to a different directory in
+    # place, so a checkout linked by earlier tooling keeps winning and the
+    # pinned build is silently unused. Remove any global link for this package
+    # first; npm link recreates it pointing here.
+    package_name=$(node -p "require('./package.json').name")
+    global_link="$(npm prefix -g)/lib/node_modules/$package_name"
+    if [ -L "$global_link" ]; then
+      echo "  removing an existing global link for $package_name" >&2
+      rm -f "$global_link"
+    fi
+    npm link
+  ) >&2
+
+  printf '%s\n' "$version" > "$stamp"
+  release_lock "$home"
+  trap - EXIT INT TERM HUP
 }
 
 echo "Kaizen toolchain manifest: $manifest"
@@ -127,94 +233,12 @@ if [ "$dry_run" -eq 1 ]; then
   exit 0
 fi
 
-install_component() {
-  component=$1
-  version=$2
-  spec="github:$owner/$component#$version"
+install_from_source kaizen-loop "$(read_version kaizen-loop)" kaizen npm .
+install_from_source builder-agent "$(read_version builder-agent)" builder-agent npm .
 
-  if [ "$force" -eq 0 ] && [ -n "${3:-}" ]; then
-    current=$(installed_version "$3" || true)
-    # Compare whole version strings. A substring match would read an installed
-    # 10.1.0 or 20.1.0 as satisfying a pinned v0.1.0 and skip a real update.
-    current_trimmed=$(printf '%s' "$current" | tr -d '[:space:]')
-    if [ "$current_trimmed" = "${version#v}" ] || [ "$current_trimmed" = "$version" ]; then
-      echo "  $component already at $version; skipping"
-      return 0
-    fi
-  fi
-
-  echo "  installing $component $version"
-  npm install -g "$spec" >&2
-}
-
-for component in kaizen-loop builder-agent; do
-  version=$(read_version "$component")
-  case "$component" in
-    kaizen-loop) probe=kaizen ;;
-    builder-agent) probe=builder-agent ;;
-  esac
-  install_component "$component" "$version" "$probe"
-done
-
-# verifier is a private pnpm workspace: its root package has no bin and is not
-# installable with `npm install -g github:`. Build it from a pinned checkout and
-# link the CLI that actually carries the bin.
-verifier_version=$(read_version verifier)
-verifier_home=${KAIZEN_HOME:-"$HOME/.kaizen"}/toolchain/verifier
-if [ "$force" -eq 0 ] && [ -f "$verifier_home/.installed-version" ] &&
-   [ "$(cat "$verifier_home/.installed-version")" = "$verifier_version" ] &&
-   command -v verifier >/dev/null 2>&1; then
-  echo "  verifier already at $verifier_version; skipping"
-else
-  echo "  installing verifier $verifier_version from source"
-  command -v pnpm >/dev/null 2>&1 || {
-    echo "error: verifier requires pnpm; install it with 'npm install -g pnpm'" >&2
-    exit 2
-  }
-  mkdir -p "$(dirname "$verifier_home")"
-
-  # $verifier_home is shared by every run on this machine, and re-running is the
-  # documented update path, so two runs for different repositories can land
-  # here together and corrupt one checkout. Serialize with a directory lock.
-  verifier_lock="$verifier_home.lock"
-  lock_attempts=0
-  until mkdir "$verifier_lock" 2>/dev/null; do
-    lock_pid=''
-    [ -f "$verifier_lock/pid" ] && lock_pid=$(cat "$verifier_lock/pid" 2>/dev/null)
-    if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
-      echo "  removing a stale verifier install lock from pid $lock_pid" >&2
-      rm -rf "$verifier_lock"
-      continue
-    fi
-    lock_attempts=$((lock_attempts + 1))
-    if [ "$lock_attempts" -gt 60 ]; then
-      echo "error: another verifier install has held $verifier_lock for too long" >&2
-      exit 1
-    fi
-    echo "  waiting for another verifier install to finish..." >&2
-    sleep 5
-  done
-  printf '%s\n' "$$" > "$verifier_lock/pid"
-  # shellcheck disable=SC2064
-  trap "rm -rf '$verifier_lock'" EXIT INT TERM HUP
-  if [ ! -d "$verifier_home/.git" ]; then
-    git clone --depth 1 --branch "$verifier_version" \
-      "https://github.com/$owner/verifier.git" "$verifier_home" >&2
-  else
-    git -C "$verifier_home" fetch --depth 1 origin "refs/tags/$verifier_version:refs/tags/$verifier_version" >&2
-    git -C "$verifier_home" checkout --detach "$verifier_version" >&2
-  fi
-  (
-    cd "$verifier_home"
-    pnpm install --frozen-lockfile
-    pnpm build
-    cd packages/core
-    npm link
-  ) >&2
-  printf '%s\n' "$verifier_version" > "$verifier_home/.installed-version"
-  rm -rf "$verifier_lock"
-  trap - EXIT INT TERM HUP
-fi
+# verifier is a pnpm workspace whose root package has no bin, so the CLI is
+# linked from packages/core rather than the repository root.
+install_from_source verifier "$(read_version verifier)" verifier pnpm packages/core
 
 echo
 echo "Kaizen toolchain installed. Verify with: kaizen doctor"

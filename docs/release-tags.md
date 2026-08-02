@@ -34,16 +34,16 @@ following against the exact commits to be tagged:
 
 - `kaizen-loop`, `builder-agent`, and `verifier` each build and test on Node
   20 or newer.
-- `npm install -g "github:kaizen-agents-org/<repo>#<tag>"` succeeds for
-  `kaizen-loop` and `builder-agent` after the tags exist, and the installed
-  `kaizen` and `builder-agent` commands run. Both commit their `dist/` output
-  and guard it with `npm run check:dist`, so a GitHub install needs no build
-  step; confirm that check passes at the commit being tagged.
-- `verifier` installs through `install-kaizen.sh`, not through
-  `npm install -g github:`. Its root package is a private pnpm workspace with
-  no `bin`, and the CLI lives in `packages/core`, so the installer clones the
-  pinned tag, runs `pnpm install --frozen-lockfile && pnpm build`, and links
-  `packages/core`. Verify that path instead for this component.
+- `install-kaizen.sh` installs all three components from the published tags and
+  the installed `kaizen`, `builder-agent`, and `verifier` commands run.
+
+  **Never verify with `npm install -g "github:owner/repo#tag"`.** For a git
+  dependency npm installs devDependencies, runs `prepare`, and packs the
+  *result*, discarding build output committed in the tag. A component that
+  ships a built `dist/` installs that way with an empty `dist/` and a dangling
+  `bin`, and the command appears to work only because an older copy is still on
+  `PATH`. The installer therefore clones each pinned tag, builds it, and links
+  it — one path for all three components.
 - A clean-machine install from `onboarding/versions.json` can run
   `kaizen doctor` successfully.
 - A Kaizen smoke run passes with the pinned set.
@@ -79,11 +79,16 @@ Run this checklist for each compatible set.
    verifier --version
    ```
 
-   The installer takes `kaizen-loop` and `builder-agent` from
-   `npm install -g github:`, and builds `verifier` from its pinned tag (see the
-   note above). Do not verify with three bare `npm install -g github:` commands:
-   that path cannot work for `verifier`. If any pinned tag is missing the
-   installer stops without installing anything, which is the intended failure.
+   The installer clones each pinned tag under `$KAIZEN_HOME/toolchain/`, builds
+   it, and links its CLI. If any pinned tag is missing it stops without
+   installing anything, which is the intended failure.
+
+   Confirm the commands resolve into those checkouts rather than an older copy
+   still on `PATH`, which is how a broken install can look healthy:
+
+   ```sh
+   readlink "$(npm prefix -g)/lib/node_modules/kaizen-loop"
+   ```
 
 6. Update `onboarding/versions.json` in this repository to the verified set.
 7. Open a ready-for-review PR that includes the manifest bump and the
