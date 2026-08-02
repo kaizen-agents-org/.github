@@ -29,7 +29,7 @@ sh /path/to/kaizen-onboarding/onboarding/onboard.sh
 Pin the clone to a release tag once one exists, so the kit you onboard with is
 reproducible.
 
-It walks seven steps and stops to ask you three things. Those three are the
+It walks eight steps and stops to ask you three things. Those three are the
 decisions you own; everything else is mechanical:
 
 1. **The verification commands.** Kaizen proposes them from your manifests
@@ -61,11 +61,15 @@ your stack — one issue per run, one open pull request — and move to
 `standard.yml` once you have weekly evidence that the review load is
 sustainable. See [`profiles/README.md`](./profiles/README.md).
 
-Three settings are not yours to lower, and a profile that sets them is rejected:
-`policy.mode` stays `pr-only`, `verifier.enabled` stays `true`, and
-`safety.operationMode` stays `external`. The protected-path floor and the
-concurrency cap are restored rather than rejected, and `kaizen init` prints a
-warning naming what it corrected.
+Four settings are not a profile's to decide, and one that sets them is rejected
+outright: `policy.mode` stays `pr-only`, `verifier.enabled` stays `true`,
+`safety.operationMode` stays `external`, and `commands.verify` stays whatever
+you confirmed for this repository. Setting an ancestor counts as setting the
+path, so a profile cannot delete one by replacing the block above it.
+
+The protected-path floor and the concurrency cap are restored rather than
+rejected, since a profile can weaken those by omission, and `kaizen init` prints
+a warning naming what it corrected.
 
 ## What lands in your repository
 

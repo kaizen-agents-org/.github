@@ -7,7 +7,7 @@ Kaizen workflow. Administrative repository changes are explicit operations:
 **Adopting a repository?** Start with [ADOPTING.md](./ADOPTING.md), the
 maintainer-facing guide to installing, scheduling, and updating the harness.
 The rest of this file documents the individual organization-owned tools that
-guide ties together.
+the guide ties together.
 
 ## Install and update
 

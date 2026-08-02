@@ -53,7 +53,9 @@ done
 
 upstream_file=$(mktemp)
 trap 'rm -f "$upstream_file"' EXIT
-if ! curl -fsSL "$upstream_url" -o "$upstream_file"; then
+# Bounded: this runs unattended on a schedule, so a hung upstream must not
+# occupy the job indefinitely.
+if ! curl -fsSL --connect-timeout 10 --max-time 60 "$upstream_url" -o "$upstream_file"; then
   echo "error: could not read the upstream manifest: $upstream_url" >&2
   exit 1
 fi
@@ -112,8 +114,16 @@ fi
 
 command -v gh >/dev/null 2>&1 || { echo "error: gh must be installed to open the issue" >&2; exit 2; }
 
-existing=$(gh issue list --repo "$repo" --state open --search "\"$title\" in:title" \
-  --json number,title --jq "[.[] | select(.title == \"$title\")] | .[0].number" 2>/dev/null || printf '')
+# Distinguish "query failed" from "no open notification". Swallowing the failure
+# would let expired auth or rate limiting look like an empty result and open a
+# duplicate issue on every scheduled run.
+if ! existing=$(gh issue list --repo "$repo" --state open --search "\"$title\" in:title" \
+  --json number,title --jq "[.[] | select(.title == \"$title\")] | .[0].number" 2>&1); then
+  echo "error: could not check for an existing notification issue on $repo" >&2
+  printf '%s\n' "$existing" >&2
+  echo "error: refusing to open an issue that might duplicate one already there." >&2
+  exit 1
+fi
 
 body=$(cat <<EOF
 A newer pinned Kaizen toolchain set is available upstream.

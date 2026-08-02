@@ -150,7 +150,7 @@ if [ "$refresh_manifest" -eq 1 ]; then
   command -v curl >/dev/null 2>&1 || { echo "error: --refresh-manifest requires curl" >&2; exit 2; }
   echo "Refreshing the pinned set from $upstream_manifest_url"
   refreshed=$(mktemp)
-  if ! curl -fsSL "$upstream_manifest_url" -o "$refreshed"; then
+  if ! curl -fsSL --connect-timeout 10 --max-time 60 "$upstream_manifest_url" -o "$refreshed"; then
     rm -f "$refreshed"
     echo "error: could not read the upstream manifest: $upstream_manifest_url" >&2
     exit 1

@@ -36,6 +36,13 @@ case "\$*" in
       esac
     done
     ;;
+  *clone*)
+    # Stand in for the verifier checkout so the build path has a directory to
+    # enter, the same as a real clone would leave behind.
+    target=''
+    for arg in "\$@"; do target=\$arg; done
+    [ -n "\$target" ] && mkdir -p "\$target/packages/core" && mkdir -p "\$target/.git"
+    ;;
 esac
 exit 0
 EOF
@@ -144,6 +151,96 @@ if KAIZEN_TEST_NPM_LOG="$log" PATH="$bin:$PATH" sh "$installer" --manifest "$man
   fi
 else
   fail "dry run failed even though every pinned tag exists"
+fi
+
+# 6. A real (non-dry-run) install runs the expected commands. Without this, a
+#    regression that validates tags and then installs nothing passes every
+#    other fixture in this file.
+manifest="$work/install.json"
+write_manifest "$manifest" v0.1.0 v0.1.0 v0.1.0
+bin=$(make_stub_bin "v0.1.0" install)
+# Report a version that cannot satisfy the pin, so a real kaizen on the host
+# PATH cannot make this fixture look like an already-current install.
+for absent in kaizen builder-agent verifier; do
+  cat > "$bin/$absent" <<'EOF'
+#!/bin/sh
+printf 'not-installed\n'
+EOF
+  chmod +x "$bin/$absent"
+done
+log="$work/npm-install.log"
+: > "$log"
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home" PATH="$bin:$PATH" \
+     sh "$installer" --manifest "$manifest" >"$work/out6" 2>&1; then
+  if grep -q "install -g github:kaizen-agents-org/kaizen-loop#v0.1.0" "$log" &&
+     grep -q "install -g github:kaizen-agents-org/builder-agent#v0.1.0" "$log"; then
+    pass "a real install runs the pinned GitHub installs"
+  else
+    fail "expected component installs did not run (log: $(tr '\n' '|' < "$log"))"
+  fi
+  if grep -q "pnpm install --frozen-lockfile" "$log" && grep -q "pnpm build" "$log"; then
+    pass "verifier is built from its pinned checkout instead of npm install -g"
+  else
+    fail "verifier build path did not run"
+  fi
+  grep -q "install -g github:kaizen-agents-org/verifier" "$log" \
+    && fail "verifier was installed with npm install -g, which cannot work" \
+    || pass "verifier is not installed through npm install -g"
+else
+  fail "a real install failed: $(cat "$work/out6")"
+fi
+
+# 7. The already-installed check compares whole versions. A substring match
+#    would read an installed 10.1.0 or 20.1.0 as satisfying a pinned v0.1.0 and
+#    silently skip a required update.
+skipbin="$work/bin-skip"
+mkdir -p "$skipbin"
+cp "$bin/git" "$skipbin/git"
+cp "$bin/npm" "$skipbin/npm"
+cp "$bin/pnpm" "$skipbin/pnpm"
+cat > "$skipbin/kaizen" <<'EOF'
+#!/bin/sh
+printf '10.1.0\n'
+EOF
+cat > "$skipbin/builder-agent" <<'EOF'
+#!/bin/sh
+printf '10.1.0\n'
+EOF
+chmod +x "$skipbin/kaizen" "$skipbin/builder-agent"
+log="$work/npm-skip.log"
+: > "$log"
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home-skip" PATH="$skipbin:$PATH" \
+     sh "$installer" --manifest "$manifest" >"$work/out7" 2>&1; then
+  if grep -q "install -g github:kaizen-agents-org/kaizen-loop#v0.1.0" "$log"; then
+    pass "an installed 10.1.0 does not satisfy a pinned v0.1.0"
+  else
+    fail "installed 10.1.0 was treated as already at v0.1.0"
+  fi
+else
+  fail "install with a mismatched installed version failed: $(cat "$work/out7")"
+fi
+
+# 8. A matching installed version is skipped, so re-running is cheap.
+cat > "$skipbin/kaizen" <<'EOF'
+#!/bin/sh
+printf '0.1.0\n'
+EOF
+cat > "$skipbin/builder-agent" <<'EOF'
+#!/bin/sh
+printf '0.1.0\n'
+EOF
+chmod +x "$skipbin/kaizen" "$skipbin/builder-agent"
+log="$work/npm-match.log"
+: > "$log"
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home-match" PATH="$skipbin:$PATH" \
+     sh "$installer" --manifest "$manifest" >"$work/out8" 2>&1; then
+  if grep -q "install -g github:kaizen-agents-org/kaizen-loop" "$log"; then
+    fail "an already-current component was reinstalled"
+  else
+    pass "an already-current component is skipped"
+  fi
+else
+  fail "install with matching versions failed: $(cat "$work/out8")"
 fi
 
 echo

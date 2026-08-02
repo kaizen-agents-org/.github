@@ -134,12 +134,13 @@ install_component() {
 
   if [ "$force" -eq 0 ] && [ -n "${3:-}" ]; then
     current=$(installed_version "$3" || true)
-    case "$current" in
-      *"${version#v}"*)
-        echo "  $component already at $version; skipping"
-        return 0
-        ;;
-    esac
+    # Compare whole version strings. A substring match would read an installed
+    # 10.1.0 or 20.1.0 as satisfying a pinned v0.1.0 and skip a real update.
+    current_trimmed=$(printf '%s' "$current" | tr -d '[:space:]')
+    if [ "$current_trimmed" = "${version#v}" ] || [ "$current_trimmed" = "$version" ]; then
+      echo "  $component already at $version; skipping"
+      return 0
+    fi
   fi
 
   echo "  installing $component $version"
@@ -171,6 +172,31 @@ else
     exit 2
   }
   mkdir -p "$(dirname "$verifier_home")"
+
+  # $verifier_home is shared by every run on this machine, and re-running is the
+  # documented update path, so two runs for different repositories can land
+  # here together and corrupt one checkout. Serialize with a directory lock.
+  verifier_lock="$verifier_home.lock"
+  lock_attempts=0
+  until mkdir "$verifier_lock" 2>/dev/null; do
+    lock_pid=''
+    [ -f "$verifier_lock/pid" ] && lock_pid=$(cat "$verifier_lock/pid" 2>/dev/null)
+    if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+      echo "  removing a stale verifier install lock from pid $lock_pid" >&2
+      rm -rf "$verifier_lock"
+      continue
+    fi
+    lock_attempts=$((lock_attempts + 1))
+    if [ "$lock_attempts" -gt 60 ]; then
+      echo "error: another verifier install has held $verifier_lock for too long" >&2
+      exit 1
+    fi
+    echo "  waiting for another verifier install to finish..." >&2
+    sleep 5
+  done
+  printf '%s\n' "$$" > "$verifier_lock/pid"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$verifier_lock'" EXIT INT TERM HUP
   if [ ! -d "$verifier_home/.git" ]; then
     git clone --depth 1 --branch "$verifier_version" \
       "https://github.com/$owner/verifier.git" "$verifier_home" >&2
@@ -186,6 +212,8 @@ else
     npm link
   ) >&2
   printf '%s\n' "$verifier_version" > "$verifier_home/.installed-version"
+  rm -rf "$verifier_lock"
+  trap - EXIT INT TERM HUP
 fi
 
 echo
