@@ -5,11 +5,11 @@ repository they own. You need `git`, `gh` (authenticated), Node 20 or newer, and
 administrator rights on the repository if you want the branch protection applied
 for you.
 
-> **Status: not yet installable.** `onboarding/versions.json` pins all three
-> components to `v0.1.0`, and none of those tags has been published, so
-> `install-kaizen.sh` stops with a "no tag" error by design rather than
+> **Status: waiting on the first release.** `onboarding/versions.json` pins all
+> three components to `v0.1.0`, and none of those tags has been published yet,
+> so `install-kaizen.sh` stops with a "no tag" error by design rather than
 > installing unreleased code. Everything below is the intended flow; it becomes
-> runnable once a compatible release set exists (see
+> runnable once a compatible set is tagged (see
 > [`docs/release-tags.md`](../docs/release-tags.md)).
 
 ## Install
