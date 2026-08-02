@@ -4,6 +4,32 @@ The onboarding directory contains organization-owned assets for adopting the
 Kaizen workflow. Administrative repository changes are explicit operations:
 `kaizen init` does not invoke the branch-protection helper.
 
+**Adopting a repository?** Start with [ADOPTING.md](./ADOPTING.md), the
+maintainer-facing guide to installing, scheduling, and updating the harness.
+The rest of this file documents the individual organization-owned tools that
+the guide ties together.
+
+## Install and update
+
+```sh
+onboarding/onboard.sh                       # install (and re-run to update)
+onboarding/scripts/install-kaizen.sh        # toolchain only, from versions.json
+onboarding/scripts/check-toolchain-update.sh --repo owner/repo
+```
+
+`onboard.sh` is idempotent: re-running it is the supported update path. The
+installer refuses to install when a version pinned by
+[`versions.json`](./versions.json) has no matching tag, rather than falling back
+to a branch and putting unreleased code behind a pinned manifest.
+
+Fixture suites for these, all network-free:
+
+```sh
+onboarding/scripts/test-install-kaizen.sh
+onboarding/scripts/test-onboard.sh
+onboarding/scripts/test-toolchain-update.sh
+```
+
 ## Opt in to the repository scout
 
 Scout automation is disabled by default. Enabling it requires an explicit
