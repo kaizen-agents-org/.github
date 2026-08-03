@@ -103,6 +103,42 @@ assert_rejected \
   'When creating an issue, add the `kaizen` and `kaizen:authorized` labels'
 
 assert_rejected \
+  "scout deterministic canonical ordering" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Choose exactly one canonical issue with this deterministic total ordering: an open issue before a closed issue, then the earliest `createdAt`, then the lowest issue number.' \
+  'Choose a canonical issue using best judgment.'
+
+assert_rejected \
+  "scout one-way duplicate relation" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Duplicate relations must point one way, from each duplicate to the canonical issue; never close the canonical issue as a duplicate.' \
+  'Duplicate relations may point either way.'
+
+assert_rejected \
+  "scout default existing-issue mutation boundary" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'The default scout is not authorized to close, reopen, or relabel existing issues.' \
+  'The default scout may close existing issues.'
+
+assert_rejected \
+  "scout reconciliation close re-query" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Immediately before any authorized reconciliation close, repeat the open-issue and open-PR queries, rebuild the duplicate-equivalence set, and recompute the canonical ordering.' \
+  'Reuse earlier query results before a reconciliation close.'
+
+assert_rejected \
+  "scout duplicate cycle fail-safe" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Detect direct and transitive duplicate cycles before mutating any issue; if a cycle exists, close no issue and report the cycle for maintainer review.' \
+  'Close every issue in a duplicate cycle.'
+
+assert_rejected \
+  "scout preserves open canonical issue" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Reconciliation must never leave the equivalence set without one open canonical issue.' \
+  'Reconciliation may leave no open canonical issue.'
+
+assert_rejected \
   "monitor issue prefix" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   "issues=\\[monitor\\]" \
@@ -325,6 +361,24 @@ assert_rejected \
   "owner, bootstrap execution labels automatically"
 
 assert_rejected \
+  "scout template deterministic canonical ordering" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'deterministic total ordering: an open issue before a closed issue, then the' \
+  'non-deterministic ordering chosen during the run'
+
+assert_rejected \
+  "scout template existing-issue mutation boundary" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'The default scout is not authorized to close, reopen, or relabel existing' \
+  'The default scout may close, reopen, or relabel existing'
+
+assert_rejected \
+  "scout template duplicate cycle fail-safe" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'duplicate cycles before mutating any issue; if a cycle exists, close no issue' \
+  'duplicate cycles after mutating issues; close every issue'
+
+assert_rejected \
   "readiness issue creator preserves fleet repository owner" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \
@@ -395,6 +449,18 @@ assert_rejected \
   "docs/repo-improvement-scout.md" \
   'scans exactly its explicitly configured `owner\/repository`.' \
   'is limited to the original four repositories.'
+
+assert_rejected \
+  "scout documentation canonical preservation" \
+  "docs/repo-improvement-scout.md" \
+  'point only from duplicate to canonical, and the canonical issue is never closed' \
+  'may point in either direction, and the canonical issue may be closed'
+
+assert_rejected \
+  "scout documentation reconciliation re-query" \
+  "docs/repo-improvement-scout.md" \
+  'Immediately before an authorized close, the scout re-queries' \
+  'The scout reuses stale results before an authorized close'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \

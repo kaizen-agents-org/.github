@@ -52,6 +52,26 @@ Before creating an issue:
 - include a `PR linkage requirement` section requiring a GitHub closing keyword
   and verification of `closingIssuesReferences`.
 
+Treat issues that own the same target repository and actionable follow-up as
+one duplicate-equivalence set. Choose exactly one canonical issue with this
+deterministic total ordering: an open issue before a closed issue, then the
+earliest `createdAt`, then the lowest issue number. An open pull request that
+owns the exact work suppresses issue creation instead of becoming the canonical
+issue. Duplicate relations must point one way, from each duplicate to the
+canonical issue; never close the canonical issue as a duplicate.
+
+The default scout is not authorized to close, reopen, or relabel existing
+issues. It may reconcile existing duplicate issues only when the current run
+has explicit authorization that names the target repository, issue set, and
+permitted reconciliation action. Immediately before any authorized
+reconciliation close, repeat the open-issue and open-pull-request queries,
+rebuild the duplicate-equivalence set, and recompute the canonical ordering. If
+a query fails, the set changed, or the intended canonical issue is no longer
+open, perform no close and report the conflict. Detect direct and transitive
+duplicate cycles before mutating any issue; if a cycle exists, close no issue
+and report the cycle for maintainer review. Reconciliation must never leave the
+equivalence set without one open canonical issue.
+
 Create no more than `{{CREATION_LIMIT}}` issues in one run. Additional findings
 remain report-only. Never create `[monitor]` or `[readiness-review]` issues.
 
