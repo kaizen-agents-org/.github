@@ -17,6 +17,8 @@ readiness_template="${repo_root}/docs/production-readiness/template.md"
 automations_readme="${repo_root}/automations/README.md"
 org_monitor_doc="${repo_root}/docs/org-monitor.md"
 scout_doc="${repo_root}/docs/repo-improvement-scout.md"
+scout_reconciler="${repo_root}/scripts/reconcile-scout-duplicates.mjs"
+scout_reconciler_test="${repo_root}/scripts/test-reconcile-scout-duplicates.mjs"
 
 fail() {
   echo "automation prompt contract check failed: $*" >&2
@@ -51,7 +53,7 @@ require_contract_marker() {
 for file in "${contract_doc}" "${scout}" "${monitor}" "${weekly_review}" "${readiness_creator}" \
   "${scout_template}" "${fleet}" "${fleet_validator}" "${readiness_readme}" \
   "${readiness_checklist}" "${readiness_template}" "${automations_readme}" "${org_monitor_doc}" \
-  "${scout_doc}"; do
+  "${scout_doc}" "${scout_reconciler}" "${scout_reconciler_test}"; do
   require_file "${file}"
 done
 
@@ -84,6 +86,20 @@ require_text "${scout}" 'Run `gh label list --repo kaizen-agents-org/<repo> --se
 require_text "${scout}" 'then do the same for `kaizen:ready` with `--search "kaizen:ready"` and `any(.name == "kaizen:ready")`'
 require_text "${scout}" 'If either label cannot be created and verified, do not create the issue'
 require_text "${scout}" 'When creating an issue, add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels'
+require_text "${scout}" 'Choose exactly one canonical issue with this deterministic total ordering: an open issue before a closed issue, then the earliest `createdAt`, then the lowest issue number.'
+require_text "${scout}" 'An open pull request that owns the exact work suppresses issue creation instead of becoming the canonical issue.'
+require_text "${scout}" 'Duplicate relations must point one way, from each duplicate to the canonical issue; never close the canonical issue as a duplicate.'
+require_text "${scout}" 'The default scout is not authorized to close, reopen, or relabel existing issues and must not invoke the reconciliation helper.'
+require_text "${scout}" 'explicit authorization that names the target repository, complete issue set, and permitted reconciliation action.'
+require_text "${scout}" '`node scripts/reconcile-scout-duplicates.mjs --repo <owner/repository> --issues <number,number,...> --authorize-reconciliation` is the only allowed mutation path'
+require_text "${scout}" 'never issue manual `gh issue close`, `reopen`, `comment`, or `edit` commands for duplicate reconciliation.'
+require_text "${scout}" 'refreshes every explicitly authorized candidate issue individually, including both `OPEN` and `CLOSED` states, instead of rebuilding from a default open-only issue list.'
+require_text "${scout}" 'immediately before every close.'
+require_text "${scout}" 'detects direct and transitive legacy duplicate cycles'
+require_text "${scout}" 'writes an unambiguous current reconciliation marker on every candidate that supersedes the legacy relations without deleting history.'
+require_text "${scout}" 'If all candidates are closed, it reopens the deterministic canonical issue before writing those markers.'
+require_text "${scout}" 'an out-of-scope relation, a conflicting current marker, an unmanaged relation after the current marker, or canonical drift fails closed without closing an issue.'
+require_text "${scout}" 'Reconciliation must never leave the equivalence set without one open canonical issue.'
 
 require_text "${scout_template}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->'
 require_text "${scout_template}" 'Created issue titles must start with `[scout]`.'
@@ -101,6 +117,26 @@ require_text "${scout_template}" '"kaizen:ready" --repo {{REPOSITORY}}'
 require_text "${scout_template}" 'For any other owner, never bootstrap execution labels'
 require_text "${scout_template}" 'Create no more than `{{CREATION_LIMIT}}` issues in one run.'
 require_text "${scout_template}" 'Do not edit files, push branches, merge pull requests, create implementation'
+require_text "${scout_template}" 'Choose exactly one canonical issue with this'
+require_text "${scout_template}" 'deterministic total ordering: an open issue before a closed issue, then the'
+require_text "${scout_template}" 'earliest `createdAt`, then the lowest issue number.'
+require_text "${scout_template}" 'An open pull request that'
+require_text "${scout_template}" 'owns the exact work suppresses issue creation instead of becoming the canonical'
+require_text "${scout_template}" 'Duplicate relations must point one way, from each duplicate to the'
+require_text "${scout_template}" 'canonical issue; never close the canonical issue as a duplicate.'
+require_text "${scout_template}" 'issues and must not invoke a reconciliation helper.'
+require_text "${scout_template}" 'scout when explicit authorization names the target repository, complete issue'
+require_text "${scout_template}" 'set, and permitted reconciliation action, and only through the source-managed'
+require_text "${scout_template}" '`scripts/reconcile-scout-duplicates.mjs` helper.'
+require_text "${scout_template}" 'Never issue manual `gh issue'
+require_text "${scout_template}" 'That helper refreshes every explicitly authorized candidate issue individually,'
+require_text "${scout_template}" 'including both `OPEN` and `CLOSED` states, instead of using a default open-only'
+require_text "${scout_template}" 'issue list, and recomputes the canonical ordering immediately before every'
+require_text "${scout_template}" 'close. It may supersede legacy or cyclic relations without deleting history'
+require_text "${scout_template}" 'only by writing the same unambiguous current reconciliation state to every'
+require_text "${scout_template}" 'deterministic canonical issue first when every candidate is closed.'
+require_text "${scout_template}" 'candidates, out-of-scope relations, conflicting current markers, unmanaged'
+require_text "${scout_template}" 'an issue. Reconciliation must never leave the equivalence set without one open'
 for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
   placeholder_count="$(grep -o "{{${placeholder}}}" "${scout_template}" | wc -l | tr -d ' ')"
   [[ "${placeholder_count}" -ge 1 ]] ||
@@ -233,6 +269,29 @@ require_text "${contract_doc}" 'only for repositories whose lowercased owner is 
 require_text "${contract_doc}" 'This comparison must not alter the complete repository identity passed to GitHub;'
 require_text "${contract_doc}" 'They must not infer missing'
 require_text "${contract_doc}" '| `repo-improvement-scout` | At most two issues per target repository per run. |'
+require_text "${scout_doc}" 'The canonical issue is selected'
+require_text "${scout_doc}" 'by a deterministic total ordering: open before closed, then earliest'
+require_text "${scout_doc}" '`createdAt`, then lowest issue number.'
+require_text "${scout_doc}" 'An open pull request that already owns'
+require_text "${scout_doc}" 'the exact work suppresses creation of another issue.'
+require_text "${scout_doc}" 'Duplicate relationships'
+require_text "${scout_doc}" 'point only from duplicate to canonical, and the canonical issue is never closed'
+require_text "${scout_doc}" 'Normal scout runs do not close, reopen, or relabel existing issues and do not'
+require_text "${scout_doc}" 'authorization naming the target repository, complete issue set, and permitted'
+require_text "${scout_doc}" 'reconciliation action.'
+require_text "${scout_doc}" '`scripts/reconcile-scout-duplicates.mjs` as its'
+require_text "${scout_doc}" 'only existing-issue mutation path; manual `gh issue` mutations are forbidden.'
+require_text "${scout_doc}" 'open-only issue list. It recomputes the canonical issue immediately before'
+require_text "${scout_doc}" 'every close. Direct or transitive legacy cycles are'
+require_text "${scout_doc}" 'The helper refreshes every explicitly authorized candidate issue individually,'
+require_text "${scout_doc}" 'including both `OPEN` and `CLOSED` state, and never relies on the default'
+require_text "${scout_doc}" 'Direct or transitive legacy cycles are'
+require_text "${scout_doc}" 'writes an authoritative reconciliation marker to every candidate'
+require_text "${scout_doc}" 'consistent marker state overrides legacy relations.'
+require_text "${scout_doc}" 'already closed, an authorized run reopens the deterministically selected'
+require_text "${scout_doc}" 'conflicting current markers, relations added after the current marker, or'
+require_text "${scout_doc}" 'canonical drift fail safe without closing anything. Repeated and concurrent'
+require_text "${scout_doc}" 'runs are idempotent and preserve the same one-way canonical relationship.'
 require_text "${contract_doc}" '| `org-monitor` | At most one issue per target repository per run. |'
 require_text "${contract_doc}" '| `readiness-issue-creator` | At most three issues per target repository per run. |'
 

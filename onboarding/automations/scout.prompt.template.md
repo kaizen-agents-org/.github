@@ -52,6 +52,34 @@ Before creating an issue:
 - include a `PR linkage requirement` section requiring a GitHub closing keyword
   and verification of `closingIssuesReferences`.
 
+Treat issues that own the same target repository and actionable follow-up as
+one duplicate-equivalence set. Choose exactly one canonical issue with this
+deterministic total ordering: an open issue before a closed issue, then the
+earliest `createdAt`, then the lowest issue number. An open pull request that
+owns the exact work suppresses issue creation instead of becoming the canonical
+issue. Duplicate relations must point one way, from each duplicate to the
+canonical issue; never close the canonical issue as a duplicate.
+
+The default scout is not authorized to close, reopen, or relabel existing
+issues and must not invoke a reconciliation helper. A rendered opt-in scout has
+no existing-issue mutation path; report duplicates for maintainer review.
+Equivalent reconciliation is permitted only from the managed organization
+scout when explicit authorization names the target repository, complete issue
+set, and permitted reconciliation action, and only through the source-managed
+`scripts/reconcile-scout-duplicates.mjs` helper. Never issue manual `gh issue
+close`, `reopen`, `comment`, or `edit` commands for duplicate reconciliation.
+That helper refreshes every explicitly authorized candidate issue individually,
+including both `OPEN` and `CLOSED` states, instead of using a default open-only
+issue list, and recomputes the canonical ordering immediately before every
+close. It may supersede legacy or cyclic relations without deleting history
+only by writing the same unambiguous current reconciliation state to every
+member of a complete explicitly authorized candidate set. It reopens the
+deterministic canonical issue first when every candidate is closed. Missing
+candidates, out-of-scope relations, conflicting current markers, unmanaged
+relations after a current marker, or state drift fail closed without closing
+an issue. Reconciliation must never leave the equivalence set without one open
+canonical issue.
+
 Create no more than `{{CREATION_LIMIT}}` issues in one run. Additional findings
 remain report-only. Never create `[monitor]` or `[readiness-review]` issues.
 

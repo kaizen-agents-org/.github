@@ -6,7 +6,7 @@ checker="${repo_root}/scripts/check-automation-prompt-contract.sh"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/automation-prompt-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
 
-mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" \
+mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" "${fixture}/scripts" \
   "${fixture}/onboarding/automations" "${fixture}/onboarding/scripts"
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
@@ -22,6 +22,9 @@ cp "${repo_root}/onboarding/automations/scout.prompt.template.md" \
   "${fixture}/onboarding/automations/"
 cp "${repo_root}/onboarding/scripts/validate-fleet.mjs" \
   "${fixture}/onboarding/scripts/"
+cp "${repo_root}/scripts/reconcile-scout-duplicates.mjs" \
+  "${repo_root}/scripts/test-reconcile-scout-duplicates.mjs" \
+  "${fixture}/scripts/"
 
 bash "${checker}" "${fixture}" >/dev/null
 
@@ -101,6 +104,60 @@ assert_rejected \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   'When creating an issue, add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels' \
   'When creating an issue, add the `kaizen` and `kaizen:authorized` labels'
+
+assert_rejected \
+  "scout deterministic canonical ordering" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Choose exactly one canonical issue with this deterministic total ordering: an open issue before a closed issue, then the earliest `createdAt`, then the lowest issue number.' \
+  'Choose a canonical issue using best judgment.'
+
+assert_rejected \
+  "scout exact-work open-PR suppression" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'An open pull request that owns the exact work suppresses issue creation instead of becoming the canonical issue.' \
+  'An open pull request does not suppress issue creation.'
+
+assert_rejected \
+  "scout one-way duplicate relation" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Duplicate relations must point one way, from each duplicate to the canonical issue; never close the canonical issue as a duplicate.' \
+  'Duplicate relations may point either way.'
+
+assert_rejected \
+  "scout default existing-issue mutation boundary" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'The default scout is not authorized to close, reopen, or relabel existing issues and must not invoke the reconciliation helper.' \
+  'The default scout may close existing issues.'
+
+assert_rejected \
+  "scout reconciliation authorization scope" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'explicit authorization that names the target repository, complete issue set, and permitted reconciliation action.' \
+  'generic authorization without a named scope.'
+
+assert_rejected \
+  "scout reconciliation all-state refresh" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'refreshes every explicitly authorized candidate issue individually, including both `OPEN` and `CLOSED` states, instead of rebuilding from a default open-only issue list.' \
+  'refreshes only the default open issue list.'
+
+assert_rejected \
+  "scout executable reconciliation path" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  '`node scripts\/reconcile-scout-duplicates.mjs --repo <owner\/repository> --issues <number,number,...> --authorize-reconciliation` is the only allowed mutation path' \
+  'manual gh commands are an allowed mutation path'
+
+assert_rejected \
+  "scout cycle supersession marker" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'writes an unambiguous current reconciliation marker on every candidate that supersedes the legacy relations without deleting history.' \
+  'closes every issue in a duplicate cycle without recording current state.'
+
+assert_rejected \
+  "scout preserves open canonical issue" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'Reconciliation must never leave the equivalence set without one open canonical issue.' \
+  'Reconciliation may leave no open canonical issue.'
 
 assert_rejected \
   "monitor issue prefix" \
@@ -325,6 +382,42 @@ assert_rejected \
   "owner, bootstrap execution labels automatically"
 
 assert_rejected \
+  "scout template deterministic canonical ordering" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'deterministic total ordering: an open issue before a closed issue, then the' \
+  'non-deterministic ordering chosen during the run'
+
+assert_rejected \
+  "scout template exact-work open-PR suppression" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'owns the exact work suppresses issue creation instead of becoming the canonical' \
+  'allows issue creation despite an exact-work open pull request'
+
+assert_rejected \
+  "scout template existing-issue mutation boundary" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'issues and must not invoke a reconciliation helper.' \
+  'The default scout may close, reopen, or relabel existing'
+
+assert_rejected \
+  "scout template reconciliation authorization scope" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'scout when explicit authorization names the target repository, complete issue' \
+  'scout when generic authorization is present'
+
+assert_rejected \
+  "scout template reconciliation all-state refresh" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'including both `OPEN` and `CLOSED` states, instead of using a default open-only' \
+  'including only `OPEN` state from the default list'
+
+assert_rejected \
+  "scout template duplicate cycle fail-safe" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'only by writing the same unambiguous current reconciliation state to every' \
+  'duplicate cycles after mutating issues; close every issue'
+
+assert_rejected \
   "readiness issue creator preserves fleet repository owner" \
   "automations/kaizen-agents-readiness-issue-creator.prompt.md" \
   "pass the active registry entry's complete \`repository\`" \
@@ -396,6 +489,36 @@ assert_rejected \
   'scans exactly its explicitly configured `owner\/repository`.' \
   'is limited to the original four repositories.'
 
+assert_rejected \
+  "scout documentation canonical preservation" \
+  "docs/repo-improvement-scout.md" \
+  'point only from duplicate to canonical, and the canonical issue is never closed' \
+  'may point in either direction, and the canonical issue may be closed'
+
+assert_rejected \
+  "scout documentation exact-work open-PR suppression" \
+  "docs/repo-improvement-scout.md" \
+  'the exact work suppresses creation of another issue.' \
+  'the exact work does not suppress creation of another issue.'
+
+assert_rejected \
+  "scout documentation reconciliation authorization scope" \
+  "docs/repo-improvement-scout.md" \
+  'authorization naming the target repository, complete issue set, and permitted' \
+  'authorization without a named repository or issue set'
+
+assert_rejected \
+  "scout documentation reconciliation all-state refresh" \
+  "docs/repo-improvement-scout.md" \
+  'including both `OPEN` and `CLOSED` state, and never relies on the default' \
+  'including only `OPEN` state from the default list'
+
+assert_rejected \
+  "scout documentation reconciliation re-query" \
+  "docs/repo-improvement-scout.md" \
+  'open-only issue list. It recomputes the canonical issue immediately before' \
+  'The scout reuses stale results before an authorized close'
+
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
 node -e \
   'const fs=require("fs"),p=process.argv[1],v=JSON.parse(fs.readFileSync(p));v.repositories.push({...v.repositories[0]});fs.writeFileSync(p,JSON.stringify(v))' \
@@ -418,3 +541,4 @@ assert_append_rejected \
 
 echo "Automation prompt contract mutations are rejected."
 bash "${repo_root}/onboarding/scripts/test-scout-fleet-contract.sh"
+node "${repo_root}/scripts/test-reconcile-scout-duplicates.mjs"

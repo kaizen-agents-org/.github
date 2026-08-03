@@ -82,6 +82,37 @@ opt-in scout never bootstraps these labels automatically.
 
 The scout creates at most two issues per target repository per run. There is no organization-wide issue creation cap because each repository already has its own per-run and open-issue limits. Additional eligible findings for a repository stay in the report. Each created issue must include a PR linkage requirement telling the implementer to put a GitHub closing keyword in the implementation PR body and verify `closingIssuesReferences` before reporting the PR ready.
 
+Duplicate detection groups issues that own the same target repository and
+actionable follow-up into one equivalence set. The canonical issue is selected
+by a deterministic total ordering: open before closed, then earliest
+`createdAt`, then lowest issue number. An open pull request that already owns
+the exact work suppresses creation of another issue. Duplicate relationships
+point only from duplicate to canonical, and the canonical issue is never closed
+as a duplicate.
+
+Normal scout runs do not close, reopen, or relabel existing issues and do not
+invoke reconciliation. Duplicate reconciliation requires explicit
+authorization naming the target repository, complete issue set, and permitted
+reconciliation action. The managed organization scout must use
+`scripts/reconcile-scout-duplicates.mjs` as its
+only existing-issue mutation path; manual `gh issue` mutations are forbidden.
+The helper refreshes every explicitly authorized candidate issue individually,
+including both `OPEN` and `CLOSED` state, and never relies on the default
+open-only issue list. It recomputes the canonical issue immediately before
+every close. Direct or transitive legacy cycles are
+repairable only when every historical relation remains inside the complete
+explicitly authorized candidate set. The helper preserves those comments, then
+writes an authoritative reconciliation marker to every candidate; the newest
+consistent marker state overrides legacy relations. If every candidate is
+already closed, an authorized run reopens the deterministically selected
+canonical issue before writing the markers and linking the remaining closed
+duplicates. Failed queries, missing candidates, out-of-scope relations,
+conflicting current markers, relations added after the current marker, or
+canonical drift fail safe without closing anything. Repeated and concurrent
+runs are idempotent and preserve the same one-way canonical relationship.
+Rendered opt-in scouts have no reconciliation mutation path and report
+duplicates for maintainer review.
+
 ## Safety Boundaries
 
 The scout does not edit files, push branches, merge pull requests, or open implementation pull requests. It only creates focused GitHub issues and reports what it found.
