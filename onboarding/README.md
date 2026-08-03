@@ -9,13 +9,19 @@ maintainer-facing guide to installing, scheduling, and updating the harness.
 The rest of this file documents the individual organization-owned tools that
 the guide ties together.
 
-## Install and update
+## Install, update, and remove
 
 ```sh
 onboarding/onboard.sh                       # install (and re-run to update)
 onboarding/scripts/install-kaizen.sh        # toolchain only, from versions.json
 onboarding/scripts/check-toolchain-update.sh --repo owner/repo
+onboarding/scripts/uninstall-kaizen.sh      # stop and remove local state
 ```
+
+`uninstall-kaizen.sh` removes one project's local state and stops its scheduled
+jobs. It reports committed files, labels, and branch protection with the exact
+commands rather than deleting them, and leaves the shared toolchain alone unless
+`--remove-toolchain` is passed. Use `--dry-run` to see the plan first.
 
 `onboard.sh` is idempotent: re-running it is the supported update path. The
 installer refuses to install when a version pinned by
@@ -28,6 +34,7 @@ Fixture suites for these, all network-free:
 onboarding/scripts/test-install-kaizen.sh
 onboarding/scripts/test-onboard.sh
 onboarding/scripts/test-toolchain-update.sh
+onboarding/scripts/test-uninstall-kaizen.sh
 ```
 
 ## Opt in to the repository scout
