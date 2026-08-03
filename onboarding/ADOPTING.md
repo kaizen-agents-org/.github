@@ -9,13 +9,11 @@ The toolchain is built from source at its pinned tags rather than installed as
 prebuilt packages, so the first install compiles three repositories and takes a
 few minutes. `pnpm` is needed because one of them is a pnpm workspace.
 
-> **Status: waiting on a working pinned set.** `onboarding/versions.json` still
-> pins `kaizen-loop v0.1.0`, whose `dist/cli.js` is not executable, so an
-> install from the current manifest produces a `kaizen` command that fails with
-> `permission denied`. The fix is kaizen-agents-org/kaizen-loop#318; once it
-> merges and `v0.1.1` is published and pinned here, this guide becomes usable.
-> Everything below describes the intended flow and has been verified against
-> locally built components.
+> **Status: the pinned set installs.** `onboarding/versions.json` pins
+> `kaizen-loop v0.1.1`, `builder-agent v0.1.0`, and `verifier v0.1.0`, and a
+> clean install from that set produces three working commands. This has been
+> verified on macOS only, and no third-party maintainer has yet run it on a
+> machine nobody here controls, so expect rough edges and please report them.
 
 ## Install
 
