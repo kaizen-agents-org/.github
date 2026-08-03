@@ -11,6 +11,7 @@ weekly checklist, metrics, and log template used to maintain this log.
 
 | Date | Judgment | Main gaps |
 | --- | --- | --- |
+| [2026-08-03](./production-readiness/logs/2026-08-03.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Tagged install repair not release-ready, one blocked installer PR, one companion PR without recognized closing reference, local-only metrics, source-doc/prompt metrics-scope conflict, stale same-stack E2E evidence, no non-Node E2E pass. |
 | [2026-07-27](./production-readiness/logs/2026-07-27.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Verifier false-positive blocks, builder-agent queue starvation from missing `kaizen:ready`, local-only metrics, source-doc/prompt metrics-scope conflict, stale same-stack E2E evidence, no non-Node E2E pass. |
 | [2026-07-20](./production-readiness/logs/2026-07-20.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Open PR backlog, stale guardian timeout state, local-only metrics, source-doc/prompt metrics-scope conflict, stale same-stack E2E evidence, no non-Node E2E pass. |
 | [2026-07-13](./production-readiness/logs/2026-07-13.md) | Ready for continued dogfooding and review-required PR generation; not ready for production-grade autonomous maintenance. | Unattended execution and payload-contract blockers, local-only metrics, stale same-stack E2E evidence, source-doc/prompt metrics-scope conflict, duplicate monitor drift issues. |
@@ -21,6 +22,7 @@ weekly checklist, metrics, and log template used to maintain this log.
 
 ## Review Files
 
+- [2026-08-03](./production-readiness/logs/2026-08-03.md): weekly readiness review.
 - [2026-07-27](./production-readiness/logs/2026-07-27.md): weekly readiness review.
 - [2026-07-20](./production-readiness/logs/2026-07-20.md): weekly readiness review.
 - [2026-07-13](./production-readiness/logs/2026-07-13.md): weekly readiness review.
