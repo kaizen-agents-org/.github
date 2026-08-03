@@ -92,6 +92,7 @@ The organization monitor should check that:
 - Push-triggered sync runs derive the source issue from the merged source PR when possible, and generated target PRs verify the issue linkage through `closingIssuesReferences`.
 - The deterministic manifest `.github/dogfood-sync/manifest.json` exists and lists every target and managed path.
 - The source repository and every manifest target explicitly declare `safety.operationMode: dogfood` together with opt-in `kaizen:ready` selection.
+- The source repository and every manifest target explicitly opt into `verifier.update.mode: canonical-main` with a bounded timeout. This Organization-only setting depends on `kaizen-loop#327`; external adopters retain the default pinned update mode.
 - Drift outside the manifest-managed paths is reported as follow-up work instead of being modified automatically.
 
 `scripts/check-daily-dogfood-sync-contract.sh` encodes these checks as a regression test.

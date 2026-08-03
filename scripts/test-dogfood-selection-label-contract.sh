@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export TMPDIR="${KAIZEN_TEST_TMPDIR:-/tmp}"
 export COPYFILE_DISABLE=1
 fixture="$(mktemp -d "${TMPDIR}/kaizen-selection-contract.XXXXXX")"
+error_log="${fixture}/contract-error.log"
 trap 'rm -rf "${fixture}"' EXIT
 
 tar -C "${repo_root}" -cf - .github .kaizen automations docs scripts skills \
@@ -12,13 +13,22 @@ tar -C "${repo_root}" -cf - .github .kaizen automations docs scripts skills \
 
 bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" >/dev/null
 
+sed -i.bak '/^    mode: canonical-main$/d' \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" > /dev/null 2>"${error_log}"; then
+  echo "contract unexpectedly accepted a dogfood config without canonical-main Verifier updates" >&2
+  exit 1
+fi
+grep -q 'dogfood runtime config must opt into verifier canonical-main updates with timeoutMinutes: 15' "${error_log}"
+mv "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml.bak" \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+
 scout_prompt="${fixture}/automations/kaizen-agents-repo-improvement-scout.prompt.md"
 mutated_prompt="${fixture}/scout.prompt.md"
 sed 's/`kaizen`, `kaizen:authorized`, and `kaizen:ready` labels/`kaizen` and `kaizen:authorized` labels/' \
   "${scout_prompt}" > "${mutated_prompt}"
 mv "${mutated_prompt}" "${scout_prompt}"
 
-error_log="${fixture}/contract-error.log"
 if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" > /dev/null 2>"${error_log}"; then
   echo "FAIL: contract accepted a trusted issue creator without kaizen:ready" >&2
   exit 1

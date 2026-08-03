@@ -389,6 +389,19 @@ done < <(jq -r '.targets[].name' "${manifest}")
 # without a separately applied execution-authorization label.
 for config in .kaizen/config.yml .github/dogfood-sync/targets/*/.kaizen/config.yml; do
   if ! awk '
+    /^verifier:$/ { in_verifier=1; next }
+    in_verifier && /^[^ ]/ { in_verifier=0; in_update=0 }
+    in_verifier && /^  update:$/ { in_update=1; next }
+    in_update && /^  [^ ]/ { in_update=0 }
+    in_update && /^    mode: canonical-main$/ { mode=1 }
+    in_update && /^    timeoutMinutes: 15$/ { timeout=1 }
+    END { exit(mode && timeout ? 0 : 1) }
+  ' "${config}"; then
+    echo "dogfood runtime config must opt into verifier canonical-main updates with timeoutMinutes: 15: ${config}" >&2
+    exit 1
+  fi
+
+  if ! awk '
     /^safety:$/ {
       in_safety=1
       next
