@@ -48,9 +48,16 @@ following against the exact commits to be tagged:
   `kaizen doctor` successfully.
 - A Kaizen smoke run passes with the pinned set.
 
-The first onboarding manifest reserves `v0.1.0` for all three components. Treat
-that manifest as a release candidate until the matching component tags exist and
-the install checks above are recorded in the release PR.
+The currently released set is `{kaizen-loop: v0.1.1, builder-agent: v0.1.0,
+verifier: v0.1.0}`, recorded in
+[`onboarding/versions.json`](../onboarding/versions.json), which is the
+authority; the JSON above is a shape example.
+
+`kaizen-loop v0.1.0` is published but superseded: its `dist/cli.js` was
+committed non-executable, which produced a `kaizen` command that failed with
+`permission denied` once installation stopped going through `npm install -g`.
+It is left in place rather than moved, per the rule above, and must not be
+pinned.
 
 ## Release Checklist
 
@@ -64,8 +71,8 @@ Run this checklist for each compatible set.
 4. Create annotated tags in the component repositories:
 
    ```sh
-   git tag -a v0.1.0 -m "Release v0.1.0"
-   git push origin v0.1.0
+   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   git push origin vX.Y.Z
    ```
 
 5. From a clean environment, verify the install path the onboarding kit
