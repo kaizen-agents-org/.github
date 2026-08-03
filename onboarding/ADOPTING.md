@@ -164,6 +164,34 @@ The contract checker is read-only. It validates the **final**
 `.kaizen/config.yml`, so hand-editing the file after install cannot slip a
 weakened safety floor past it. Every failure prints a remediation line.
 
+## Removing the harness
+
+If you trial Kaizen and decide against it, run this from the repository:
+
+```sh
+onboarding/scripts/uninstall-kaizen.sh --dry-run   # see the plan first
+onboarding/scripts/uninstall-kaizen.sh
+```
+
+It stops the scheduled jobs and removes this project's local state — its
+registry entry and its workspace under `~/.kaizen/`. Re-running is safe.
+
+**It deliberately leaves three things alone**, and prints the exact commands
+for each:
+
+- **Committed files** (`.kaizen/`, the issue template, vendored skills, smoke
+  artifacts). They are in your git history, so removing them should be a commit
+  you author rather than something a script does behind you.
+- **Labels.** Deleting a label strips it from every issue that ever carried it,
+  including closed ones.
+- **Branch protection, issues, and pull requests.** Protection is an
+  administrative decision you may want to keep, and the issues and pull requests
+  the loop opened are project history.
+
+The toolchain under `~/.kaizen/toolchain/` is shared by every repository you
+onboarded on this machine, so it also survives. Pass `--remove-toolchain` to
+remove it and its global links once you are uninstalling the last one.
+
 ## If something goes wrong
 
 - **"no tag vX.Y.Z"** — `versions.json` pins a release that was never
