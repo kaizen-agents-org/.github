@@ -6,7 +6,7 @@ checker="${repo_root}/scripts/check-automation-prompt-contract.sh"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/automation-prompt-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
 
-mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" \
+mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" "${fixture}/scripts" \
   "${fixture}/onboarding/automations" "${fixture}/onboarding/scripts"
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
@@ -22,6 +22,9 @@ cp "${repo_root}/onboarding/automations/scout.prompt.template.md" \
   "${fixture}/onboarding/automations/"
 cp "${repo_root}/onboarding/scripts/validate-fleet.mjs" \
   "${fixture}/onboarding/scripts/"
+cp "${repo_root}/scripts/reconcile-scout-duplicates.mjs" \
+  "${repo_root}/scripts/test-reconcile-scout-duplicates.mjs" \
+  "${fixture}/scripts/"
 
 bash "${checker}" "${fixture}" >/dev/null
 
@@ -117,19 +120,19 @@ assert_rejected \
 assert_rejected \
   "scout default existing-issue mutation boundary" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
-  'The default scout is not authorized to close, reopen, or relabel existing issues.' \
+  'The default scout is not authorized to close, reopen, or relabel existing issues and must not invoke the reconciliation helper.' \
   'The default scout may close existing issues.'
 
 assert_rejected \
-  "scout reconciliation close re-query" \
+  "scout executable reconciliation path" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
-  'Immediately before any authorized reconciliation close, repeat the open-issue and open-PR queries, rebuild the duplicate-equivalence set, and recompute the canonical ordering.' \
-  'Reuse earlier query results before a reconciliation close.'
+  '`node scripts\/reconcile-scout-duplicates.mjs --repo <owner\/repository> --issues <number,number,...> --authorize-reconciliation` is the only allowed mutation path' \
+  'manual gh commands are an allowed mutation path'
 
 assert_rejected \
   "scout duplicate cycle fail-safe" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
-  'Detect direct and transitive duplicate cycles before mutating any issue; if a cycle exists, close no issue and report the cycle for maintainer review.' \
+  'It detects direct and transitive duplicate cycles before mutating any issue' \
   'Close every issue in a duplicate cycle.'
 
 assert_rejected \
@@ -369,13 +372,13 @@ assert_rejected \
 assert_rejected \
   "scout template existing-issue mutation boundary" \
   "onboarding/automations/scout.prompt.template.md" \
-  'The default scout is not authorized to close, reopen, or relabel existing' \
+  'issues and must not invoke a reconciliation helper.' \
   'The default scout may close, reopen, or relabel existing'
 
 assert_rejected \
   "scout template duplicate cycle fail-safe" \
   "onboarding/automations/scout.prompt.template.md" \
-  'duplicate cycles before mutating any issue; if a cycle exists, close no issue' \
+  'every close, detects direct and transitive cycles before mutation, and fails' \
   'duplicate cycles after mutating issues; close every issue'
 
 assert_rejected \
@@ -459,7 +462,7 @@ assert_rejected \
 assert_rejected \
   "scout documentation reconciliation re-query" \
   "docs/repo-improvement-scout.md" \
-  'Immediately before an authorized close, the scout re-queries' \
+  'immediately before every close.' \
   'The scout reuses stale results before an authorized close'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"
@@ -484,3 +487,4 @@ assert_append_rejected \
 
 echo "Automation prompt contract mutations are rejected."
 bash "${repo_root}/onboarding/scripts/test-scout-fleet-contract.sh"
+node "${repo_root}/scripts/test-reconcile-scout-duplicates.mjs"

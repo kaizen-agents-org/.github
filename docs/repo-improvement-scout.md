@@ -90,14 +90,20 @@ the exact work suppresses creation of another issue. Duplicate relationships
 point only from duplicate to canonical, and the canonical issue is never closed
 as a duplicate.
 
-Normal scout runs do not close, reopen, or relabel existing issues. Duplicate
-reconciliation requires explicit authorization for a named repository, issue
-set, and action. Immediately before an authorized close, the scout re-queries
-open issues and pull requests, reconstructs the equivalence set, and recomputes
-the canonical issue. Failed queries, changed membership, a non-open canonical
-issue, or a direct or transitive duplicate cycle make the reconciliation fail
-safe without closing anything. Reconciliation must always preserve one open
-canonical issue.
+Normal scout runs do not close, reopen, or relabel existing issues and do not
+invoke reconciliation. Duplicate reconciliation requires explicit
+authorization for a named repository, issue set, and action. The managed
+organization scout must use `scripts/reconcile-scout-duplicates.mjs` as its
+only existing-issue mutation path; manual `gh issue` mutations are forbidden.
+The helper re-queries current issue state and recomputes the canonical issue
+immediately before every close. Failed queries, changed membership, a non-open
+canonical issue, or a direct or transitive duplicate cycle make reconciliation
+fail safe without closing anything. If every candidate is already closed, an
+authorized run reopens the deterministically selected canonical issue before
+linking the remaining closed duplicates. Repeated and concurrent runs are
+idempotent and preserve the same one-way canonical relationship. Rendered
+opt-in scouts have no reconciliation mutation path and report duplicates for
+maintainer review.
 
 ## Safety Boundaries
 

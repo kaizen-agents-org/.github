@@ -61,16 +61,16 @@ issue. Duplicate relations must point one way, from each duplicate to the
 canonical issue; never close the canonical issue as a duplicate.
 
 The default scout is not authorized to close, reopen, or relabel existing
-issues. It may reconcile existing duplicate issues only when the current run
-has explicit authorization that names the target repository, issue set, and
-permitted reconciliation action. Immediately before any authorized
-reconciliation close, repeat the open-issue and open-pull-request queries,
-rebuild the duplicate-equivalence set, and recompute the canonical ordering. If
-a query fails, the set changed, or the intended canonical issue is no longer
-open, perform no close and report the conflict. Detect direct and transitive
-duplicate cycles before mutating any issue; if a cycle exists, close no issue
-and report the cycle for maintainer review. Reconciliation must never leave the
-equivalence set without one open canonical issue.
+issues and must not invoke a reconciliation helper. A rendered opt-in scout has
+no existing-issue mutation path; report duplicates for maintainer review.
+Equivalent reconciliation is permitted only from the managed organization
+scout when explicitly authorized and only through the source-managed
+`scripts/reconcile-scout-duplicates.mjs` helper. Never issue manual `gh issue
+close`, `reopen`, `comment`, or `edit` commands for duplicate reconciliation.
+That helper re-queries and recomputes the canonical ordering immediately before
+every close, detects direct and transitive cycles before mutation, and fails
+without closing when state changes or a cycle exists. Reconciliation must never
+leave the equivalence set without one open canonical issue.
 
 Create no more than `{{CREATION_LIMIT}}` issues in one run. Additional findings
 remain report-only. Never create `[monitor]` or `[readiness-review]` issues.
