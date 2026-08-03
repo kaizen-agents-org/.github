@@ -126,9 +126,10 @@ fi
 # 5. --remove-toolchain removes the checkouts and the global links.
 home=$(seed_home home-toolchain)
 prefix="$work/npmprefix"
-mkdir -p "$prefix/lib/node_modules/@kaizen-agents" "$prefix/lib/node_modules/@verifier" "$work/target"
-ln -s "$work/target" "$prefix/lib/node_modules/kaizen-loop"
-ln -s "$work/target" "$prefix/lib/node_modules/@verifier/core"
+mkdir -p "$prefix/lib/node_modules/@kaizen-agents" "$prefix/lib/node_modules/@verifier"
+mkdir -p "$home/toolchain/kaizen-loop" "$home/toolchain/verifier/packages/core"
+ln -s "$home/toolchain/kaizen-loop" "$prefix/lib/node_modules/kaizen-loop"
+ln -s "$home/toolchain/verifier/packages/core" "$prefix/lib/node_modules/@verifier/core"
 KAIZEN_TEST_LOG="$work/log-tc"; : > "$KAIZEN_TEST_LOG"
 export KAIZEN_TEST_LOG
 if KAIZEN_HOME="$home" KAIZEN_TEST_NPM_PREFIX="$prefix" PATH="$bin:$PATH" \
@@ -142,9 +143,6 @@ if KAIZEN_HOME="$home" KAIZEN_TEST_NPM_PREFIX="$prefix" PATH="$bin:$PATH" \
   else
     pass "--remove-toolchain removes the global links"
   fi
-  [ -d "$work/target" ] \
-    && pass "removing a link does not remove what it pointed at" \
-    || fail "removing a global link deleted the checkout it targeted"
 else
   fail "--remove-toolchain run failed: $(cat "$work/out5")"
 fi
@@ -171,7 +169,7 @@ if KAIZEN_HOME="$home" PATH="$bin:$PATH" \
   else
     fail "a workspace outside KAIZEN_HOME was deleted"
   fi
-  grep -q "workspace is outside" "$work/out6" \
+  grep -q "resolves outside" "$work/out6" \
     && pass "the preserved workspace is reported" \
     || fail "preserving the outside workspace was silent"
 else
@@ -213,6 +211,87 @@ else
     && pass "the refused run changed nothing" \
     || fail "the refused run still removed the registry entry"
 fi
+
+# 10. A slug containing .. must not escape KAIZEN_HOME. A textual prefix check
+#     passes for "$home/workspaces/../../victim", which resolves outside the
+#     home and would then be deleted.
+home=$(seed_home home-traversal)
+mkdir -p "$work/victim"
+printf 'must survive\n' > "$work/victim/data.txt"
+victim_name=$(basename "$work/victim")
+KAIZEN_TEST_LOG="$work/log-trav"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+KAIZEN_HOME="$home" PATH="$bin:$PATH" \
+  sh "$uninstaller" --project "../../$victim_name" --yes >"$work/out10" 2>&1 || true
+if [ -f "$work/victim/data.txt" ]; then
+  pass "a slug with .. cannot delete a directory outside KAIZEN_HOME"
+else
+  fail "path traversal via --project deleted an outside directory"
+fi
+grep -q "resolves outside" "$work/out10" \
+  && pass "the escaped path is reported" \
+  || fail "the traversal attempt was silent"
+
+# 11. Without kaizen on PATH the scheduled jobs cannot be stopped, so the run
+#     must abort rather than delete the state that identifies them and report
+#     success while automation keeps firing.
+home=$(seed_home home-nokaizen)
+nokaizen="$work/bin-nokaizen"
+mkdir -p "$nokaizen"
+cp "$bin/npm" "$nokaizen/npm"
+# node is a hard prerequisite checked before anything else, so keep it
+# reachable; this fixture is about kaizen being absent, not node.
+ln -sf "$(command -v node)" "$nokaizen/node"
+KAIZEN_TEST_LOG="$work/log-nok"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if KAIZEN_HOME="$home" PATH="$nokaizen:/usr/bin:/bin" \
+     sh "$uninstaller" --project example-org-demo --yes >"$work/out11" 2>&1; then
+  fail "the uninstall reported success without stopping scheduled jobs"
+else
+  grep -q "kaizen is not on PATH" "$work/out11" \
+    && pass "a missing kaizen aborts the uninstall" \
+    || fail "the abort message was missing"
+  if has_project "$home" example-org-demo && [ -d "$home/workspaces/example-org-demo" ]; then
+    pass "the aborted run left local state intact"
+  else
+    fail "the aborted run still discarded local state"
+  fi
+fi
+
+# 12. --remove-toolchain must not unlink a package someone relinked to their
+#     own checkout after onboarding; the package name alone does not make the
+#     link ours.
+home=$(seed_home home-foreign)
+prefix2="$work/npmprefix-foreign"
+mkdir -p "$prefix2/lib/node_modules" "$work/their-own-checkout"
+ln -s "$work/their-own-checkout" "$prefix2/lib/node_modules/kaizen-loop"
+KAIZEN_TEST_LOG="$work/log-foreign"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if KAIZEN_HOME="$home" KAIZEN_TEST_NPM_PREFIX="$prefix2" PATH="$bin:$PATH" \
+     sh "$uninstaller" --project example-org-demo --yes --remove-toolchain >"$work/out12" 2>&1; then
+  if [ -L "$prefix2/lib/node_modules/kaizen-loop" ]; then
+    pass "a global link pointing outside this toolchain is kept"
+  else
+    fail "--remove-toolchain unlinked a package it does not own"
+  fi
+  grep -q "points outside this toolchain" "$work/out12" \
+    && pass "keeping the foreign link is reported" \
+    || fail "keeping the foreign link was silent"
+else
+  fail "--remove-toolchain with a foreign link failed: $(cat "$work/out12")"
+fi
+
+# 13. The reported cleanup commands must not tell an adopter to delete
+#     directories wholesale; a repository can have had its own skills/ before
+#     onboarding vendored into it.
+if grep -q "git rm -r skills" "$work/out12"; then
+  fail "the notes still recommend removing the whole skills directory"
+else
+  pass "vendored skills are derived from the manifest, not removed wholesale"
+fi
+grep -q "skills-manifest.json" "$work/out12" \
+  && pass "the notes point at the manifest for the vendored file list" \
+  || fail "the manifest-derived removal command is missing"
 
 echo
 if [ "$failures" -gt 0 ]; then

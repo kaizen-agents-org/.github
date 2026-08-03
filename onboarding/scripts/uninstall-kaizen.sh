@@ -134,13 +134,28 @@ if [ "$dry_run" -eq 0 ]; then
 
   # Reuse the CLI rather than reimplementing plist and crontab handling; it
   # already knows both providers and how to stop a run in progress.
-  if command -v kaizen >/dev/null 2>&1; then
-    kaizen scheduler disable --project "$project" >/dev/null 2>&1 \
-      && say "  removed scheduled jobs" \
-      || say "  no scheduled jobs to remove (or none registered)"
+  # Stop execution before discarding the state that identifies it. If the jobs
+  # cannot be removed, tearing down the registry entry and workspace would
+  # leave automation running against a project nothing knows about any more,
+  # and report success while doing it.
+  if ! command -v kaizen >/dev/null 2>&1; then
+    cat >&2 <<EOF
+error: kaizen is not on PATH, so scheduled jobs cannot be removed.
+
+  Stopping before touching local state. Removing the registry entry and
+  workspace now would leave launchd or cron jobs running for a project that no
+  longer exists locally, behind a successful-looking uninstall.
+
+  Put the toolchain back on PATH and re-run, or stop the jobs first:
+
+    kaizen scheduler disable --project $project
+EOF
+    exit 1
+  fi
+  if kaizen scheduler disable --project "$project" >/dev/null 2>&1; then
+    say "  removed scheduled jobs"
   else
-    say "  warning: kaizen is not on PATH; scheduled jobs were NOT removed." >&2
-    say "  warning: run 'kaizen scheduler disable --project $project' once it is." >&2
+    say "  no scheduled jobs to remove (or none registered)"
   fi
 
   if [ -f "$registry" ]; then
@@ -162,28 +177,48 @@ if [ "$dry_run" -eq 0 ]; then
     # Only remove a workspace that sits under this KAIZEN_HOME. A registry can
     # point anywhere, and deleting an arbitrary path because a JSON file named
     # it would be far worse than leaving one behind.
-    case "$workspace" in
-      "$kaizen_home"/*)
-        rm -rf "$workspace"
-        say "  removed the workspace"
-        ;;
-      *)
-        say "  warning: workspace is outside $kaizen_home; left in place:" >&2
-        say "  warning:   $workspace" >&2
-        ;;
-    esac
+    #
+    # Compare canonical paths. A textual prefix check passes for
+    # "$kaizen_home/workspaces/../../elsewhere", which resolves outside the home
+    # and would then be deleted.
+    canonical_workspace=$(cd "$workspace" 2>/dev/null && pwd -P || true)
+    canonical_home=$(cd "$kaizen_home" 2>/dev/null && pwd -P || true)
+    inside=0
+    if [ -n "$canonical_workspace" ] && [ -n "$canonical_home" ]; then
+      case "$canonical_workspace" in
+        "$canonical_home"/*) inside=1 ;;
+      esac
+    fi
+    if [ "$inside" -eq 1 ]; then
+      rm -rf "$canonical_workspace"
+      say "  removed the workspace"
+    else
+      say "  warning: workspace resolves outside $kaizen_home; left in place:" >&2
+      say "  warning:   ${canonical_workspace:-$workspace}" >&2
+    fi
   fi
 
   if [ "$remove_toolchain" -eq 1 ]; then
+    toolchain_root=$(cd "$kaizen_home/toolchain" 2>/dev/null && pwd -P || true)
     for pkg in kaizen-loop @kaizen-agents/builder-agent @verifier/core; do
       link="$(npm prefix -g 2>/dev/null)/lib/node_modules/$pkg"
-      if [ -L "$link" ]; then
-        rm -f "$link"
-        say "  removed the global link for $pkg"
-      fi
+      [ -L "$link" ] || continue
+      # Only unlink what points into this toolchain. Someone who relinked a
+      # package to their own checkout after onboarding should keep that link;
+      # the name alone does not make it ours.
+      target=$(cd "$link" 2>/dev/null && pwd -P || true)
+      case "${target:-}" in
+        "$toolchain_root"/*)
+          rm -f "$link"
+          say "  removed the global link for $pkg"
+          ;;
+        *)
+          say "  kept the global link for $pkg; it points outside this toolchain"
+          ;;
+      esac
     done
-    if [ -d "$kaizen_home/toolchain" ]; then
-      rm -rf "$kaizen_home/toolchain"
+    if [ -n "$toolchain_root" ]; then
+      rm -rf "$toolchain_root"
       say "  removed the toolchain checkouts"
     fi
   fi
@@ -197,7 +232,17 @@ Left in place, because they are yours to remove:
   commit you author and review:
 
     git rm -r .kaizen .github/ISSUE_TEMPLATE/kaizen.yml
-    git rm -r skills docs/smoke-runs   # if onboarding vendored them
+
+  Vendored skills, if onboarding added them. Remove only the files the manifest
+  records, since your repository may have had its own skills/ beforehand:
+
+    node -e "const m=require('./skills/skills-manifest.json');\\
+      console.log(Object.keys(m.files).join(' '))" | xargs git rm
+    git rm skills/skills-manifest.json
+
+  Smoke artifacts, which are the JSON files the smoke pass wrote:
+
+    git rm docs/smoke-runs/*.json   # review the directory first
 
   Repository labels. Deleting a label strips it from every issue that ever
   carried it, including closed ones, so this is deliberate rather than implied:

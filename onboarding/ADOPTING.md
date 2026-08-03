@@ -176,6 +176,11 @@ onboarding/scripts/uninstall-kaizen.sh
 It stops the scheduled jobs and removes this project's local state — its
 registry entry and its workspace under `~/.kaizen/`. Re-running is safe.
 
+It needs `kaizen` on `PATH` to stop the jobs, and refuses to run without it.
+Removing the registry entry while launchd or cron still hold jobs would leave
+automation firing for a project nothing knows about, behind a successful-looking
+uninstall.
+
 **It deliberately leaves three things alone**, and prints the exact commands
 for each:
 
