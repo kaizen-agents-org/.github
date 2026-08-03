@@ -133,7 +133,9 @@ onboarding/                     # kaizen-agents-org/.github リポジトリ直�
 3 コンポーネント(kaizen-loop / builder-agent / verifier)は npm 未公開で、現状の導入手段はローカル checkout 前提である。設計:
 
 1. **各リポジトリにリリースタグ(`v0.x`)を導入**し、互換の取れた組を `onboarding/versions.json` に記録する(`{"kaizen-loop": "v0.9.0", "builder-agent": "v0.7.2", "verifier": "v0.5.1"}`)。
-2. Stage 1 のインストールは `npm install -g "github:kaizen-agents-org/<repo>#<tag>"` を versions.json に従って行う 1 スクリプト(`install-kaizen.sh`)に包む。
+2. Stage 1 のインストールは versions.json に従う 1 スクリプト(`install-kaizen.sh`)に包む。
+
+   > **実装時の修正(2026-08-03)**: 当初ここは `npm install -g "github:kaizen-agents-org/<repo>#<tag>"` を想定していたが、この方式は使えない。npm は git 依存を入れる際に devDependencies を入れて `prepare` を実行し、**その結果をパックする**ため、タグにコミット済みのビルド成果物が破棄される。ビルド済み `dist/` を同梱するコンポーネントは `dist/` が空・`bin` が壊れた状態で入る。実装では 3 コンポーネントとも「pin したタグを clone → ビルド → link」に統一した。
 3. Stage 2 以降で npm 公開(または GHCR コンテナイメージ)に移行する。**インストール手段は versions.json の後ろに隠蔽されているので、移行しても導入手順は変わらない。**
 
 ### 6.7 GitHub Actions reusable workflow(Stage 2 = Phase C-1、kaizen-loop#199(旧 kaizen-loop#173)の詳細化)

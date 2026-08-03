@@ -37,11 +37,18 @@ case "\$*" in
     done
     ;;
   *clone*)
-    # Stand in for the verifier checkout so the build path has a directory to
-    # enter, the same as a real clone would leave behind.
+    # Stand in for a real clone: the installer enters the checkout, reads its
+    # package name to find any conflicting global link, and links from either
+    # the root or packages/core, so every one of those paths needs a manifest.
     target=''
     for arg in "\$@"; do target=\$arg; done
-    [ -n "\$target" ] && mkdir -p "\$target/packages/core" && mkdir -p "\$target/.git"
+    if [ -n "\$target" ]; then
+      mkdir -p "\$target/.git" "\$target/packages/core"
+      name=\$(basename "\$target")
+      printf '{"name":"%s","version":"0.0.0"}\n' "\$name" > "\$target/package.json"
+      printf '{"name":"@%s/core","version":"0.0.0"}\n' "\$name" \\
+        > "\$target/packages/core/package.json"
+    fi
     ;;
 esac
 exit 0
@@ -49,6 +56,11 @@ EOF
   cat > "$bin/npm" <<'EOF'
 #!/bin/sh
 printf 'npm %s\n' "$*" >> "$KAIZEN_TEST_NPM_LOG"
+# The installer asks npm where global packages live so it can drop a
+# conflicting link; point that at a scratch prefix the fixtures own.
+case "$*" in
+  "prefix -g") printf '%s\n' "${KAIZEN_TEST_NPM_PREFIX:-/nonexistent}" ;;
+esac
 EOF
   cat > "$bin/pnpm" <<'EOF'
 #!/bin/sh
@@ -172,14 +184,18 @@ log="$work/npm-install.log"
 : > "$log"
 if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home" PATH="$bin:$PATH" \
      sh "$installer" --manifest "$manifest" >"$work/out6" 2>&1; then
-  if grep -q "install -g github:kaizen-agents-org/kaizen-loop#v0.1.0" "$log" &&
-     grep -q "install -g github:kaizen-agents-org/builder-agent#v0.1.0" "$log"; then
-    pass "a real install runs the pinned GitHub installs"
+  # Every component is built from a pinned checkout: `npm ci && npm run build`
+  # for the npm components, `pnpm install --frozen-lockfile && pnpm build` for
+  # the workspace one, then `npm link`.
+  if [ "$(grep -c '^npm ci$' "$log")" -eq 2 ] &&
+     [ "$(grep -c '^npm run build$' "$log")" -eq 2 ] &&
+     [ "$(grep -c '^npm link$' "$log")" -eq 3 ]; then
+    pass "every component is built from its pinned checkout and linked"
   else
-    fail "expected component installs did not run (log: $(tr '\n' '|' < "$log"))"
+    fail "expected build commands did not run (log: $(tr '\n' '|' < "$log"))"
   fi
   if grep -q "pnpm install --frozen-lockfile" "$log" && grep -q "pnpm build" "$log"; then
-    pass "verifier is built from its pinned checkout instead of npm install -g"
+    pass "the workspace component uses its own package manager"
   else
     fail "verifier build path did not run"
   fi
@@ -190,57 +206,119 @@ else
   fail "a real install failed: $(cat "$work/out6")"
 fi
 
-# 7. The already-installed check compares whole versions. A substring match
-#    would read an installed 10.1.0 or 20.1.0 as satisfying a pinned v0.1.0 and
-#    silently skip a required update.
-skipbin="$work/bin-skip"
-mkdir -p "$skipbin"
-cp "$bin/git" "$skipbin/git"
-cp "$bin/npm" "$skipbin/npm"
-cp "$bin/pnpm" "$skipbin/pnpm"
-cat > "$skipbin/kaizen" <<'EOF'
-#!/bin/sh
-printf '10.1.0\n'
-EOF
-cat > "$skipbin/builder-agent" <<'EOF'
-#!/bin/sh
-printf '10.1.0\n'
-EOF
-chmod +x "$skipbin/kaizen" "$skipbin/builder-agent"
-log="$work/npm-skip.log"
+# 7. A stale stamp does not satisfy the pin. The skip decision reads the
+#    recorded version of each pinned checkout, so a checkout left at an older
+#    release must be rebuilt rather than silently kept.
+staleroot="$work/home-stale"
+mkdir -p "$staleroot/toolchain/kaizen-loop"
+printf 'v0.0.9\n' > "$staleroot/toolchain/kaizen-loop/.installed-version"
+log="$work/npm-stale.log"
 : > "$log"
-if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home-skip" PATH="$skipbin:$PATH" \
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$staleroot" PATH="$bin:$PATH" \
      sh "$installer" --manifest "$manifest" >"$work/out7" 2>&1; then
-  if grep -q "install -g github:kaizen-agents-org/kaizen-loop#v0.1.0" "$log"; then
-    pass "an installed 10.1.0 does not satisfy a pinned v0.1.0"
+  if grep -q "installing kaizen-loop v0.1.0 from source" "$work/out7"; then
+    pass "a checkout stamped with an older release is reinstalled"
   else
-    fail "installed 10.1.0 was treated as already at v0.1.0"
+    fail "a stale stamp was treated as already current"
+  fi
+  if [ "$(cat "$staleroot/toolchain/kaizen-loop/.installed-version")" = "v0.1.0" ]; then
+    pass "the stamp is updated to the pinned version"
+  else
+    fail "the stamp was not updated after reinstall"
   fi
 else
-  fail "install with a mismatched installed version failed: $(cat "$work/out7")"
+  fail "install over a stale stamp failed: $(cat "$work/out7")"
 fi
 
-# 8. A matching installed version is skipped, so re-running is cheap.
-cat > "$skipbin/kaizen" <<'EOF'
-#!/bin/sh
-printf '0.1.0\n'
-EOF
-cat > "$skipbin/builder-agent" <<'EOF'
-#!/bin/sh
-printf '0.1.0\n'
-EOF
-chmod +x "$skipbin/kaizen" "$skipbin/builder-agent"
+# 8. A current stamp with a global link that really points at this checkout is
+#    skipped, which is what makes re-running cheap and makes "re-run to update"
+#    viable as the documented update path.
+matchprefix="$work/npmprefix-match"
+mkdir -p "$matchprefix/lib/node_modules"
+for c in kaizen-loop builder-agent; do
+  ln -sfn "$staleroot/toolchain/$c" "$matchprefix/lib/node_modules/$c"
+done
+mkdir -p "$matchprefix/lib/node_modules/@verifier"
+ln -sfn "$staleroot/toolchain/verifier/packages/core" \
+  "$matchprefix/lib/node_modules/@verifier/core"
 log="$work/npm-match.log"
 : > "$log"
-if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home-match" PATH="$skipbin:$PATH" \
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_TEST_NPM_PREFIX="$matchprefix" \
+   KAIZEN_HOME="$staleroot" PATH="$bin:$PATH" \
      sh "$installer" --manifest "$manifest" >"$work/out8" 2>&1; then
-  if grep -q "install -g github:kaizen-agents-org/kaizen-loop" "$log"; then
-    fail "an already-current component was reinstalled"
+  if grep -q "kaizen-loop already at v0.1.0; skipping" "$work/out8"; then
+    pass "an already-current component is skipped on re-run"
   else
-    pass "an already-current component is skipped"
+    fail "an already-current component was reinstalled"
+  fi
+  # `npm prefix -g` is a read-only query used to locate the global link, so it
+  # is expected here; no build or link command should run.
+  if grep -qE '^(npm ci|npm run build|npm link|pnpm )' "$log"; then
+    fail "a fully current re-run still built or linked: $(tr "\n" "|" < "$log")"
+  else
+    pass "a fully current re-run runs no build or link commands"
   fi
 else
-  fail "install with matching versions failed: $(cat "$work/out8")"
+  fail "re-run with current stamps failed: $(cat "$work/out8")"
+fi
+
+# 9. A current stamp is NOT enough to skip when the global link points at some
+#    other checkout. That is the stale-link failure this script exists to
+#    repair, and a plain re-run must fix it rather than keep using the wrong
+#    CLI until someone discovers --force.
+linkroot="$work/npmprefix-stale"
+mkdir -p "$linkroot/lib/node_modules" "$work/someone-elses-checkout"
+staleroot2="$work/home-stalelink"
+mkdir -p "$staleroot2/toolchain/kaizen-loop"
+printf 'v0.1.0\n' > "$staleroot2/toolchain/kaizen-loop/.installed-version"
+printf '{"name":"kaizen-loop","version":"0.1.0"}\n' \
+  > "$staleroot2/toolchain/kaizen-loop/package.json"
+ln -s "$work/someone-elses-checkout" "$linkroot/lib/node_modules/kaizen-loop"
+probebin="$work/bin-probe"
+mkdir -p "$probebin"
+cp "$bin/git" "$probebin/git"
+cp "$bin/npm" "$probebin/npm"
+cp "$bin/pnpm" "$probebin/pnpm"
+printf '#!/bin/sh\nprintf "0.1.0\\n"\n' > "$probebin/kaizen"
+chmod +x "$probebin/kaizen"
+log="$work/npm-stalelink.log"
+: > "$log"
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_TEST_NPM_PREFIX="$linkroot" \
+   KAIZEN_HOME="$staleroot2" PATH="$probebin:$PATH" \
+     sh "$installer" --manifest "$manifest" >"$work/out9" 2>&1; then
+  if grep -q "kaizen-loop already at v0.1.0; skipping" "$work/out9"; then
+    fail "a component whose global link points elsewhere was skipped"
+  else
+    pass "a foreign global link prevents the skip and forces a reinstall"
+  fi
+else
+  fail "install over a stale global link failed: $(cat "$work/out9")"
+fi
+
+# 10. A leftover real directory from an older `npm install -g github:...` must
+#     be replaced too, not just a symlink; that is the migration path from the
+#     previous install mechanism.
+linkroot2="$work/npmprefix-realdir"
+mkdir -p "$linkroot2/lib/node_modules/kaizen-loop/dist"
+printf '{"name":"kaizen-loop","version":"0.0.1"}\n' \
+  > "$linkroot2/lib/node_modules/kaizen-loop/package.json"
+realdirroot="$work/home-realdir"
+mkdir -p "$realdirroot/toolchain/kaizen-loop"
+printf 'v0.1.0\n' > "$realdirroot/toolchain/kaizen-loop/.installed-version"
+printf '{"name":"kaizen-loop","version":"0.1.0"}\n' \
+  > "$realdirroot/toolchain/kaizen-loop/package.json"
+log="$work/npm-realdir.log"
+: > "$log"
+if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_TEST_NPM_PREFIX="$linkroot2" \
+   KAIZEN_HOME="$realdirroot" PATH="$probebin:$PATH" \
+     sh "$installer" --manifest "$manifest" >"$work/out10" 2>&1; then
+  if grep -q "kaizen-loop already at v0.1.0; skipping" "$work/out10"; then
+    fail "a leftover real global install was treated as current"
+  else
+    pass "a leftover real global install is not mistaken for the pinned one"
+  fi
+else
+  fail "install over a leftover global install failed: $(cat "$work/out10")"
 fi
 
 echo
