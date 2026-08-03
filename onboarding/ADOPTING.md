@@ -108,12 +108,17 @@ from your checkout, so an update can never reset your working tree. Set
 `KAIZEN_RUNTIME_REF` to the tag pinned in `versions.json` so scheduled runs stay
 on released code:
 
+Read it from the manifest rather than typing a version, so it cannot drift out
+of step with the pinned set:
+
 ```sh
-export KAIZEN_RUNTIME_REF=v0.1.0
+export KAIZEN_RUNTIME_REF=$(node -p "require('./onboarding/versions.json')['kaizen-loop']")
 ```
 
 Without it the runtime follows `main`, which is what the Kaizen organization's
-own repositories want and almost certainly not what you want.
+own repositories want and almost certainly not what you want. Pinning it to a
+superseded tag is worse than either: `v0.1.0` in particular ships a
+non-executable CLI.
 
 ## Staying up to date
 
