@@ -96,14 +96,19 @@ authorization for a named repository, issue set, and action. The managed
 organization scout must use `scripts/reconcile-scout-duplicates.mjs` as its
 only existing-issue mutation path; manual `gh issue` mutations are forbidden.
 The helper re-queries current issue state and recomputes the canonical issue
-immediately before every close. Failed queries, changed membership, a non-open
-canonical issue, or a direct or transitive duplicate cycle make reconciliation
-fail safe without closing anything. If every candidate is already closed, an
-authorized run reopens the deterministically selected canonical issue before
-linking the remaining closed duplicates. Repeated and concurrent runs are
-idempotent and preserve the same one-way canonical relationship. Rendered
-opt-in scouts have no reconciliation mutation path and report duplicates for
-maintainer review.
+immediately before every close. Direct or transitive legacy cycles are
+repairable only when every historical relation remains inside the complete
+explicitly authorized candidate set. The helper preserves those comments, then
+writes an authoritative reconciliation marker to every candidate; the newest
+consistent marker state overrides legacy relations. If every candidate is
+already closed, an authorized run reopens the deterministically selected
+canonical issue before writing the markers and linking the remaining closed
+duplicates. Failed queries, missing candidates, out-of-scope relations,
+conflicting current markers, relations added after the current marker, or
+canonical drift fail safe without closing anything. Repeated and concurrent
+runs are idempotent and preserve the same one-way canonical relationship.
+Rendered opt-in scouts have no reconciliation mutation path and report
+duplicates for maintainer review.
 
 ## Safety Boundaries
 

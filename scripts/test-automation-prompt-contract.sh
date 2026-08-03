@@ -130,10 +130,10 @@ assert_rejected \
   'manual gh commands are an allowed mutation path'
 
 assert_rejected \
-  "scout duplicate cycle fail-safe" \
+  "scout cycle supersession marker" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
-  'It detects direct and transitive duplicate cycles before mutating any issue' \
-  'Close every issue in a duplicate cycle.'
+  'writes an unambiguous current reconciliation marker on every candidate that supersedes the legacy relations without deleting history.' \
+  'closes every issue in a duplicate cycle without recording current state.'
 
 assert_rejected \
   "scout preserves open canonical issue" \
@@ -378,7 +378,7 @@ assert_rejected \
 assert_rejected \
   "scout template duplicate cycle fail-safe" \
   "onboarding/automations/scout.prompt.template.md" \
-  'every close, detects direct and transitive cycles before mutation, and fails' \
+  'history only by writing the same unambiguous current reconciliation state to' \
   'duplicate cycles after mutating issues; close every issue'
 
 assert_rejected \

@@ -15,6 +15,12 @@ function issue(number, state, createdAt, targets = []) {
   };
 }
 
+function reconciliationComment(candidates, canonical, role) {
+  return {
+    body: `<!-- kaizen-scout-reconciliation: candidates=${candidates}; canonical=#${canonical}; role=${role} -->`,
+  };
+}
+
 function createRunner(initialIssues) {
   const issues = new Map(initialIssues.map((candidate) => [candidate.number, structuredClone(candidate)]));
   const mutations = [];
@@ -85,7 +91,8 @@ const repository = 'kaizen-agents-org/verifier';
   });
   assert.equal(result.canonical, 197, 'open state wins, then equal timestamps use the lowest number');
   assert.deepEqual(result.closed, [198]);
-  assert.deepEqual(result.linked, [196]);
+  assert.deepEqual(result.marked, [197, 196, 198]);
+  assert.deepEqual(result.skipped, [196]);
   assert.equal(runner.issues.get(197).state, 'OPEN');
 }
 
@@ -103,7 +110,7 @@ const repository = 'kaizen-agents-org/verifier';
   assert.equal(result.canonical, 10);
   assert.equal(result.reopened, true);
   assert.equal(runner.issues.get(10).state, 'OPEN');
-  assert.deepEqual(runner.mutations, ['reopen:10', 'comment:20']);
+  assert.deepEqual(runner.mutations, ['reopen:10', 'comment:10', 'comment:20']);
 }
 
 {
@@ -125,11 +132,19 @@ const repository = 'kaizen-agents-org/verifier';
     issue(197, 'CLOSED', '2026-08-01T00:00:00Z', [198]),
     issue(198, 'CLOSED', '2026-08-02T00:00:00Z', [197]),
   ]);
-  await assert.rejects(
-    reconcileScoutDuplicates({ repo: repository, issueNumbers: [197, 198], authorized: true, runGh: runner.runGh }),
-    /duplicate cycle detected/,
-  );
-  assert.deepEqual(runner.mutations, [], 'cycle detection must precede every mutation');
+  const result = await reconcileScoutDuplicates({
+    repo: repository,
+    issueNumbers: [198, 197],
+    authorized: true,
+    runGh: runner.runGh,
+  });
+  assert.equal(result.canonical, 197, 'the live mutual-closure incident must reopen its deterministic canonical');
+  assert.equal(result.reopened, true);
+  assert.equal(runner.issues.get(197).state, 'OPEN');
+  assert.equal(runner.issues.get(198).state, 'CLOSED');
+  assert(runner.issues.get(197).comments.some(({ body }) => /role=canonical/.test(body)));
+  assert(runner.issues.get(198).comments.some(({ body }) => /role=duplicate/.test(body)));
+  assert(runner.issues.get(197).comments.some(({ body }) => /canonical=#198/.test(body)), 'legacy history is preserved');
 }
 
 {
@@ -138,11 +153,52 @@ const repository = 'kaizen-agents-org/verifier';
     issue(2, 'OPEN', '2026-08-02T00:00:00Z', [3]),
     issue(3, 'OPEN', '2026-08-03T00:00:00Z', [1]),
   ]);
+  const result = await reconcileScoutDuplicates({
+    repo: repository,
+    issueNumbers: [3, 2, 1],
+    authorized: true,
+    runGh: runner.runGh,
+  });
+  assert.equal(result.canonical, 1);
+  assert.deepEqual(result.closed.sort((left, right) => left - right), [2, 3]);
+  assert.equal(runner.issues.get(1).state, 'OPEN');
+}
+
+{
+  const runner = createRunner([
+    issue(1, 'OPEN', '2026-08-01T00:00:00Z', [99]),
+    issue(2, 'OPEN', '2026-08-02T00:00:00Z'),
+  ]);
   await assert.rejects(
-    reconcileScoutDuplicates({ repo: repository, issueNumbers: [1, 2, 3], authorized: true, runGh: runner.runGh }),
-    /duplicate cycle detected/,
+    reconcileScoutDuplicates({ repo: repository, issueNumbers: [1, 2], authorized: true, runGh: runner.runGh }),
+    /outside the authorized candidate set/,
   );
-  assert.deepEqual(runner.mutations, [], 'transitive cycles must fail without mutation');
+  assert.deepEqual(runner.mutations, [], 'out-of-scope relations remain fail-closed');
+}
+
+{
+  const first = issue(1, 'OPEN', '2026-08-01T00:00:00Z');
+  first.comments.push(reconciliationComment('1,2', 2, 'duplicate'));
+  const runner = createRunner([first, issue(2, 'OPEN', '2026-08-02T00:00:00Z')]);
+  await assert.rejects(
+    reconcileScoutDuplicates({ repo: repository, issueNumbers: [1, 2], authorized: true, runGh: runner.runGh }),
+    /conflicting reconciliation marker/,
+  );
+  assert.deepEqual(runner.mutations, [], 'conflicting current state remains fail-closed');
+}
+
+{
+  const first = issue(1, 'OPEN', '2026-08-01T00:00:00Z');
+  first.comments.push(reconciliationComment('1,2', 1, 'canonical'));
+  first.comments.push({ body: 'Duplicate of #2.' });
+  const second = issue(2, 'CLOSED', '2026-08-02T00:00:00Z');
+  second.comments.push(reconciliationComment('1,2', 1, 'duplicate'));
+  const runner = createRunner([first, second]);
+  await assert.rejects(
+    reconcileScoutDuplicates({ repo: repository, issueNumbers: [1, 2], authorized: true, runGh: runner.runGh }),
+    /unmanaged duplicate relation after its current reconciliation marker/,
+  );
+  assert.deepEqual(runner.mutations, [], 'new unmanaged state cannot be hidden by an older marker');
 }
 
 {
@@ -160,7 +216,7 @@ const repository = 'kaizen-agents-org/verifier';
   };
   await assert.rejects(
     reconcileScoutDuplicates({ repo: repository, issueNumbers: [1, 2], authorized: true, runGh: driftingRunner }),
-    /canonical drift before reconciling/,
+    /canonical drift before writing reconciliation state/,
   );
   assert.deepEqual(runner.mutations, [], 'a fresh pre-close query must stop on canonical drift');
 }

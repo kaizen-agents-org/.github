@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 const markerPattern = /<!--\s*kaizen-scout-duplicate:\s*canonical=#(\d+)\s*-->/gi;
 const duplicateCommentPattern = /(?:^|\n)\s*duplicate\s+of\s+#(\d+)\b/gi;
+const reconciliationPattern = /<!--\s*kaizen-scout-reconciliation:\s*candidates=([0-9,]+);\s*canonical=#(\d+);\s*role=(canonical|duplicate)\s*-->/gi;
 
 function fail(message) {
   throw new Error(message);
@@ -42,20 +43,59 @@ function parseArgs(argv) {
   return options;
 }
 
-function canonicalMarker(number) {
-  return `<!-- kaizen-scout-duplicate: canonical=#${number} -->\nDuplicate of #${number}.`;
+function candidateKey(issueNumbers) {
+  return [...issueNumbers].sort((left, right) => left - right).join(',');
+}
+
+function reconciliationMarker(issueNumber, canonicalNumber, issueNumbers) {
+  const role = issueNumber === canonicalNumber ? 'canonical' : 'duplicate';
+  const marker = `<!-- kaizen-scout-reconciliation: candidates=${candidateKey(issueNumbers)}; canonical=#${canonicalNumber}; role=${role} -->`;
+  return role === 'canonical'
+    ? `${marker}\nCanonical issue for this explicitly authorized duplicate reconciliation.`
+    : `${marker}\nDuplicate of #${canonicalNumber}.`;
+}
+
+function sources(issue) {
+  return [issue.body ?? '', ...(issue.comments ?? []).map((comment) => comment.body ?? '')];
+}
+
+function reconciliationState(issue) {
+  let state;
+  sources(issue).forEach((text, sourceIndex) => {
+    reconciliationPattern.lastIndex = 0;
+    for (let match = reconciliationPattern.exec(text); match; match = reconciliationPattern.exec(text)) {
+      state = {
+        candidateKey: match[1],
+        canonical: Number(match[2]),
+        role: match[3],
+        sourceIndex,
+      };
+    }
+  });
+  return state;
+}
+
+function rawRelationTargets(issue, afterSourceIndex = -1) {
+  const targets = new Set();
+  sources(issue).forEach((text, sourceIndex) => {
+    if (sourceIndex <= afterSourceIndex) return;
+    for (const pattern of [markerPattern, duplicateCommentPattern]) {
+      pattern.lastIndex = 0;
+      for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
+        targets.add(Number(match[1]));
+      }
+    }
+  });
+  return targets;
 }
 
 function relationTargets(issue) {
-  const text = [issue.body ?? '', ...(issue.comments ?? []).map((comment) => comment.body ?? '')].join('\n');
-  const targets = new Set();
-  for (const pattern of [markerPattern, duplicateCommentPattern]) {
-    pattern.lastIndex = 0;
-    for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
-      targets.add(Number(match[1]));
-    }
+  const state = reconciliationState(issue);
+  if (!state) return rawRelationTargets(issue);
+  if (rawRelationTargets(issue, state.sourceIndex).size > 0) {
+    fail(`issue #${issue.number} has an unmanaged duplicate relation after its current reconciliation marker`);
   }
-  return targets;
+  return state.role === 'canonical' ? new Set() : new Set([state.canonical]);
 }
 
 function chooseCanonical(issues) {
@@ -101,6 +141,26 @@ function assertOneWayRelations(issues, canonicalNumber) {
   }
 }
 
+function assertRepairableRelations(issues, canonicalNumber, issueNumbers) {
+  const candidates = new Set(issueNumbers);
+  const expectedKey = candidateKey(issueNumbers);
+  for (const issue of issues) {
+    const outsideTarget = [...rawRelationTargets(issue)].find((target) => !candidates.has(target));
+    if (outsideTarget !== undefined) {
+      fail(`issue #${issue.number} points outside the authorized candidate set to #${outsideTarget}`);
+    }
+    const state = reconciliationState(issue);
+    if (!state) continue;
+    const expectedRole = issue.number === canonicalNumber ? 'canonical' : 'duplicate';
+    if (state.candidateKey !== expectedKey || state.canonical !== canonicalNumber || state.role !== expectedRole) {
+      fail(`issue #${issue.number} has a conflicting reconciliation marker`);
+    }
+    if (rawRelationTargets(issue, state.sourceIndex).size > 0) {
+      fail(`issue #${issue.number} has an unmanaged duplicate relation after its current reconciliation marker`);
+    }
+  }
+}
+
 async function defaultRunGh(args, ghBin = process.env.KAIZEN_SCOUT_GH_BIN ?? 'gh') {
   const { stdout } = await execFileAsync(ghBin, args, { encoding: 'utf8' });
   return stdout;
@@ -133,22 +193,44 @@ export async function reconcileScoutDuplicates({ repo, issueNumbers, authorized 
   }
 
   let current = await fetchAll();
-  assertNoCycle(current);
   let canonical = chooseCanonical(current);
-  assertOneWayRelations(current, canonical.number);
-  const result = { canonical: canonical.number, reopened: false, closed: [], linked: [], skipped: [] };
+  assertRepairableRelations(current, canonical.number, issueNumbers);
+  const result = { canonical: canonical.number, reopened: false, marked: [], closed: [], skipped: [] };
 
   if (current.every((issue) => issue.state === 'CLOSED')) {
     await runGh(['issue', 'reopen', String(canonical.number), '--repo', repo]);
     result.reopened = true;
     current = await fetchAll();
-    assertNoCycle(current);
     canonical = chooseCanonical(current);
     if (canonical.number !== result.canonical || canonical.state !== 'OPEN') {
       fail(`canonical drift after reopen: expected #${result.canonical}`);
     }
-    assertOneWayRelations(current, canonical.number);
+    assertRepairableRelations(current, canonical.number, issueNumbers);
   }
+
+  const markerOrder = [
+    result.canonical,
+    ...issueNumbers.filter((number) => number !== result.canonical).sort((left, right) => left - right),
+  ];
+  for (const issueNumber of markerOrder) {
+    current = await fetchAll();
+    canonical = chooseCanonical(current);
+    if (canonical.number !== result.canonical || canonical.state !== 'OPEN') {
+      fail(`canonical drift before writing reconciliation state for #${issueNumber}`);
+    }
+    assertRepairableRelations(current, canonical.number, issueNumbers);
+    const issue = current.find((candidate) => candidate.number === issueNumber);
+    if (reconciliationState(issue)) continue;
+    await runGh([
+      'issue', 'comment', String(issueNumber), '--repo', repo,
+      '--body', reconciliationMarker(issueNumber, canonical.number, issueNumbers),
+    ]);
+    result.marked.push(issueNumber);
+  }
+
+  current = await fetchAll();
+  assertNoCycle(current);
+  assertOneWayRelations(current, result.canonical);
 
   for (const duplicateNumber of issueNumbers.filter((number) => number !== result.canonical)) {
     // This fetch/recompute is intentionally adjacent to each mutation. Never
@@ -165,11 +247,8 @@ export async function reconcileScoutDuplicates({ repo, issueNumbers, authorized 
     const targets = relationTargets(duplicate);
     const pointsToCanonical = targets.has(canonical.number);
     if (duplicate.state === 'CLOSED') {
-      if (pointsToCanonical) result.skipped.push(duplicateNumber);
-      else {
-        await runGh(['issue', 'comment', String(duplicateNumber), '--repo', repo, '--body', canonicalMarker(canonical.number)]);
-        result.linked.push(duplicateNumber);
-      }
+      if (!pointsToCanonical) fail(`closed duplicate #${duplicateNumber} lacks current canonical state`);
+      result.skipped.push(duplicateNumber);
       continue;
     }
 
@@ -177,7 +256,7 @@ export async function reconcileScoutDuplicates({ repo, issueNumbers, authorized 
       'issue', 'close', String(duplicateNumber), '--repo', repo,
       '--duplicate-of', String(canonical.number),
     ];
-    if (!pointsToCanonical) closeArgs.push('--comment', canonicalMarker(canonical.number));
+    if (!pointsToCanonical) fail(`open duplicate #${duplicateNumber} lacks current canonical state`);
     await runGh(closeArgs);
     result.closed.push(duplicateNumber);
   }

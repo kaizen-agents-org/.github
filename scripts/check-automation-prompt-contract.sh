@@ -92,7 +92,10 @@ require_text "${scout}" 'The default scout is not authorized to close, reopen, o
 require_text "${scout}" '`node scripts/reconcile-scout-duplicates.mjs --repo <owner/repository> --issues <number,number,...> --authorize-reconciliation` is the only allowed mutation path'
 require_text "${scout}" 'never issue manual `gh issue close`, `reopen`, `comment`, or `edit` commands for duplicate reconciliation.'
 require_text "${scout}" 'immediately before every close.'
-require_text "${scout}" 'It detects direct and transitive duplicate cycles before mutating any issue'
+require_text "${scout}" 'detects direct and transitive legacy duplicate cycles'
+require_text "${scout}" 'writes an unambiguous current reconciliation marker on every candidate that supersedes the legacy relations without deleting history.'
+require_text "${scout}" 'If all candidates are closed, it reopens the deterministic canonical issue before writing those markers.'
+require_text "${scout}" 'an out-of-scope relation, a conflicting current marker, an unmanaged relation after the current marker, or canonical drift fails closed without closing an issue.'
 require_text "${scout}" 'Reconciliation must never leave the equivalence set without one open canonical issue.'
 
 require_text "${scout_template}" '<!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->'
@@ -121,9 +124,11 @@ require_text "${scout_template}" 'scout when explicitly authorized and only thro
 require_text "${scout_template}" '`scripts/reconcile-scout-duplicates.mjs` helper.'
 require_text "${scout_template}" 'Never issue manual `gh issue'
 require_text "${scout_template}" 'That helper re-queries and recomputes the canonical ordering immediately before'
-require_text "${scout_template}" 'every close, detects direct and transitive cycles before mutation, and fails'
-require_text "${scout_template}" 'without closing when state changes or a cycle exists. Reconciliation must never'
-require_text "${scout_template}" 'leave the equivalence set without one open canonical issue.'
+require_text "${scout_template}" 'every close. It may supersede legacy or cyclic relations without deleting'
+require_text "${scout_template}" 'history only by writing the same unambiguous current reconciliation state to'
+require_text "${scout_template}" 'deterministic canonical issue first when every candidate is closed.'
+require_text "${scout_template}" 'candidates, out-of-scope relations, conflicting current markers, unmanaged'
+require_text "${scout_template}" 'issue. Reconciliation must never leave the equivalence set without one open'
 for placeholder in REPOSITORY LABELS WIP_LIMIT CREATION_LIMIT; do
   placeholder_count="$(grep -o "{{${placeholder}}}" "${scout_template}" | wc -l | tr -d ' ')"
   [[ "${placeholder_count}" -ge 1 ]] ||
@@ -265,9 +270,13 @@ require_text "${scout_doc}" 'Normal scout runs do not close, reopen, or relabel 
 require_text "${scout_doc}" '`scripts/reconcile-scout-duplicates.mjs` as its'
 require_text "${scout_doc}" 'only existing-issue mutation path; manual `gh issue` mutations are forbidden.'
 require_text "${scout_doc}" 'immediately before every close.'
-require_text "${scout_doc}" 'If every candidate is already closed, an'
-require_text "${scout_doc}" 'Repeated and concurrent runs are'
-require_text "${scout_doc}" 'idempotent and preserve the same one-way canonical relationship.'
+require_text "${scout_doc}" 'Direct or transitive legacy cycles are'
+require_text "${scout_doc}" 'writes an authoritative reconciliation marker to every candidate'
+require_text "${scout_doc}" 'consistent marker state overrides legacy relations.'
+require_text "${scout_doc}" 'already closed, an authorized run reopens the deterministically selected'
+require_text "${scout_doc}" 'conflicting current markers, relations added after the current marker, or'
+require_text "${scout_doc}" 'canonical drift fail safe without closing anything. Repeated and concurrent'
+require_text "${scout_doc}" 'runs are idempotent and preserve the same one-way canonical relationship.'
 require_text "${contract_doc}" '| `org-monitor` | At most one issue per target repository per run. |'
 require_text "${contract_doc}" '| `readiness-issue-creator` | At most three issues per target repository per run. |'
 
