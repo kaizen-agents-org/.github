@@ -135,19 +135,42 @@ release_lock() {
 # checkouts are disposable build output, and a build can leave tracked files
 # modified, which would abort a plain checkout on the next update.
 fetch_component() {
-  home=$1
-  component=$2
-  version=$3
-  if [ ! -d "$home/.git" ]; then
-    rm -rf "$home"
-    git clone --branch "$version" --depth 1 \
-      "https://github.com/$owner/$component.git" "$home" >&2
+  # Distinct names: install_from_source holds home/component/version across the
+  # call, and POSIX sh has no `local`, so reusing them here would clobber it.
+  _fetch_home=$1
+  _fetch_component=$2
+  _fetch_version=$3
+  if [ ! -d "$_fetch_home/.git" ]; then
+    rm -rf "$_fetch_home"
+    git clone --branch "$_fetch_version" --depth 1 \
+      "https://github.com/$owner/$_fetch_component.git" "$_fetch_home" >&2
   else
-    git -C "$home" fetch --depth 1 origin \
-      "+refs/tags/$version:refs/tags/$version" >&2
-    git -C "$home" reset --hard "refs/tags/$version" >&2
-    git -C "$home" clean -fd >&2
+    git -C "$_fetch_home" fetch --depth 1 origin \
+      "+refs/tags/$_fetch_version:refs/tags/$_fetch_version" >&2
+    git -C "$_fetch_home" reset --hard "refs/tags/$_fetch_version" >&2
+    git -C "$_fetch_home" clean -fd >&2
   fi
+}
+
+# Where npm would keep a global link for the package in $1/$2, or empty when
+# that cannot be determined.
+global_link_path() {
+  _pkg_dir="$1/$2"
+  [ -f "$_pkg_dir/package.json" ] || return 1
+  _name=$(node -p "require('$_pkg_dir/package.json').name" 2>/dev/null) || return 1
+  [ -n "$_name" ] || return 1
+  _prefix=$(npm prefix -g 2>/dev/null) || return 1
+  [ -n "$_prefix" ] || return 1
+  printf '%s/lib/node_modules/%s' "$_prefix" "$_name"
+}
+
+# True when the global link for this package resolves to this checkout.
+link_points_at() {
+  _link=$(global_link_path "$1" "$2") || return 1
+  [ -e "$_link" ] || return 1
+  _want=$(cd "$1/$2" 2>/dev/null && pwd -P) || return 1
+  _have=$(cd "$_link" 2>/dev/null && pwd -P) || return 1
+  [ "$_want" = "$_have" ]
 }
 
 # Install one component from a pinned checkout.
@@ -167,9 +190,14 @@ install_from_source() {
   home="$toolchain_root/$component"
   stamp="$home/.installed-version"
 
+  # Skipping requires more than "the command exists at the right version": the
+  # global link must actually point at this checkout. Another checkout can have
+  # replaced it since, which is the stale-link failure this script exists to
+  # repair, and a plain re-run would otherwise keep using the wrong CLI.
   if [ "$force" -eq 0 ] && [ -f "$stamp" ] &&
      [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] &&
-     command -v "$probe" >/dev/null 2>&1; then
+     command -v "$probe" >/dev/null 2>&1 &&
+     link_points_at "$home" "$link_dir"; then
     echo "  $component already at $version; skipping"
     return 0
   fi
@@ -193,18 +221,26 @@ install_from_source() {
       *) npm ci && npm run build ;;
     esac
     cd "$link_dir"
-    # npm link leaves an existing global link to a different directory in
-    # place, so a checkout linked by earlier tooling keeps winning and the
-    # pinned build is silently unused. Remove any global link for this package
-    # first; npm link recreates it pointing here.
-    package_name=$(node -p "require('./package.json').name")
-    global_link="$(npm prefix -g)/lib/node_modules/$package_name"
-    if [ -L "$global_link" ]; then
-      echo "  removing an existing global link for $package_name" >&2
-      rm -f "$global_link"
-    fi
     npm link
   ) >&2
+
+  # npm link leaves an existing global link to a different directory in place,
+  # so a checkout linked by earlier tooling keeps winning and the pinned build
+  # is silently unused. Remove a foreign link and link again; npm recreates it
+  # pointing here.
+  if ! link_points_at "$home" "$link_dir"; then
+    stale_link=$(global_link_path "$home" "$link_dir" || true)
+    if [ -n "$stale_link" ] && [ -e "$stale_link" ]; then
+      echo "  replacing a global link that pointed elsewhere" >&2
+      rm -rf "$stale_link"
+      ( cd "$home/$link_dir" && npm link ) >&2
+    fi
+  fi
+
+  if ! link_points_at "$home" "$link_dir"; then
+    echo "warning: $component was built but its global link does not point at" >&2
+    echo "warning: $home/$link_dir; the installed command may be a different copy." >&2
+  fi
 
   printf '%s\n' "$version" > "$stamp"
   release_lock "$home"
