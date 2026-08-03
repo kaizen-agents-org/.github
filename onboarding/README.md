@@ -265,7 +265,7 @@ detected:
 {
   "version": 1,
   "toolchain": {
-    "kaizen-loop": "v0.1.0",
+    "kaizen-loop": "v0.1.1",
     "builder-agent": "v0.1.0",
     "verifier": "v0.1.0"
   },
@@ -274,6 +274,10 @@ detected:
   }
 }
 ```
+
+The versions above are the currently pinned set; the checker compares against
+[`versions.json`](./versions.json), so read the versions from there rather than
+copying them out of this example.
 
 When `onboarding/versions.json` exists in the target, its component versions
 must contain exactly `kaizen-loop`, `builder-agent`, and `verifier` using
