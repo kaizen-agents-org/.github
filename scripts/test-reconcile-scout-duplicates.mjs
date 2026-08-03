@@ -24,8 +24,10 @@ function reconciliationComment(candidates, canonical, role) {
 function createRunner(initialIssues) {
   const issues = new Map(initialIssues.map((candidate) => [candidate.number, structuredClone(candidate)]));
   const mutations = [];
+  const commands = [];
 
   async function runGh(args) {
+    commands.push([...args]);
     await new Promise((resolve) => setImmediate(resolve));
     if (args[0] === 'api') {
       const match = args.at(-1).match(/\/issues\/(\d+)\/comments$/);
@@ -60,7 +62,7 @@ function createRunner(initialIssues) {
     assert.fail(`unsupported fake gh command: ${args.join(' ')}`);
   }
 
-  return { issues, mutations, runGh };
+  return { commands, issues, mutations, runGh };
 }
 
 const repository = 'kaizen-agents-org/verifier';
@@ -145,6 +147,13 @@ const repository = 'kaizen-agents-org/verifier';
   assert(runner.issues.get(197).comments.some(({ body }) => /role=canonical/.test(body)));
   assert(runner.issues.get(198).comments.some(({ body }) => /role=duplicate/.test(body)));
   assert(runner.issues.get(197).comments.some(({ body }) => /canonical=#198/.test(body)), 'legacy history is preserved');
+  assert(!runner.commands.some((args) => args[0] === 'issue' && args[1] === 'list'), 'refresh must not use the default open-only list');
+  for (const number of [197, 198]) {
+    assert(
+      runner.commands.some((args) => args[0] === 'issue' && args[1] === 'view' && args[2] === String(number)),
+      `all-state refresh must query exact candidate #${number}`,
+    );
+  }
 }
 
 {

@@ -112,6 +112,12 @@ assert_rejected \
   'Choose a canonical issue using best judgment.'
 
 assert_rejected \
+  "scout exact-work open-PR suppression" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'An open pull request that owns the exact work suppresses issue creation instead of becoming the canonical issue.' \
+  'An open pull request does not suppress issue creation.'
+
+assert_rejected \
   "scout one-way duplicate relation" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   'Duplicate relations must point one way, from each duplicate to the canonical issue; never close the canonical issue as a duplicate.' \
@@ -122,6 +128,18 @@ assert_rejected \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   'The default scout is not authorized to close, reopen, or relabel existing issues and must not invoke the reconciliation helper.' \
   'The default scout may close existing issues.'
+
+assert_rejected \
+  "scout reconciliation authorization scope" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'explicit authorization that names the target repository, complete issue set, and permitted reconciliation action.' \
+  'generic authorization without a named scope.'
+
+assert_rejected \
+  "scout reconciliation all-state refresh" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  'refreshes every explicitly authorized candidate issue individually, including both `OPEN` and `CLOSED` states, instead of rebuilding from a default open-only issue list.' \
+  'refreshes only the default open issue list.'
 
 assert_rejected \
   "scout executable reconciliation path" \
@@ -370,15 +388,33 @@ assert_rejected \
   'non-deterministic ordering chosen during the run'
 
 assert_rejected \
+  "scout template exact-work open-PR suppression" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'owns the exact work suppresses issue creation instead of becoming the canonical' \
+  'allows issue creation despite an exact-work open pull request'
+
+assert_rejected \
   "scout template existing-issue mutation boundary" \
   "onboarding/automations/scout.prompt.template.md" \
   'issues and must not invoke a reconciliation helper.' \
   'The default scout may close, reopen, or relabel existing'
 
 assert_rejected \
+  "scout template reconciliation authorization scope" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'scout when explicit authorization names the target repository, complete issue' \
+  'scout when generic authorization is present'
+
+assert_rejected \
+  "scout template reconciliation all-state refresh" \
+  "onboarding/automations/scout.prompt.template.md" \
+  'including both `OPEN` and `CLOSED` states, instead of using a default open-only' \
+  'including only `OPEN` state from the default list'
+
+assert_rejected \
   "scout template duplicate cycle fail-safe" \
   "onboarding/automations/scout.prompt.template.md" \
-  'history only by writing the same unambiguous current reconciliation state to' \
+  'only by writing the same unambiguous current reconciliation state to every' \
   'duplicate cycles after mutating issues; close every issue'
 
 assert_rejected \
@@ -460,9 +496,27 @@ assert_rejected \
   'may point in either direction, and the canonical issue may be closed'
 
 assert_rejected \
+  "scout documentation exact-work open-PR suppression" \
+  "docs/repo-improvement-scout.md" \
+  'the exact work suppresses creation of another issue.' \
+  'the exact work does not suppress creation of another issue.'
+
+assert_rejected \
+  "scout documentation reconciliation authorization scope" \
+  "docs/repo-improvement-scout.md" \
+  'authorization naming the target repository, complete issue set, and permitted' \
+  'authorization without a named repository or issue set'
+
+assert_rejected \
+  "scout documentation reconciliation all-state refresh" \
+  "docs/repo-improvement-scout.md" \
+  'including both `OPEN` and `CLOSED` state, and never relies on the default' \
+  'including only `OPEN` state from the default list'
+
+assert_rejected \
   "scout documentation reconciliation re-query" \
   "docs/repo-improvement-scout.md" \
-  'immediately before every close.' \
+  'open-only issue list. It recomputes the canonical issue immediately before' \
   'The scout reuses stale results before an authorized close'
 
 cp "${repo_root}/onboarding/fleet.json" "${fixture}/onboarding/fleet.json"

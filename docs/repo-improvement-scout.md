@@ -92,11 +92,14 @@ as a duplicate.
 
 Normal scout runs do not close, reopen, or relabel existing issues and do not
 invoke reconciliation. Duplicate reconciliation requires explicit
-authorization for a named repository, issue set, and action. The managed
-organization scout must use `scripts/reconcile-scout-duplicates.mjs` as its
+authorization naming the target repository, complete issue set, and permitted
+reconciliation action. The managed organization scout must use
+`scripts/reconcile-scout-duplicates.mjs` as its
 only existing-issue mutation path; manual `gh issue` mutations are forbidden.
-The helper re-queries current issue state and recomputes the canonical issue
-immediately before every close. Direct or transitive legacy cycles are
+The helper refreshes every explicitly authorized candidate issue individually,
+including both `OPEN` and `CLOSED` state, and never relies on the default
+open-only issue list. It recomputes the canonical issue immediately before
+every close. Direct or transitive legacy cycles are
 repairable only when every historical relation remains inside the complete
 explicitly authorized candidate set. The helper preserves those comments, then
 writes an authoritative reconciliation marker to every candidate; the newest

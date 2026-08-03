@@ -64,17 +64,20 @@ The default scout is not authorized to close, reopen, or relabel existing
 issues and must not invoke a reconciliation helper. A rendered opt-in scout has
 no existing-issue mutation path; report duplicates for maintainer review.
 Equivalent reconciliation is permitted only from the managed organization
-scout when explicitly authorized and only through the source-managed
+scout when explicit authorization names the target repository, complete issue
+set, and permitted reconciliation action, and only through the source-managed
 `scripts/reconcile-scout-duplicates.mjs` helper. Never issue manual `gh issue
 close`, `reopen`, `comment`, or `edit` commands for duplicate reconciliation.
-That helper re-queries and recomputes the canonical ordering immediately before
-every close. It may supersede legacy or cyclic relations without deleting
-history only by writing the same unambiguous current reconciliation state to
-every member of a complete explicitly authorized candidate set. It reopens the
+That helper refreshes every explicitly authorized candidate issue individually,
+including both `OPEN` and `CLOSED` states, instead of using a default open-only
+issue list, and recomputes the canonical ordering immediately before every
+close. It may supersede legacy or cyclic relations without deleting history
+only by writing the same unambiguous current reconciliation state to every
+member of a complete explicitly authorized candidate set. It reopens the
 deterministic canonical issue first when every candidate is closed. Missing
 candidates, out-of-scope relations, conflicting current markers, unmanaged
-relations after a current marker, or state drift fail closed without closing an
-issue. Reconciliation must never leave the equivalence set without one open
+relations after a current marker, or state drift fail closed without closing
+an issue. Reconciliation must never leave the equivalence set without one open
 canonical issue.
 
 Create no more than `{{CREATION_LIMIT}}` issues in one run. Additional findings
