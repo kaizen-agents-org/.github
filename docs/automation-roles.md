@@ -114,6 +114,14 @@ Each automation applies limits per target repository so one repository cannot co
 
 The shared backlog guard still applies: skip new issue creation for a target repository when it already has four or more open issues labeled `kaizen`, except where a monitor prompt explicitly allows a concrete closed-loop health finding to bypass that guard.
 
+The repository improvement scout also applies a generated-PR WIP guard per
+target repository. It creates no new issue when that repository has five or
+more open generated PRs. Branches or PR titles prefixed with `kaizen/`,
+`codex/`, `claude/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated
+unless there is evidence that they are human-authored maintenance. When this
+guard is reached, the scout reports the eligible finding as skipped due to the
+WIP cap.
+
 Every issue-creating automation must include a `PR linkage requirement` section
 in each created issue body. The section tells the implementer to put a GitHub
 closing keyword in the implementation PR body and verify

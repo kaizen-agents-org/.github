@@ -256,6 +256,24 @@ assert_rejected \
   "At most twenty issues per target repository per run."
 
 assert_rejected \
+  "scout prompt generated PR WIP limit" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "fewer than five open generated PRs" \
+  "fewer than fifty open generated PRs"
+
+assert_rejected \
+  "role documentation generated PR WIP limit" \
+  "docs/automation-roles.md" \
+  "target repository. It creates no new issue when that repository has five or" \
+  "target repository. It creates no new issue when that repository has fifty or"
+
+assert_rejected \
+  "scout documentation generated PR WIP limit" \
+  "docs/repo-improvement-scout.md" \
+  "fewer than five open generated PRs" \
+  "fewer than fifty open generated PRs"
+
+assert_rejected \
   "monitor fleet registry source" \
   "automations/kaizen-agents-org-monitor.prompt.md" \
   'updated `origin\/main` ref, not from the current checkout' \
