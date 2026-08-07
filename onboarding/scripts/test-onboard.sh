@@ -380,6 +380,63 @@ else
   fail "a non-404 protection API failure lacked actionable diagnostics: $(cat "$work/out13")"
 fi
 
+# 14. A generic 404 can also mean the requested branch does not exist. Do not
+#     convert that response into a misleading "unprotected" observation.
+repo=$(make_repo repo14)
+missingbin="$work/bin-missing-branch"
+mkdir -p "$missingbin"
+cp "$bin/kaizen" "$missingbin/kaizen"
+cat > "$missingbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) printf '{"message":"Branch not found","status":"404"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$missingbin/gh"
+KAIZEN_TEST_LOG="$work/log14"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$missingbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test --branch missing \
+        >"$work/out14" 2>&1 ); then
+  fail "a missing branch was reported as merely unprotected"
+elif grep -Fq "could not read branch protection" "$work/out14"; then
+  pass "a missing branch is distinguished from an unprotected branch"
+else
+  fail "a missing branch lacked actionable diagnostics: $(cat "$work/out14")"
+fi
+
+# 15. Skipping application must still resolve and observe the real default
+#     branch instead of implicitly querying main.
+repo=$(make_repo repo15)
+skipbin="$work/bin-skip-protection"
+mkdir -p "$skipbin"
+cp "$bin/kaizen" "$skipbin/kaizen"
+cat > "$skipbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *"--jq .default_branch"*) printf 'develop\n' ;;
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *"branches/develop/protection"*) printf '{"message":"Branch not protected","status":"404"}'; exit 1 ;;
+  *protection*) printf '{"message":"Branch not found","status":"404"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$skipbin/gh"
+KAIZEN_TEST_LOG="$work/log15"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG KAIZEN_TEST_CONTRACT_STATUS=0
+( cd "$repo" && PATH="$skipbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+    KAIZEN_TEST_CONTRACT_STATUS=0 \
+    sh "$stub_tree/onboard.sh" --yes --profile pilot-node --skip-protection \
+      >"$work/out15" 2>&1 ) || true
+unset KAIZEN_TEST_CONTRACT_STATUS
+if grep -Fq 'branches/develop/protection' "$KAIZEN_TEST_LOG"; then
+  pass "skip-protection observes the resolved default branch"
+else
+  fail "skip-protection did not observe the resolved default branch: $(cat "$work/out15")"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "onboard fixtures failed with $failures failure(s)." >&2

@@ -248,11 +248,24 @@ fi
 
 # ------------------------------------------------------------- 4. protection
 step "4/8 Apply branch protection"
+# Resolve the branch even when protection application is skipped: the final
+# observation must inspect the repository's actual default branch rather than
+# silently assuming main.
+[ -n "$branch" ] || branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##') || branch=''
+if [ -z "$branch" ] && [ "$skip_protection" -eq 1 ] && command -v gh >/dev/null 2>&1; then
+  if ! branch=$(gh api "repos/$slug" --jq '.default_branch' 2>/dev/null); then
+    echo "error: could not resolve the repository default branch" >&2
+    exit 1
+  fi
+  if [ -z "$branch" ]; then
+    echo "error: GitHub returned no repository default branch" >&2
+    exit 1
+  fi
+fi
+[ -n "$branch" ] || branch=main
 if [ "$skip_protection" -eq 1 ]; then
   echo "Skipped by --skip-protection."
 else
-  [ -n "$branch" ] || branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##') || branch=''
-  [ -n "$branch" ] || branch=main
   if [ -z "$check_name" ]; then
     if [ "$assume_yes" -eq 1 ]; then
       echo "error: --check is required with --yes so protection names a real status check" >&2
@@ -332,7 +345,9 @@ if command -v gh >/dev/null 2>&1; then
       } catch {
         process.exit(1);
       }
-      process.exit(String(response.status) === "404" ? 0 : 1);
+      process.exit(
+        String(response.status) === "404" && response.message === "Branch not protected" ? 0 : 1
+      );
     '; then
       protection_json='{}'
     else
