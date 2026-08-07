@@ -286,6 +286,42 @@ assert_rejected \
   "even when there is evidence that they are human-authored maintenance."
 
 assert_rejected \
+  "generated PR kaizen branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`kaizen\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR codex branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`codex\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR claude branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`claude\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR scout title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[scout\]\`" \
+  "\`[other]\`"
+
+assert_rejected \
+  "generated PR monitor title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[monitor\]\`" \
+  "\`[other]\`"
+
+assert_rejected \
+  "generated PR kaizen title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[monitor\]\`, or \`kaizen:\` as generated PRs" \
+  "\`[monitor]\`, or \`other:\` as generated PRs"
+
+assert_rejected \
   "scout documentation fixed-scout scope" \
   "docs/repo-improvement-scout.md" \
   "For the fixed organization-wide scout's generated-PR WIP guard" \
