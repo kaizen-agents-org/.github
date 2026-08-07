@@ -49,6 +49,10 @@ for pattern in \
   '(.errors == null)' \
   '($threads.nodes | type == "array")' \
   '($threads.pageInfo.hasNextPage | type == "boolean")' \
+  'all($threads.nodes[];' \
+  '(.comments | type == "object")' \
+  '(.comments.nodes | type == "array")' \
+  '(.comments.pageInfo.hasNextPage | type == "boolean")' \
   '($comments.nodes | type == "array")' \
   '($comments.pageInfo.hasNextPage | type == "boolean")' \
   'reviewThreads(first:100, after:$cursor)' \

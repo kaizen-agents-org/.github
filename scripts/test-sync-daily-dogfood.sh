@@ -50,6 +50,29 @@ sed '/(.errors == null)/d' \
 if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted fail-open review collection guidance"
 fi
+
+thread_validator="$(awk '
+  /^  if ! jq -e '\''$/ { capture=1; next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{"comments": null}],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a malformed nested comments connection"
+fi
 rm -rf "${weak_guardian_dir}"
 trap - EXIT
 echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"

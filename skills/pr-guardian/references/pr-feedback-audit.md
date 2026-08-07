@@ -67,7 +67,13 @@ query($owner:String!, $name:String!, $number:Int!, $cursor:String) {
       and ($threads.nodes | type == "array")
       and ($threads.pageInfo | type == "object")
       and ($threads.pageInfo.hasNextPage | type == "boolean")
-      and (($threads.pageInfo.endCursor == null) or ($threads.pageInfo.endCursor | type == "string")))
+      and (($threads.pageInfo.endCursor == null) or ($threads.pageInfo.endCursor | type == "string"))
+      and all($threads.nodes[];
+        (.comments | type == "object")
+        and (.comments.nodes | type == "array")
+        and (.comments.pageInfo | type == "object")
+        and (.comments.pageInfo.hasNextPage | type == "boolean")
+        and ((.comments.pageInfo.endCursor == null) or (.comments.pageInfo.endCursor | type == "string"))))
   ' >/dev/null <<<"${page}"; then
     echo 'reviewThreads returned an incomplete response' >&2
     exit 1
