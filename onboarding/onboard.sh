@@ -358,16 +358,17 @@ if command -v gh >/dev/null 2>&1; then
     LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
       const fs = require("node:fs");
       const labels = JSON.parse(fs.readFileSync(process.env.LABELS_FILE, "utf8"));
-      // Treat an unreadable protection payload as "no protection" rather than
-      // crashing the run: the contract checker reports the missing protection
-      // with remediation, which is far more useful than a JSON stack trace.
       let protection;
       try {
         protection = JSON.parse(process.env.PROTECTION_JSON);
       } catch {
-        protection = {};
+        console.error("error: branch protection API returned malformed JSON");
+        process.exit(1);
       }
-      if (protection === null || typeof protection !== "object") protection = {};
+      if (protection === null || typeof protection !== "object" || Array.isArray(protection)) {
+        console.error("error: branch protection API returned an invalid payload");
+        process.exit(1);
+      }
       const checks = protection.required_status_checks ?? {};
       process.stdout.write(JSON.stringify({
         labels,

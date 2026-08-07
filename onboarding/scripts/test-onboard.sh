@@ -437,6 +437,31 @@ else
   fail "skip-protection did not observe the resolved default branch: $(cat "$work/out15")"
 fi
 
+# 16. A zero exit status does not make a malformed API body valid.
+repo=$(make_repo repo16)
+malformedbin="$work/bin-malformed-protection"
+mkdir -p "$malformedbin"
+cp "$bin/kaizen" "$malformedbin/kaizen"
+cat > "$malformedbin/gh" <<'EOF'
+#!/bin/sh
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) printf '{truncated' ;;
+esac
+EOF
+chmod +x "$malformedbin/gh"
+KAIZEN_TEST_LOG="$work/log16"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$malformedbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+        >"$work/out16" 2>&1 ); then
+  fail "a malformed successful protection response was accepted"
+elif grep -Fq "branch protection API returned malformed JSON" "$work/out16"; then
+  pass "a malformed successful protection response is rejected"
+else
+  fail "a malformed successful response lacked diagnostics: $(cat "$work/out16")"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "onboard fixtures failed with $failures failure(s)." >&2
