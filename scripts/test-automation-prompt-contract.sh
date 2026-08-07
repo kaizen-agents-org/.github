@@ -11,6 +11,7 @@ mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" "${fixt
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
+cp "${repo_root}/docs/improvement-playbook.ja.md" "${fixture}/docs/"
 cp "${repo_root}/docs/org-monitor.md" "${fixture}/docs/"
 cp "${repo_root}/docs/repo-improvement-scout.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
