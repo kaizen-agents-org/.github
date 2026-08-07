@@ -322,6 +322,18 @@ assert_rejected \
   "\`[monitor]\`, or \`other:\` as generated PRs"
 
 assert_rejected \
+  "role documentation generated PR prefix list" \
+  "docs/automation-roles.md" \
+  "\`codex\/\`" \
+  "\`drifted\/\`"
+
+assert_rejected \
+  "scout documentation generated PR prefix list" \
+  "docs/repo-improvement-scout.md" \
+  "\`codex\/\`" \
+  "\`drifted\/\`"
+
+assert_rejected \
   "scout documentation fixed-scout scope" \
   "docs/repo-improvement-scout.md" \
   "For the fixed organization-wide scout's generated-PR WIP guard" \

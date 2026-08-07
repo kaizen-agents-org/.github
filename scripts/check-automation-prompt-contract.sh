@@ -273,11 +273,12 @@ require_text "${contract_doc}" 'This comparison must not alter the complete repo
 require_text "${contract_doc}" 'They must not infer missing'
 require_text "${contract_doc}" '| `repo-improvement-scout` | At most two issues per target repository per run. |'
 require_text "${contract_doc}" 'The fixed organization-wide repository improvement scout also applies a'
-require_text "${contract_doc}" 'repository has five or more open generated PRs. Branches or PR titles prefixed'
+require_text "${contract_doc}" 'repository has five or more open generated PRs.'
+require_text "${contract_doc}" 'Branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated.'
 require_text "${contract_doc}" 'Those prefixes count as generated unless there is evidence that they are human-authored maintenance.'
 require_text "${contract_doc}" 'WIP limit for all open pull requests.'
 require_text "${scout_doc}" 'for the fixed organization-wide scout, the target repository has fewer than'
-require_text "${scout_doc}" "For the fixed organization-wide scout's generated-PR WIP guard, branches or PR"
+require_text "${scout_doc}" "For the fixed organization-wide scout's generated-PR WIP guard, branches or PR titles prefixed with \`kaizen/\`, \`codex/\`, \`claude/\`, \`[scout]\`, \`[monitor]\`, or \`kaizen:\` count as generated."
 require_text "${scout_doc}" 'Those prefixes count as generated unless there is evidence that they are human-authored maintenance.'
 require_text "${scout_doc}" 'When a target reaches five open generated PRs, the fixed scout creates no new'
 require_text "${scout_doc}" 'issue for that repository and reports the eligible finding as skipped due to'
