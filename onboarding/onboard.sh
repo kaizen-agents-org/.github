@@ -354,7 +354,6 @@ if command -v gh >/dev/null 2>&1; then
       echo "error: could not read branch protection; check GitHub authentication, permissions, and API availability" >&2
       exit 1
     fi
-    [ -n "$protection_json" ] || protection_json='{}'
     LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
       const fs = require("node:fs");
       const labels = JSON.parse(fs.readFileSync(process.env.LABELS_FILE, "utf8"));

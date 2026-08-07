@@ -446,7 +446,7 @@ cat > "$malformedbin/gh" <<'EOF'
 #!/bin/sh
 case "$*" in
   *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
-  *protection*) printf '{truncated' ;;
+  *protection*) : ;;
 esac
 EOF
 chmod +x "$malformedbin/gh"
@@ -455,9 +455,9 @@ export KAIZEN_TEST_LOG
 if ( cd "$repo" && PATH="$malformedbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
       sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
         >"$work/out16" 2>&1 ); then
-  fail "a malformed successful protection response was accepted"
+  fail "an empty successful protection response was accepted"
 elif grep -Fq "branch protection API returned malformed JSON" "$work/out16"; then
-  pass "a malformed successful protection response is rejected"
+  pass "an empty successful protection response is rejected"
 else
   fail "a malformed successful response lacked diagnostics: $(cat "$work/out16")"
 fi
