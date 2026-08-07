@@ -78,13 +78,18 @@ a warning naming what it corrected.
 
 ```text
 .kaizen/config.yml                    the contract: commands, policy, schedule
+.kaizen/.gitignore                    excludes regenerated onboarding observations
 .github/ISSUE_TEMPLATE/kaizen.yml     how Kaizen issues get filed
 docs/smoke-runs/<timestamp>.json      evidence the loop completed once
 skills/ + skills-manifest.json        vendored skills and their digests
 ```
 
-Commit all of it. `~/.kaizen/` holds local state (registry, workspaces, logs)
-and belongs on your machine, not in the repository.
+Commit all of the files listed above. `.kaizen/onboarding-observations.json` is
+different: `onboard.sh` regenerates this live labels and branch-protection
+snapshot for the contract checker, and `.kaizen/.gitignore` keeps it out of
+commits. In contrast, `docs/smoke-runs/*.json` is durable acceptance evidence
+and should be committed. `~/.kaizen/` holds local state (registry, workspaces,
+logs) and belongs on your machine, not in the repository.
 
 ## Scheduled runs
 

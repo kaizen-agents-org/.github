@@ -116,6 +116,12 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   grep -q "Onboarding complete" "$work/out3" \
     && pass "a passing contract reports completion" \
     || fail "completion message missing"
+  if grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore" &&
+     git -C "$repo" check-ignore -q .kaizen/onboarding-observations.json; then
+    pass "observations are excluded from adopter commits"
+  else
+    fail "observations were not ignored by the generated .kaizen rule"
+  fi
 else
   fail "a full non-interactive pass failed: $(cat "$work/out3")"
 fi

@@ -320,13 +320,21 @@ fi
 # --------------------------------------------------------------- 8. contract
 step "8/8 Check the onboarding contract"
 observations=.kaizen/onboarding-observations.json
+# This snapshot is live checker input, not durable onboarding evidence. Keep the
+# rule beside the generated config so a fresh adopter cannot accidentally stage
+# it with the artifacts documented for commit.
+mkdir -p .kaizen
+if [ ! -f .kaizen/.gitignore ]; then
+  printf '%s\n' 'onboarding-observations.json' > .kaizen/.gitignore
+elif ! grep -Fxq 'onboarding-observations.json' .kaizen/.gitignore; then
+  printf '%s\n' 'onboarding-observations.json' >> .kaizen/.gitignore
+fi
 # Always recapture. Keeping an earlier snapshot means a maintainer who fixes the
 # labels or protection it reported as missing would see the same failure
 # forever, which contradicts the resume-and-re-run path this script promises.
 # The snapshot is read-only GitHub state, so re-reading it costs two API calls.
 if command -v gh >/dev/null 2>&1; then
   echo "Capturing repository observations..."
-  mkdir -p .kaizen
   if ! gh api "repos/$slug/labels?per_page=100" --jq '[.[].name]' > "$observations.labels" 2>/dev/null; then
     echo "warning: could not read labels; capture $observations by hand" >&2
     rm -f "$observations.labels"
