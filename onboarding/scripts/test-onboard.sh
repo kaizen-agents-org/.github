@@ -298,6 +298,60 @@ else
   fi
 fi
 
+# 12. An unprotected default branch is the normal state for a repository being
+#     onboarded. `gh api` reports it by writing a 404 body to stdout and exiting
+#     non-zero, so a fallback that only discards stderr concatenates the error
+#     body with the fallback and produces unparseable JSON. The run must report
+#     the missing protection, not crash.
+repo=$(make_repo repo12)
+unprotbin="$work/bin-unprot"
+mkdir -p "$unprotbin"
+cp "$bin/kaizen" "$unprotbin/kaizen"
+cat > "$unprotbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*)
+    printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n'
+    ;;
+  *protection*)
+    # Exactly what gh does for an unprotected branch: body on stdout, exit 1.
+    printf '{"message":"Branch not protected","documentation_url":"https://docs.github.com/rest","status":"404"}'
+    exit 1
+    ;;
+esac
+EOF
+chmod +x "$unprotbin/gh"
+KAIZEN_TEST_LOG="$work/log12"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG KAIZEN_TEST_CONTRACT_STATUS=0
+( cd "$repo" && PATH="$unprotbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+    KAIZEN_TEST_CONTRACT_STATUS=0 \
+    sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out12" 2>&1 ) || true
+unset KAIZEN_TEST_CONTRACT_STATUS
+if grep -qE "SyntaxError|Unexpected non-whitespace|JSON.parse" "$work/out12"; then
+  fail "an unprotected branch crashed the observation capture"
+else
+  pass "an unprotected branch does not crash the observation capture"
+fi
+if [ -f "$repo/.kaizen/onboarding-observations.json" ]; then
+  if OBS="$repo/.kaizen/onboarding-observations.json" node -e '
+    const fs = require("node:fs");
+    const d = JSON.parse(fs.readFileSync(process.env.OBS, "utf8"));
+    const p = d.branchProtection;
+    process.exit(
+      p && p.requiredStatusChecks && p.requiredStatusChecks.strict === false &&
+      p.requiredConversationResolution === false && p.enforceAdmins === false ? 0 : 1
+    );
+  ' 2>/dev/null; then
+    pass "an unprotected branch is recorded as unprotected"
+  else
+    fail "the observation snapshot did not record the branch as unprotected"
+  fi
+else
+  fail "no observation snapshot was written for an unprotected branch"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "onboard fixtures failed with $failures failure(s)." >&2

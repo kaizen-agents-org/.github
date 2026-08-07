@@ -318,11 +318,28 @@ if command -v gh >/dev/null 2>&1; then
     echo "warning: could not read labels; capture $observations by hand" >&2
     rm -f "$observations.labels"
   else
-    protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null || printf '{}')
+    # An unprotected branch is the normal state for a repository being
+    # onboarded, and `gh api` reports it by writing a 404 body to *stdout* and
+    # exiting non-zero. Discarding only stderr would concatenate that body with
+    # the fallback and produce JSON that cannot be parsed, so capture stdout
+    # separately and fall back only when the call actually failed.
+    if ! protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null); then
+      protection_json='{}'
+    fi
+    [ -n "$protection_json" ] || protection_json='{}'
     LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
       const fs = require("node:fs");
       const labels = JSON.parse(fs.readFileSync(process.env.LABELS_FILE, "utf8"));
-      const protection = JSON.parse(process.env.PROTECTION_JSON);
+      // Treat an unreadable protection payload as "no protection" rather than
+      // crashing the run: the contract checker reports the missing protection
+      // with remediation, which is far more useful than a JSON stack trace.
+      let protection;
+      try {
+        protection = JSON.parse(process.env.PROTECTION_JSON);
+      } catch {
+        protection = {};
+      }
+      if (protection === null || typeof protection !== "object") protection = {};
       const checks = protection.required_status_checks ?? {};
       process.stdout.write(JSON.stringify({
         labels,
