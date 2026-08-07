@@ -393,13 +393,22 @@ if ! awk '
   in_commands && /^[^ ]/ { in_commands=0; in_verify=0 }
   in_commands && /^  verify:$/ { in_verify=1; next }
   in_verify && /^  [^ ]/ { in_verify=0 }
-  in_verify && /^    - "npm run check:dist"$/ { found=1 }
-  END { exit(found ? 0 : 1) }
+  in_verify && /^    - "npm run check:dist"$/ { dist_line=NR }
+  in_verify && /^    - "npm test"$/ { test_line=NR }
+  END { exit(dist_line && test_line && dist_line < test_line ? 0 : 1) }
 ' "${builder_config}"; then
   echo "builder-agent dogfood verification must preserve npm run check:dist" >&2
   exit 1
 fi
-if ! grep -Fq 'npm run check:dist' "${builder_agents}"; then
+if ! awk '
+  /^## Verification$/ { in_verification=1; next }
+  in_verification && /^## / { in_verification=0; in_fence=0 }
+  in_verification && /^```sh$/ { in_fence=1; next }
+  in_fence && /^```$/ { in_fence=0; next }
+  in_fence && /^npm run check:dist$/ { dist_line=NR }
+  in_fence && /^npm test$/ { test_line=NR }
+  END { exit(dist_line && test_line && dist_line < test_line ? 0 : 1) }
+' "${builder_agents}"; then
   echo "builder-agent dogfood guidance must require npm run check:dist" >&2
   exit 1
 fi
