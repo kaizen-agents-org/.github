@@ -248,11 +248,24 @@ fi
 
 # ------------------------------------------------------------- 4. protection
 step "4/8 Apply branch protection"
+# Resolve the branch even when protection application is skipped: the final
+# observation must inspect the repository's actual default branch rather than
+# silently assuming main.
+[ -n "$branch" ] || branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##') || branch=''
+if [ -z "$branch" ] && [ "$skip_protection" -eq 1 ] && command -v gh >/dev/null 2>&1; then
+  if ! branch=$(gh api "repos/$slug" --jq '.default_branch' 2>/dev/null); then
+    echo "error: could not resolve the repository default branch" >&2
+    exit 1
+  fi
+  if [ -z "$branch" ]; then
+    echo "error: GitHub returned no repository default branch" >&2
+    exit 1
+  fi
+fi
+[ -n "$branch" ] || branch=main
 if [ "$skip_protection" -eq 1 ]; then
   echo "Skipped by --skip-protection."
 else
-  [ -n "$branch" ] || branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##') || branch=''
-  [ -n "$branch" ] || branch=main
   if [ -z "$check_name" ]; then
     if [ "$assume_yes" -eq 1 ]; then
       echo "error: --check is required with --yes so protection names a real status check" >&2
@@ -318,11 +331,43 @@ if command -v gh >/dev/null 2>&1; then
     echo "warning: could not read labels; capture $observations by hand" >&2
     rm -f "$observations.labels"
   else
-    protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null || printf '{}')
+    # An unprotected branch is the normal state for a repository being
+    # onboarded, and `gh api` reports it by writing a 404 body to *stdout* and
+    # exiting non-zero. Discarding only stderr would concatenate that body with
+    # the fallback and produce JSON that cannot be parsed, so capture stdout
+    # separately and fall back only when the call actually failed.
+    if protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null); then
+      :
+    elif PROTECTION_JSON="$protection_json" node -e '
+      let response;
+      try {
+        response = JSON.parse(process.env.PROTECTION_JSON);
+      } catch {
+        process.exit(1);
+      }
+      process.exit(
+        String(response.status) === "404" && response.message === "Branch not protected" ? 0 : 1
+      );
+    '; then
+      protection_json='{}'
+    else
+      echo "error: could not read branch protection; check GitHub authentication, permissions, and API availability" >&2
+      exit 1
+    fi
     LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
       const fs = require("node:fs");
       const labels = JSON.parse(fs.readFileSync(process.env.LABELS_FILE, "utf8"));
-      const protection = JSON.parse(process.env.PROTECTION_JSON);
+      let protection;
+      try {
+        protection = JSON.parse(process.env.PROTECTION_JSON);
+      } catch {
+        console.error("error: branch protection API returned malformed JSON");
+        process.exit(1);
+      }
+      if (protection === null || typeof protection !== "object" || Array.isArray(protection)) {
+        console.error("error: branch protection API returned an invalid payload");
+        process.exit(1);
+      }
       const checks = protection.required_status_checks ?? {};
       process.stdout.write(JSON.stringify({
         labels,

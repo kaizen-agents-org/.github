@@ -298,6 +298,170 @@ else
   fi
 fi
 
+# 12. An unprotected default branch is the normal state for a repository being
+#     onboarded. `gh api` reports it by writing a 404 body to stdout and exiting
+#     non-zero, so a fallback that only discards stderr concatenates the error
+#     body with the fallback and produces unparseable JSON. The run must report
+#     the missing protection, not crash.
+repo=$(make_repo repo12)
+unprotbin="$work/bin-unprot"
+mkdir -p "$unprotbin"
+cp "$bin/kaizen" "$unprotbin/kaizen"
+cat > "$unprotbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*)
+    printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n'
+    ;;
+  *protection*)
+    # Exactly what gh does for an unprotected branch: body on stdout, exit 1.
+    printf '{"message":"Branch not protected","documentation_url":"https://docs.github.com/rest","status":"404"}'
+    exit 1
+    ;;
+esac
+EOF
+chmod +x "$unprotbin/gh"
+KAIZEN_TEST_LOG="$work/log12"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG KAIZEN_TEST_CONTRACT_STATUS=0
+( cd "$repo" && PATH="$unprotbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+    KAIZEN_TEST_CONTRACT_STATUS=0 \
+    sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out12" 2>&1 ) || true
+unset KAIZEN_TEST_CONTRACT_STATUS
+if grep -qE "SyntaxError|Unexpected non-whitespace|JSON.parse" "$work/out12"; then
+  fail "an unprotected branch crashed the observation capture"
+else
+  pass "an unprotected branch does not crash the observation capture"
+fi
+if [ -f "$repo/.kaizen/onboarding-observations.json" ]; then
+  if OBS="$repo/.kaizen/onboarding-observations.json" node -e '
+    const fs = require("node:fs");
+    const d = JSON.parse(fs.readFileSync(process.env.OBS, "utf8"));
+    const p = d.branchProtection;
+    process.exit(
+      p && p.requiredStatusChecks && p.requiredStatusChecks.strict === false &&
+      p.requiredConversationResolution === false && p.enforceAdmins === false ? 0 : 1
+    );
+  ' 2>/dev/null; then
+    pass "an unprotected branch is recorded as unprotected"
+  else
+    fail "the observation snapshot did not record the branch as unprotected"
+  fi
+else
+  fail "no observation snapshot was written for an unprotected branch"
+fi
+
+# 13. Authentication, permission, rate-limit, and transient API failures are
+#     not evidence that branch protection is absent. Preserve the failure so an
+#     operator fixes the real problem instead of receiving misleading guidance.
+repo=$(make_repo repo13)
+failurebin="$work/bin-protection-failure"
+mkdir -p "$failurebin"
+cp "$bin/kaizen" "$failurebin/kaizen"
+cat > "$failurebin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) printf '{"message":"API rate limit exceeded","status":"403"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$failurebin/gh"
+KAIZEN_TEST_LOG="$work/log13"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$failurebin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+        >"$work/out13" 2>&1 ); then
+  fail "a non-404 protection API failure was reported as missing protection"
+elif grep -Fq "could not read branch protection" "$work/out13"; then
+  pass "a non-404 protection API failure is preserved"
+else
+  fail "a non-404 protection API failure lacked actionable diagnostics: $(cat "$work/out13")"
+fi
+
+# 14. A generic 404 can also mean the requested branch does not exist. Do not
+#     convert that response into a misleading "unprotected" observation.
+repo=$(make_repo repo14)
+missingbin="$work/bin-missing-branch"
+mkdir -p "$missingbin"
+cp "$bin/kaizen" "$missingbin/kaizen"
+cat > "$missingbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) printf '{"message":"Branch not found","status":"404"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$missingbin/gh"
+KAIZEN_TEST_LOG="$work/log14"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$missingbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test --branch missing \
+        >"$work/out14" 2>&1 ); then
+  fail "a missing branch was reported as merely unprotected"
+elif grep -Fq "could not read branch protection" "$work/out14"; then
+  pass "a missing branch is distinguished from an unprotected branch"
+else
+  fail "a missing branch lacked actionable diagnostics: $(cat "$work/out14")"
+fi
+
+# 15. Skipping application must still resolve and observe the real default
+#     branch instead of implicitly querying main.
+repo=$(make_repo repo15)
+skipbin="$work/bin-skip-protection"
+mkdir -p "$skipbin"
+cp "$bin/kaizen" "$skipbin/kaizen"
+cat > "$skipbin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *"--jq .default_branch"*) printf 'develop\n' ;;
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *"branches/develop/protection"*) printf '{"message":"Branch not protected","status":"404"}'; exit 1 ;;
+  *protection*) printf '{"message":"Branch not found","status":"404"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$skipbin/gh"
+KAIZEN_TEST_LOG="$work/log15"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG KAIZEN_TEST_CONTRACT_STATUS=0
+( cd "$repo" && PATH="$skipbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+    KAIZEN_TEST_CONTRACT_STATUS=0 \
+    sh "$stub_tree/onboard.sh" --yes --profile pilot-node --skip-protection \
+      >"$work/out15" 2>&1 ) || true
+unset KAIZEN_TEST_CONTRACT_STATUS
+if grep -Fq 'branches/develop/protection' "$KAIZEN_TEST_LOG"; then
+  pass "skip-protection observes the resolved default branch"
+else
+  fail "skip-protection did not observe the resolved default branch: $(cat "$work/out15")"
+fi
+
+# 16. A zero exit status does not make a malformed API body valid.
+repo=$(make_repo repo16)
+malformedbin="$work/bin-malformed-protection"
+mkdir -p "$malformedbin"
+cp "$bin/kaizen" "$malformedbin/kaizen"
+cat > "$malformedbin/gh" <<'EOF'
+#!/bin/sh
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) : ;;
+esac
+EOF
+chmod +x "$malformedbin/gh"
+KAIZEN_TEST_LOG="$work/log16"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$malformedbin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+        >"$work/out16" 2>&1 ); then
+  fail "an empty successful protection response was accepted"
+elif grep -Fq "branch protection API returned malformed JSON" "$work/out16"; then
+  pass "an empty successful protection response is rejected"
+else
+  fail "a malformed successful response lacked diagnostics: $(cat "$work/out16")"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "onboard fixtures failed with $failures failure(s)." >&2
