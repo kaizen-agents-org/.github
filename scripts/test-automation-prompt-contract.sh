@@ -264,14 +264,32 @@ assert_rejected \
 assert_rejected \
   "role documentation generated PR WIP limit" \
   "docs/automation-roles.md" \
-  "target repository. It creates no new issue when that repository has five or" \
-  "target repository. It creates no new issue when that repository has fifty or"
+  "repository has five or more open generated PRs" \
+  "repository has fifty or more open generated PRs"
 
 assert_rejected \
   "scout documentation generated PR WIP limit" \
   "docs/repo-improvement-scout.md" \
-  "fewer than five open generated PRs" \
-  "fewer than fifty open generated PRs"
+  "five open generated PRs" \
+  "fifty open generated PRs"
+
+assert_rejected \
+  "role documentation human-maintenance exemption" \
+  "docs/automation-roles.md" \
+  "unless there is evidence that they are human-authored maintenance." \
+  "even when there is evidence that they are human-authored maintenance."
+
+assert_rejected \
+  "scout documentation human-maintenance exemption" \
+  "docs/repo-improvement-scout.md" \
+  "unless there is evidence that they are human-authored maintenance." \
+  "even when there is evidence that they are human-authored maintenance."
+
+assert_rejected \
+  "scout documentation fixed-scout scope" \
+  "docs/repo-improvement-scout.md" \
+  "For the fixed organization-wide scout's generated-PR WIP guard" \
+  "For every scout's generated-PR WIP guard"
 
 assert_rejected \
   "monitor fleet registry source" \

@@ -60,13 +60,16 @@ The scout may create `[scout]` issues when all of these are true:
 - the work is not already covered by an open issue or PR in that target repository;
 - the issue is ready for the next Kaizen run without human clarification;
 - the target repository has fewer than four open issues labeled `kaizen`;
-- the target repository has fewer than five open generated PRs.
+- for the fixed organization-wide scout, the target repository has fewer than
+  five open generated PRs.
 
-For the generated-PR WIP guard, branches or PR titles prefixed with `kaizen/`,
-`codex/`, `claude/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated
-unless there is evidence that they are human-authored maintenance. When a
-target reaches five open generated PRs, the scout creates no new issue for that
-repository and reports the eligible finding as skipped due to the WIP cap.
+For the fixed organization-wide scout's generated-PR WIP guard, branches or PR
+titles prefixed with `kaizen/`, `codex/`, `claude/`, `[scout]`, `[monitor]`, or
+`kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
+When a target reaches five open generated PRs, the fixed scout creates no new
+issue for that repository and reports the eligible finding as skipped due to
+the WIP cap. An opt-in per-repository scout instead blocks at its configured
+WIP limit of one to four open pull requests, regardless of provenance.
 
 For organization-owned targets, the scout adds the `kaizen`,
 `kaizen:authorized`, and `kaizen:ready` labels to created issues. Execution
