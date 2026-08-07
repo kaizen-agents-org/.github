@@ -384,6 +384,35 @@ while IFS= read -r repo; do
   fi
 done < <(jq -r '.targets[].name' "${manifest}")
 
+# Builder releases commit generated dist, so its managed runtime and maintainer
+# guidance must keep the freshness check ahead of the ordinary test suite.
+builder_config=".github/dogfood-sync/targets/builder-agent/.kaizen/config.yml"
+builder_agents=".github/dogfood-sync/targets/builder-agent/AGENTS.md"
+if ! awk '
+  /^commands:$/ { in_commands=1; next }
+  in_commands && /^[^ ]/ { in_commands=0; in_verify=0 }
+  in_commands && /^  verify:$/ { in_verify=1; next }
+  in_verify && /^  [^ ]/ { in_verify=0 }
+  in_verify && /^    - "npm run check:dist"$/ { dist_line=NR }
+  in_verify && /^    - "npm test"$/ { test_line=NR }
+  END { exit(dist_line && test_line && dist_line < test_line ? 0 : 1) }
+' "${builder_config}"; then
+  echo "builder-agent dogfood verification must preserve npm run check:dist" >&2
+  exit 1
+fi
+if ! awk '
+  /^## Verification$/ { in_verification=1; next }
+  in_verification && /^## / { in_verification=0; in_fence=0 }
+  in_verification && /^```sh$/ { in_fence=1; next }
+  in_fence && /^```$/ { in_fence=0; next }
+  in_fence && /^npm run check:dist$/ { dist_line=NR }
+  in_fence && /^npm test$/ { test_line=NR }
+  END { exit(dist_line && test_line && dist_line < test_line ? 0 : 1) }
+' "${builder_agents}"; then
+  echo "builder-agent dogfood guidance must require npm run check:dist" >&2
+  exit 1
+fi
+
 # The trusted self-organization fleet must opt into dogfood mode explicitly.
 # A missing value falls back to external mode and silently skips every issue
 # without a separately applied execution-authorization label.
