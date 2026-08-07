@@ -29,18 +29,30 @@ fail() {
 bash "${guardian_contract_check}" >/dev/null \
   || fail "strict pr-guardian source contract was rejected"
 
-weak_guardian="$(mktemp)"
-trap 'rm -f "${weak_guardian}"' EXIT
+weak_guardian_dir="$(mktemp -d)"
+weak_guardian="${weak_guardian_dir}/SKILL.md"
+mkdir -p "${weak_guardian_dir}/references"
+trap 'rm -rf "${weak_guardian_dir}"' EXIT
 sed \
   -e 's/isDraft,mergeable,mergeStateStatus/isDraft,mergeStateStatus/' \
   -e 's/including outdated threads/only current threads/' \
   "${repo_root}/skills/pr-guardian/SKILL.md" > "${weak_guardian}"
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
 if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted weakened pr-guardian guidance"
 fi
-rm -f "${weak_guardian}"
+
+cp "${repo_root}/skills/pr-guardian/SKILL.md" "${weak_guardian}"
+sed '/(.errors == null)/d' \
+  "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted fail-open review collection guidance"
+fi
+rm -rf "${weak_guardian_dir}"
 trap - EXIT
-echo "PASS: weakened pr-guardian guidance is rejected before sync"
+echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"
 
 make_targets() {
   local parent="$1"

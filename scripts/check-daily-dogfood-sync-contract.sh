@@ -413,6 +413,19 @@ if ! awk '
   exit 1
 fi
 
+# Verifier owns package-entry and semantic evaluation gates that must survive
+# the deterministic managed-config sync.
+verifier_config=".github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+for command in \
+  '    - "pnpm test:package-entry"' \
+  '    - "pnpm eval"' \
+  '    - "SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci"'; do
+  if ! grep -Fqx -- "${command}" "${verifier_config}"; then
+    echo "verifier dogfood verification is missing: ${command}" >&2
+    exit 1
+  fi
+done
+
 # The trusted self-organization fleet must opt into dogfood mode explicitly.
 # A missing value falls back to external mode and silently skips every issue
 # without a separately applied execution-authorization label.

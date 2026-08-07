@@ -23,6 +23,16 @@ grep -q 'dogfood runtime config must opt into verifier canonical-main updates wi
 mv "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml.bak" \
   "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
 
+sed -i.bak '/SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci/d' \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" > /dev/null 2>"${error_log}"; then
+  echo "contract unexpectedly accepted verifier config without semantic eval CI" >&2
+  exit 1
+fi
+grep -Fq 'verifier dogfood verification is missing:' "${error_log}"
+mv "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml.bak" \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+
 scout_prompt="${fixture}/automations/kaizen-agents-repo-improvement-scout.prompt.md"
 mutated_prompt="${fixture}/scout.prompt.md"
 sed 's/`kaizen`, `kaizen:authorized`, and `kaizen:ready` labels/`kaizen` and `kaizen:authorized` labels/' \

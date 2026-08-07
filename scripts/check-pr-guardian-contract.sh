@@ -45,6 +45,12 @@ for pattern in \
   'cursor=${cursor}' \
   'hasNextPage' \
   'endCursor' \
+  'if ! page="$(gh "${args[@]}")"; then' \
+  '(.errors == null)' \
+  '($threads.nodes | type == "array")' \
+  '($threads.pageInfo.hasNextPage | type == "boolean")' \
+  '($comments.nodes | type == "array")' \
+  '($comments.pageInfo.hasNextPage | type == "boolean")' \
   'reviewThreads(first:100, after:$cursor)' \
   'comments(first:100, after:$cursor)' \
   '--paginate' \
@@ -58,6 +64,15 @@ for pattern in \
   'resolveReviewThread(input:{threadId:$threadId})'; do
   if ! grep -Fq -- "${pattern}" <<<"${executable}"; then
     echo "pr-guardian audit reference missing executable contract: ${pattern}" >&2
+    exit 1
+  fi
+done
+
+for pattern in \
+  'if ! page="$(gh "${args[@]}")"; then' \
+  '(.errors == null)'; do
+  if [[ "$(grep -Fc -- "${pattern}" <<<"${executable}")" -ne 2 ]]; then
+    echo "pr-guardian audit reference must fail closed in both paginated GraphQL loops: ${pattern}" >&2
     exit 1
   fi
 done
