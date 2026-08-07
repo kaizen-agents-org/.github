@@ -416,15 +416,21 @@ fi
 # Verifier owns package-entry and semantic evaluation gates that must survive
 # the deterministic managed-config sync.
 verifier_config=".github/dogfood-sync/targets/verifier/.kaizen/config.yml"
-for command in \
-  '    - "pnpm test:package-entry"' \
-  '    - "pnpm eval"' \
-  '    - "SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci"'; do
-  if ! grep -Fqx -- "${command}" "${verifier_config}"; then
-    echo "verifier dogfood verification is missing: ${command}" >&2
+verifier_agents=".github/dogfood-sync/targets/verifier/AGENTS.md"
+while IFS=$'\t' read -r config_line guidance_line; do
+  if ! grep -Fqx -- "${config_line}" "${verifier_config}"; then
+    echo "verifier dogfood verification is missing: ${guidance_line}" >&2
     exit 1
   fi
-done
+  if ! grep -Fqx -- "${guidance_line}" "${verifier_agents}"; then
+    echo "verifier dogfood guidance is missing: ${guidance_line}" >&2
+    exit 1
+  fi
+done <<'EOF'
+    - "pnpm test:package-entry"	pnpm test:package-entry
+    - "pnpm eval"	pnpm eval
+    - "SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci"	SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci
+EOF
 
 # The trusted self-organization fleet must opt into dogfood mode explicitly.
 # A missing value falls back to external mode and silently skips every issue
