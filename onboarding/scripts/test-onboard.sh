@@ -352,6 +352,34 @@ else
   fail "no observation snapshot was written for an unprotected branch"
 fi
 
+# 13. Authentication, permission, rate-limit, and transient API failures are
+#     not evidence that branch protection is absent. Preserve the failure so an
+#     operator fixes the real problem instead of receiving misleading guidance.
+repo=$(make_repo repo13)
+failurebin="$work/bin-protection-failure"
+mkdir -p "$failurebin"
+cp "$bin/kaizen" "$failurebin/kaizen"
+cat > "$failurebin/gh" <<'EOF'
+#!/bin/sh
+printf 'gh %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+case "$*" in
+  *labels*) printf '["kaizen","kaizen:P0","kaizen:P1","kaizen:P2","kaizen:pr-only"]\n' ;;
+  *protection*) printf '{"message":"API rate limit exceeded","status":"403"}'; exit 1 ;;
+esac
+EOF
+chmod +x "$failurebin/gh"
+KAIZEN_TEST_LOG="$work/log13"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$failurebin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+        >"$work/out13" 2>&1 ); then
+  fail "a non-404 protection API failure was reported as missing protection"
+elif grep -Fq "could not read branch protection" "$work/out13"; then
+  pass "a non-404 protection API failure is preserved"
+else
+  fail "a non-404 protection API failure lacked actionable diagnostics: $(cat "$work/out13")"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "onboard fixtures failed with $failures failure(s)." >&2

@@ -323,8 +323,21 @@ if command -v gh >/dev/null 2>&1; then
     # exiting non-zero. Discarding only stderr would concatenate that body with
     # the fallback and produce JSON that cannot be parsed, so capture stdout
     # separately and fall back only when the call actually failed.
-    if ! protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null); then
+    if protection_json=$(gh api "repos/$slug/branches/${branch:-main}/protection" 2>/dev/null); then
+      :
+    elif PROTECTION_JSON="$protection_json" node -e '
+      let response;
+      try {
+        response = JSON.parse(process.env.PROTECTION_JSON);
+      } catch {
+        process.exit(1);
+      }
+      process.exit(String(response.status) === "404" ? 0 : 1);
+    '; then
       protection_json='{}'
+    else
+      echo "error: could not read branch protection; check GitHub authentication, permissions, and API availability" >&2
+      exit 1
     fi
     [ -n "$protection_json" ] || protection_json='{}'
     LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
