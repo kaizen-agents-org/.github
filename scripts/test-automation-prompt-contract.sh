@@ -335,6 +335,12 @@ assert_rejected \
   "\`drifted\/\`"
 
 assert_rejected \
+  "playbook per-repository generated PR threshold" \
+  "docs/improvement-playbook.ja.md" \
+  "\*\*5 件\*\* 以上" \
+  "**50 件** 以上"
+
+assert_rejected \
   "scout documentation fixed-scout scope" \
   "docs/repo-improvement-scout.md" \
   "For the fixed organization-wide scout's generated-PR WIP guard" \
