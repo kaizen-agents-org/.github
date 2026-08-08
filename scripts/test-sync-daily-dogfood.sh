@@ -29,18 +29,98 @@ fail() {
 bash "${guardian_contract_check}" >/dev/null \
   || fail "strict pr-guardian source contract was rejected"
 
-weak_guardian="$(mktemp)"
-trap 'rm -f "${weak_guardian}"' EXIT
+weak_guardian_dir="$(mktemp -d)"
+weak_guardian="${weak_guardian_dir}/SKILL.md"
+mkdir -p "${weak_guardian_dir}/references"
+trap 'rm -rf "${weak_guardian_dir}"' EXIT
 sed \
   -e 's/isDraft,mergeable,mergeStateStatus/isDraft,mergeStateStatus/' \
   -e 's/including outdated threads/only current threads/' \
   "${repo_root}/skills/pr-guardian/SKILL.md" > "${weak_guardian}"
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
 if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted weakened pr-guardian guidance"
 fi
-rm -f "${weak_guardian}"
+
+cp "${repo_root}/skills/pr-guardian/SKILL.md" "${weak_guardian}"
+sed '/(.errors == null)/d' \
+  "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted fail-open review collection guidance"
+fi
+
+thread_validator="$(awk '
+  /^  if ! jq -e '\''$/ { capture=1; next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{"comments": null}],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a malformed nested comments connection"
+fi
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "src/example.ts",
+            "comments": {
+              "nodes": [],
+              "pageInfo": {"hasNextPage": false, "endCursor": null}
+            }
+          }],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a thread without an id"
+fi
+comment_validator="$(awk '
+  /^  if ! jq -e '\''$/ { validator+=1; capture=(validator == 2); next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${comment_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "node": {
+      "comments": {
+        "nodes": [{}],
+        "pageInfo": {"hasNextPage": false, "endCursor": null}
+      }
+    }
+  }
+}
+JSON
+  fail "review comment pagination accepted a malformed comment node"
+fi
+rm -rf "${weak_guardian_dir}"
 trap - EXIT
-echo "PASS: weakened pr-guardian guidance is rejected before sync"
+echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"
 
 make_targets() {
   local parent="$1"

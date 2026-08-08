@@ -28,6 +28,7 @@ on:
     paths:
       - "skills/**"
       - "scripts/sync-kaizen-shared-skills.sh"
+      - "scripts/check-pr-guardian-contract.sh"
       - ".github/workflows/sync-kaizen-shared-skills.yml"
 
 permissions:

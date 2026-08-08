@@ -15,6 +15,7 @@ cd "${repo_root}"
 daily_workflow=".github/workflows/daily-dogfood-sync.yml"
 dogfood_workflow=".github/workflows/sync-daily-dogfood.yml"
 shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
+shared_skill_sync_script="scripts/sync-kaizen-shared-skills.sh"
 sync_script="scripts/sync-daily-dogfood.sh"
 pr_link_test="scripts/test-sync-daily-dogfood-pr-link.sh"
 monitor_contract_check="scripts/check-org-monitor-contract.sh"
@@ -34,6 +35,7 @@ for path in \
   "${daily_workflow}" \
   "${dogfood_workflow}" \
   "${shared_skill_workflow}" \
+  "${shared_skill_sync_script}" \
   "${sync_script}" \
   "${pr_link_test}" \
   "${monitor_contract_check}" \
@@ -221,6 +223,8 @@ grep -q "Shared skill sync blocked" "${shared_skill_workflow}"
 grep -q "available=false" "${shared_skill_workflow}"
 grep -q "Shared skill sync skipped" "${shared_skill_workflow}"
 grep -q "Verify synced skill copies" "${shared_skill_workflow}"
+grep -Fq 'scripts/check-pr-guardian-contract.sh' "${shared_skill_workflow}"
+grep -Fq 'bash "${guardian_contract_check}" "${source_root}/skills/pr-guardian/SKILL.md"' "${shared_skill_sync_script}"
 grep -q "Assert no target drifts silently" "${shared_skill_workflow}"
 grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
@@ -412,6 +416,39 @@ if ! awk '
   echo "builder-agent dogfood guidance must require npm run check:dist" >&2
   exit 1
 fi
+
+# Verifier owns package-entry and semantic evaluation gates that must survive
+# the deterministic managed-config sync.
+verifier_config=".github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+verifier_agents=".github/dogfood-sync/targets/verifier/AGENTS.md"
+while IFS=$'\t' read -r config_line guidance_line; do
+  if ! awk -v required="${config_line}" '
+    /^commands:$/ { in_commands=1; next }
+    in_commands && /^[^ ]/ { in_commands=0; in_verify=0 }
+    in_commands && /^  verify:$/ { in_verify=1; next }
+    in_verify && /^  [^ ]/ { in_verify=0 }
+    in_verify && $0 == required { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "${verifier_config}"; then
+    echo "verifier dogfood verification is missing: ${guidance_line}" >&2
+    exit 1
+  fi
+  if ! awk -v required="${guidance_line}" '
+    /^## Verification$/ { in_verification=1; next }
+    in_verification && /^## / { in_verification=0; in_fence=0 }
+    in_verification && /^```sh$/ { in_fence=1; next }
+    in_fence && /^```$/ { in_fence=0; next }
+    in_fence && $0 == required { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "${verifier_agents}"; then
+    echo "verifier dogfood guidance is missing: ${guidance_line}" >&2
+    exit 1
+  fi
+done <<'EOF'
+    - "pnpm test:package-entry"	pnpm test:package-entry
+    - "pnpm eval"	pnpm eval
+    - "SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci"	SEMANTIC_EVAL_WRITE_METRICS=false pnpm eval:semantic:ci
+EOF
 
 # The trusted self-organization fleet must opt into dogfood mode explicitly.
 # A missing value falls back to external mode and silently skips every issue
