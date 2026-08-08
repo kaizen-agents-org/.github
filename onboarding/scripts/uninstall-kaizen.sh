@@ -231,7 +231,7 @@ Left in place, because they are yours to remove:
   Committed files. They are in your git history, so removing them should be a
   commit you author and review:
 
-    rm -f .kaizen/onboarding-observations.json
+    rm -f .kaizen/onboarding-observations.json .kaizen/onboarding-observations.json.labels
     git rm -r .kaizen .github/ISSUE_TEMPLATE/kaizen.yml
 
   Vendored skills, if onboarding added them. Remove only the files the manifest

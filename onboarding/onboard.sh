@@ -320,6 +320,11 @@ fi
 # --------------------------------------------------------------- 8. contract
 step "8/8 Check the onboarding contract"
 observations=.kaizen/onboarding-observations.json
+observation_labels="$observations.labels"
+cleanup_observation_labels() {
+  rm -f -- "$observation_labels"
+}
+trap cleanup_observation_labels EXIT
 # This snapshot is live checker input, not durable onboarding evidence. Keep the
 # rule beside the generated config so a fresh adopter cannot accidentally stage
 # it with the artifacts documented for commit.
@@ -344,9 +349,9 @@ fi
 # The snapshot is read-only GitHub state, so re-reading it costs two API calls.
 if command -v gh >/dev/null 2>&1; then
   echo "Capturing repository observations..."
-  if ! gh api "repos/$slug/labels?per_page=100" --jq '[.[].name]' > "$observations.labels" 2>/dev/null; then
+  if ! gh api "repos/$slug/labels?per_page=100" --jq '[.[].name]' > "$observation_labels" 2>/dev/null; then
     echo "warning: could not read labels; capture $observations by hand" >&2
-    rm -f "$observations.labels"
+    rm -f "$observation_labels"
   else
     # An unprotected branch is the normal state for a repository being
     # onboarded, and `gh api` reports it by writing a 404 body to *stdout* and
@@ -371,7 +376,7 @@ if command -v gh >/dev/null 2>&1; then
       echo "error: could not read branch protection; check GitHub authentication, permissions, and API availability" >&2
       exit 1
     fi
-    LABELS_FILE="$observations.labels" PROTECTION_JSON="$protection_json" node -e '
+    LABELS_FILE="$observation_labels" PROTECTION_JSON="$protection_json" node -e '
       const fs = require("node:fs");
       const labels = JSON.parse(fs.readFileSync(process.env.LABELS_FILE, "utf8"));
       let protection;
@@ -399,7 +404,7 @@ if command -v gh >/dev/null 2>&1; then
         }
       }, null, 2) + "\n");
     ' > "$observations"
-    rm -f "$observations.labels"
+    rm -f "$observation_labels"
   fi
 elif [ -f "$observations" ]; then
   echo "warning: gh is unavailable, so $observations was not refreshed." >&2

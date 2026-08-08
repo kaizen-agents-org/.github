@@ -416,6 +416,11 @@ elif grep -Fq "could not read branch protection" "$work/out13"; then
 else
   fail "a non-404 protection API failure lacked actionable diagnostics: $(cat "$work/out13")"
 fi
+if [ -e "$repo/.kaizen/onboarding-observations.json.labels" ]; then
+  fail "a failed observation capture left the labels sidecar behind"
+else
+  pass "failed observation capture removes the labels sidecar"
+fi
 
 # 14. A generic 404 can also mean the requested branch does not exist. Do not
 #     convert that response into a misleading "unprotected" observation.
