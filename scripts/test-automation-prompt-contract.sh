@@ -305,6 +305,12 @@ assert_rejected \
   "\`other\/\`"
 
 assert_rejected \
+  "generated PR agent branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`agent\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
   "generated PR scout title prefix" \
   "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
   "\`\[scout\]\`" \

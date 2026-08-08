@@ -63,7 +63,7 @@ The scout may create `[scout]` issues when all of these are true:
 - for the fixed organization-wide scout, the target repository has fewer than
   five open generated PRs.
 
-For the fixed organization-wide scout's generated-PR WIP guard, branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
+For the fixed organization-wide scout's generated-PR WIP guard, branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `agent/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
 When a target reaches five open generated PRs, the fixed scout creates no new
 issue for that repository and reports the eligible finding as skipped due to
 the WIP cap. An opt-in per-repository scout instead blocks at its configured

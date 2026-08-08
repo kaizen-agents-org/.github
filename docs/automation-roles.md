@@ -116,7 +116,7 @@ The shared backlog guard still applies: skip new issue creation for a target rep
 
 The fixed organization-wide repository improvement scout also applies a
 generated-PR WIP guard per target repository. It creates no new issue when that
-repository has five or more open generated PRs. Branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
+repository has five or more open generated PRs. Branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `agent/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
 When this guard is reached, the scout reports the eligible finding as skipped
 due to the WIP cap. Opt-in per-repository scouts instead use their configured
 WIP limit for all open pull requests.
