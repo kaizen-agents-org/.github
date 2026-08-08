@@ -50,8 +50,17 @@ for pattern in \
   '($threads.nodes | type == "array")' \
   '($threads.pageInfo.hasNextPage | type == "boolean")' \
   'all($threads.nodes[];' \
+  '(.id | type == "string")' \
+  '(.isResolved | type == "boolean")' \
+  '(.isOutdated | type == "boolean")' \
+  '(.path | type == "string")' \
   '(.comments | type == "object")' \
   '(.comments.nodes | type == "array")' \
+  'all(.comments.nodes[];' \
+  '(.fullDatabaseId | type)' \
+  '(.author.login | type == "string")' \
+  '(.createdAt | type == "string")' \
+  '(.outdated | type == "boolean")' \
   '(.comments.pageInfo.hasNextPage | type == "boolean")' \
   '($comments.nodes | type == "array")' \
   '($comments.pageInfo.hasNextPage | type == "boolean")' \

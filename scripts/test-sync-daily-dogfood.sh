@@ -73,6 +73,31 @@ if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
 JSON
   fail "reviewThreads validation accepted a malformed nested comments connection"
 fi
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "src/example.ts",
+            "comments": {
+              "nodes": [],
+              "pageInfo": {"hasNextPage": false, "endCursor": null}
+            }
+          }],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a thread without an id"
+fi
 rm -rf "${weak_guardian_dir}"
 trap - EXIT
 echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"

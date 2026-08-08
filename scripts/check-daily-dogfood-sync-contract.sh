@@ -418,11 +418,25 @@ fi
 verifier_config=".github/dogfood-sync/targets/verifier/.kaizen/config.yml"
 verifier_agents=".github/dogfood-sync/targets/verifier/AGENTS.md"
 while IFS=$'\t' read -r config_line guidance_line; do
-  if ! grep -Fqx -- "${config_line}" "${verifier_config}"; then
+  if ! awk -v required="${config_line}" '
+    /^commands:$/ { in_commands=1; next }
+    in_commands && /^[^ ]/ { in_commands=0; in_verify=0 }
+    in_commands && /^  verify:$/ { in_verify=1; next }
+    in_verify && /^  [^ ]/ { in_verify=0 }
+    in_verify && $0 == required { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "${verifier_config}"; then
     echo "verifier dogfood verification is missing: ${guidance_line}" >&2
     exit 1
   fi
-  if ! grep -Fqx -- "${guidance_line}" "${verifier_agents}"; then
+  if ! awk -v required="${guidance_line}" '
+    /^## Verification$/ { in_verification=1; next }
+    in_verification && /^## / { in_verification=0; in_fence=0 }
+    in_verification && /^```sh$/ { in_fence=1; next }
+    in_fence && /^```$/ { in_fence=0; next }
+    in_fence && $0 == required { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "${verifier_agents}"; then
     echo "verifier dogfood guidance is missing: ${guidance_line}" >&2
     exit 1
   fi

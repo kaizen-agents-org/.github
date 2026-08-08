@@ -43,6 +43,36 @@ grep -Fq 'verifier dogfood guidance is missing:' "${error_log}"
 mv "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md.bak" \
   "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md"
 
+# Identical commands outside their managed sections must not mask drift inside
+# commands.verify or the Verification shell fence.
+printf '%s\n' '    - "pnpm test:package-entry"' >> \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+sed -i.bak '/^    - "pnpm test:package-entry"$/d' \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+printf '%s\n' '    - "pnpm test:package-entry"' >> \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" > /dev/null 2>"${error_log}"; then
+  echo "contract unexpectedly accepted verifier config command outside commands.verify" >&2
+  exit 1
+fi
+grep -Fq 'verifier dogfood verification is missing: pnpm test:package-entry' "${error_log}"
+mv "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml.bak" \
+  "${fixture}/.github/dogfood-sync/targets/verifier/.kaizen/config.yml"
+
+printf '%s\n' 'pnpm test:package-entry' >> \
+  "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md"
+sed -i.bak '/^pnpm test:package-entry$/d' \
+  "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md"
+printf '%s\n' 'pnpm test:package-entry' >> \
+  "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md"
+if bash "${fixture}/scripts/check-daily-dogfood-sync-contract.sh" "${fixture}" > /dev/null 2>"${error_log}"; then
+  echo "contract unexpectedly accepted verifier guidance outside Verification" >&2
+  exit 1
+fi
+grep -Fq 'verifier dogfood guidance is missing: pnpm test:package-entry' "${error_log}"
+mv "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md.bak" \
+  "${fixture}/.github/dogfood-sync/targets/verifier/AGENTS.md"
+
 scout_prompt="${fixture}/automations/kaizen-agents-repo-improvement-scout.prompt.md"
 mutated_prompt="${fixture}/scout.prompt.md"
 sed 's/`kaizen`, `kaizen:authorized`, and `kaizen:ready` labels/`kaizen` and `kaizen:authorized` labels/' \
