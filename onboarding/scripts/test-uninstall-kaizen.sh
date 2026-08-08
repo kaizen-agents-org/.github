@@ -194,6 +194,9 @@ grep -q "git rm -r .kaizen" "$work/out7" \
 grep -q "rm -f .kaizen/onboarding-observations.json" "$work/out7" \
   && pass "ignored observations are reported with an explicit removal command" \
   || fail "the ignored-observation removal command is missing"
+grep -q 'cd -- "/tmp/demo"' "$work/out2" \
+  && pass "repository cleanup is anchored to the selected checkout" \
+  || fail "the repository cleanup checkout is ambiguous"
 grep -q "gh label delete" "$work/out7" \
   && pass "labels are reported rather than deleted" \
   || fail "the label note is missing"

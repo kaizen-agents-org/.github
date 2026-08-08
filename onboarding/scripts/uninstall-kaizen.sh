@@ -94,6 +94,7 @@ registry_field() {
 }
 
 registered=$(registry_field repo)
+repository_path=$(registry_field localPath)
 workspace=$(registry_field workspacePath)
 [ -n "$workspace" ] || workspace="$kaizen_home/workspaces/$project"
 
@@ -229,8 +230,9 @@ cat <<EOF
 Left in place, because they are yours to remove:
 
   Committed files. They are in your git history, so removing them should be a
-  commit you author and review:
+  commit you author and review. Run these from the selected repository checkout:
 
+    cd -- "${repository_path:-/path/to/the/selected/repository}"
     rm -f .kaizen/onboarding-observations.json .kaizen/onboarding-observations.json.labels
     git rm -r .kaizen .github/ISSUE_TEMPLATE/kaizen.yml
 
