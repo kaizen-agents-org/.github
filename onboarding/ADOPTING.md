@@ -78,13 +78,20 @@ a warning naming what it corrected.
 
 ```text
 .kaizen/config.yml                    the contract: commands, policy, schedule
+.kaizen/.gitignore                    excludes regenerated onboarding observations
 .github/ISSUE_TEMPLATE/kaizen.yml     how Kaizen issues get filed
 docs/smoke-runs/<timestamp>.json      evidence the loop completed once
 skills/ + skills-manifest.json        vendored skills and their digests
 ```
 
-Commit all of it. `~/.kaizen/` holds local state (registry, workspaces, logs)
-and belongs on your machine, not in the repository.
+Commit all of the files listed above. `.kaizen/onboarding-observations.json` is
+different: `onboard.sh` regenerates this live labels and branch-protection
+snapshot for the contract checker, and `.kaizen/.gitignore` keeps it out of
+commits. On an upgrade, `onboard.sh` also removes a previously committed snapshot
+from the index while leaving the refreshed local file in place. In contrast,
+`docs/smoke-runs/*.json` is durable acceptance evidence
+and should be committed. `~/.kaizen/` holds local state (registry, workspaces,
+logs) and belongs on your machine, not in the repository.
 
 ## Scheduled runs
 
@@ -184,9 +191,10 @@ uninstall.
 **It deliberately leaves three things alone**, and prints the exact commands
 for each:
 
-- **Committed files** (`.kaizen/`, the issue template, vendored skills, smoke
-  artifacts). They are in your git history, so removing them should be a commit
-  you author rather than something a script does behind you.
+- **Repository files** (`.kaizen/`, the issue template, vendored skills, smoke
+  artifacts). The printed cleanup first removes the ignored generated
+  `.kaizen/onboarding-observations.json`, then stages removal of the committed
+  files so the repository change remains a commit you author.
 - **Labels.** Deleting a label strips it from every issue that ever carried it,
   including closed ones.
 - **Branch protection, issues, and pull requests.** Protection is an

@@ -116,8 +116,47 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   grep -q "Onboarding complete" "$work/out3" \
     && pass "a passing contract reports completion" \
     || fail "completion message missing"
+  if grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore" &&
+     git -C "$repo" check-ignore -q .kaizen/onboarding-observations.json; then
+    pass "observations are excluded from adopter commits"
+  else
+    fail "observations were not ignored by the generated .kaizen rule"
+  fi
 else
   fail "a full non-interactive pass failed: $(cat "$work/out3")"
+fi
+
+# A repository onboarded by an older release may already track the transient
+# snapshot. Upgrading must untrack it without deleting the refreshed local file.
+repo=$(make_repo repo3-upgrade)
+mkdir -p "$repo/.kaizen"
+printf 'cache.tmp\nonboarding-observations.json\n!*.json' > "$repo/.kaizen/.gitignore"
+printf '{"labels":["legacy"]}\n' > "$repo/.kaizen/onboarding-observations.json"
+git -C "$repo" add .kaizen/.gitignore .kaizen/onboarding-observations.json
+git -C "$repo" -c user.name='Onboarding Test' -c user.email='onboarding-test@example.invalid' \
+  commit -qm 'track legacy onboarding observations'
+printf '{"labels":["staged"]}\n' > "$repo/.kaizen/onboarding-observations.json"
+git -C "$repo" add .kaizen/onboarding-observations.json
+printf '{"labels":["dirty-worktree"]}\n' > "$repo/.kaizen/onboarding-observations.json"
+KAIZEN_TEST_LOG="$work/log3-upgrade"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out3-upgrade" 2>&1 ); then
+  if git -C "$repo" ls-files --error-unmatch -- .kaizen/onboarding-observations.json >/dev/null 2>&1; then
+    fail "upgrade left onboarding observations tracked"
+  elif [ ! -f "$repo/.kaizen/onboarding-observations.json" ]; then
+    fail "upgrade deleted the local onboarding observations"
+  elif ! grep -Fxq 'cache.tmp' "$repo/.kaizen/.gitignore" ||
+       ! grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore"; then
+    fail "upgrade concatenated the observations rule onto an unterminated ignore pattern"
+  elif ! git -C "$repo" check-ignore -q .kaizen/onboarding-observations.json; then
+    fail "upgrade left a later re-inclusion overriding the observations rule"
+  else
+    pass "upgrade untracks observations and preserves ignore-rule boundaries"
+  fi
+else
+  fail "upgrade from tracked observations failed: $(cat "$work/out3-upgrade")"
 fi
 
 # 4. Re-running is idempotent: init and smoke are skipped the second time.
@@ -378,6 +417,11 @@ elif grep -Fq "could not read branch protection" "$work/out13"; then
   pass "a non-404 protection API failure is preserved"
 else
   fail "a non-404 protection API failure lacked actionable diagnostics: $(cat "$work/out13")"
+fi
+if [ -e "$repo/.kaizen/onboarding-observations.json.labels" ]; then
+  fail "a failed observation capture left the labels sidecar behind"
+else
+  pass "failed observation capture removes the labels sidecar"
 fi
 
 # 14. A generic 404 can also mean the requested branch does not exist. Do not
