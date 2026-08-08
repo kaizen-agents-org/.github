@@ -130,8 +130,9 @@ fi
 # snapshot. Upgrading must untrack it without deleting the refreshed local file.
 repo=$(make_repo repo3-upgrade)
 mkdir -p "$repo/.kaizen"
+printf 'cache.tmp' > "$repo/.kaizen/.gitignore"
 printf '{"labels":["legacy"]}\n' > "$repo/.kaizen/onboarding-observations.json"
-git -C "$repo" add .kaizen/onboarding-observations.json
+git -C "$repo" add .kaizen/.gitignore .kaizen/onboarding-observations.json
 git -C "$repo" commit -qm 'track legacy onboarding observations'
 KAIZEN_TEST_LOG="$work/log3-upgrade"; : > "$KAIZEN_TEST_LOG"
 export KAIZEN_TEST_LOG
@@ -142,8 +143,11 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
     fail "upgrade left onboarding observations tracked"
   elif [ ! -f "$repo/.kaizen/onboarding-observations.json" ]; then
     fail "upgrade deleted the local onboarding observations"
+  elif ! grep -Fxq 'cache.tmp' "$repo/.kaizen/.gitignore" ||
+       ! grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore"; then
+    fail "upgrade concatenated the observations rule onto an unterminated ignore pattern"
   else
-    pass "upgrade untracks observations while preserving the local snapshot"
+    pass "upgrade untracks observations and preserves ignore-rule boundaries"
   fi
 else
   fail "upgrade from tracked observations failed: $(cat "$work/out3-upgrade")"

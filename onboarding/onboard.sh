@@ -327,6 +327,9 @@ mkdir -p .kaizen
 if [ ! -f .kaizen/.gitignore ]; then
   printf '%s\n' 'onboarding-observations.json' > .kaizen/.gitignore
 elif ! grep -Fxq 'onboarding-observations.json' .kaizen/.gitignore; then
+  if [ -s .kaizen/.gitignore ] && [ "$(tail -c 1 .kaizen/.gitignore | wc -l)" -eq 0 ]; then
+    printf '\n' >> .kaizen/.gitignore
+  fi
   printf '%s\n' 'onboarding-observations.json' >> .kaizen/.gitignore
 fi
 # Existing adopters may have committed this snapshot before it became transient
