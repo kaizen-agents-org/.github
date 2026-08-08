@@ -14,7 +14,7 @@
 
 ## 運用ルール(常時適用)
 
-- **WIP 制限**: 組織全体で生成 PR の open 件数が **5 件** を超えている間は、新しい issue への着手(`kaizen fix` / maintenance ジョブの新規実行)を行わない。まずレビュー・マージで排出する。
+- **WIP 制限**: 対象リポジトリで生成 PR の open 件数が **5 件** 以上の間は、そのリポジトリで新しい issue への着手(`kaizen fix` / maintenance ジョブの新規実行)を行わない。リポジトリ単位で公平に容量を管理し、まずレビュー・マージで排出する。
 - **鮮度優先**: open PR が BEHIND になったら、新規作業より先に rebase する(放置すると builder のやり直しコストになる)。
 - **凍結**: kaizen-loop への新コマンド追加は Phase B 完了まで凍結(hardening は可)。自律マージ・Product Kaizen 層は着手しない。
 - **完了の定義**: 「PR を開いた」は完了ではない。**マージされて main に載り、元 issue が閉じた**ときに完了。
@@ -55,15 +55,15 @@ done
 
 **完了判定**: checks が green の生成 PR が BLOCKED にならないことを新規 PR 1 件で確認。
 
-### A-3. WIP 制限を仕組みにする ✅
+### A-3. WIP 制限を仕組みにする ⬜
 
 評価レポート §4 の「作りすぎのムダ」対策。まず運用で、次に自動化で。
 
 1. ⬜ 即時(運用): scout automation のカデンツを 1 日 3 回 → **1 日 1 回**に減らす(`$CODEX_HOME/automations` と `.github/automations/README.md` の両方を更新)。バックログがゼロになったら戻すか判断。
-2. ✅ 自動化: kaizen-loop の issue 選択時に「対象リポジトリ+組織全体の open 生成 PR 数」を数え、上限(config で `wipLimit`、デフォルト 5)超過なら着手をスキップして理由をログに残す。scout プロンプトにも「open PR が上限超過のリポジトリには issue を作らない」を追記。
+2. ⬜ 自動化: kaizen-loop の issue 選択時に対象リポジトリの open 生成 PR 数を数え、上限(config で `wipLimit`、デフォルト 5)到達なら着手をスキップして理由をログに残す。scout プロンプトにも「open PR が上限到達のリポジトリには issue を作らない」を追記。組織全体の合算 cap は設けず、各リポジトリを独立に判定する。対象リポジトリ単位の実装 ref と実観測を記録できるまでは未完了とする。
 3. ✅ `kaizen status --metrics` に open PR 滞留日数(最古の生成 PR の経過日数)を追加し、週次レビューで監視する。
 
-**完了判定**: 2026-07-05 v2 評価で `safety.wipLimit` デフォルト 5、組織全体の open 生成 PR 数による intake skip、`kaizen status --metrics` 反映を確認済み。WIP 超過スキップの実観測と scout カデンツ調整は継続監視。
+**完了判定**: 2026-07-05 v2 評価で確認済みなのは `safety.wipLimit` デフォルト 5、当時の組織全体の open 生成 PR 数による intake skip、`kaizen status --metrics` 反映まで。現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価の証拠範囲外なので、実装 ref を示した再検証と WIP 到達スキップの実観測を行う。scout カデンツ調整も継続監視する。
 
 ### A-4. sandbox smoke を実運用で 1 回完走させる ✅
 

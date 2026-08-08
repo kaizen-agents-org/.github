@@ -11,6 +11,7 @@ mkdir -p "${fixture}/automations" "${fixture}/docs/production-readiness" "${fixt
 cp "${repo_root}"/automations/*.prompt.md "${fixture}/automations/"
 cp "${repo_root}/automations/README.md" "${fixture}/automations/"
 cp "${repo_root}/docs/automation-roles.md" "${fixture}/docs/"
+cp "${repo_root}/docs/improvement-playbook.ja.md" "${fixture}/docs/"
 cp "${repo_root}/docs/org-monitor.md" "${fixture}/docs/"
 cp "${repo_root}/docs/repo-improvement-scout.md" "${fixture}/docs/"
 cp "${repo_root}/docs/production-readiness/README.md" \
@@ -254,6 +255,120 @@ assert_rejected \
   "docs/automation-roles.md" \
   "At most two issues per target repository per run." \
   "At most twenty issues per target repository per run."
+
+assert_rejected \
+  "scout prompt generated PR WIP limit" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "fewer than five open generated PRs" \
+  "fewer than fifty open generated PRs"
+
+assert_rejected \
+  "role documentation generated PR WIP limit" \
+  "docs/automation-roles.md" \
+  "repository has five or more open generated PRs" \
+  "repository has fifty or more open generated PRs"
+
+assert_rejected \
+  "scout documentation generated PR WIP limit" \
+  "docs/repo-improvement-scout.md" \
+  "five open generated PRs" \
+  "fifty open generated PRs"
+
+assert_rejected \
+  "role documentation human-maintenance exemption" \
+  "docs/automation-roles.md" \
+  "unless there is evidence that they are human-authored maintenance." \
+  "even when there is evidence that they are human-authored maintenance."
+
+assert_rejected \
+  "scout documentation human-maintenance exemption" \
+  "docs/repo-improvement-scout.md" \
+  "unless there is evidence that they are human-authored maintenance." \
+  "even when there is evidence that they are human-authored maintenance."
+
+assert_rejected \
+  "generated PR kaizen branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`kaizen\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR codex branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`codex\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR claude branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`claude\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR agent branch prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`agent\/\`" \
+  "\`other\/\`"
+
+assert_rejected \
+  "generated PR scout title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[scout\]\`" \
+  "\`[other]\`"
+
+assert_rejected \
+  "generated PR monitor title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[monitor\]\`" \
+  "\`[other]\`"
+
+assert_rejected \
+  "generated PR kaizen title prefix" \
+  "automations/kaizen-agents-repo-improvement-scout.prompt.md" \
+  "\`\[monitor\]\`, or \`kaizen:\` as generated PRs" \
+  "\`[monitor]\`, or \`other:\` as generated PRs"
+
+assert_rejected \
+  "role documentation generated PR prefix list" \
+  "docs/automation-roles.md" \
+  "\`codex\/\`" \
+  "\`drifted\/\`"
+
+assert_rejected \
+  "scout documentation generated PR prefix list" \
+  "docs/repo-improvement-scout.md" \
+  "\`codex\/\`" \
+  "\`drifted\/\`"
+
+assert_rejected \
+  "playbook per-repository generated PR threshold" \
+  "docs/improvement-playbook.ja.md" \
+  "\*\*5 件\*\* 以上" \
+  "**50 件** 以上"
+
+assert_rejected \
+  "playbook unverified WIP evidence qualification" \
+  "docs/improvement-playbook.ja.md" \
+  "現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価の証拠範囲外" \
+  "現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価で確認済み"
+
+assert_rejected \
+  "playbook unverified WIP status markers" \
+  "docs/improvement-playbook.ja.md" \
+  "### A-3. WIP 制限を仕組みにする ⬜" \
+  "### A-3. WIP 制限を仕組みにする ✅"
+
+assert_rejected \
+  "playbook unverified WIP implementation marker" \
+  "docs/improvement-playbook.ja.md" \
+  "2. ⬜ 自動化:" \
+  "2. ✅ 自動化:"
+
+assert_rejected \
+  "scout documentation fixed-scout scope" \
+  "docs/repo-improvement-scout.md" \
+  "For the fixed organization-wide scout's generated-PR WIP guard" \
+  "For every scout's generated-PR WIP guard"
 
 assert_rejected \
   "monitor fleet registry source" \
