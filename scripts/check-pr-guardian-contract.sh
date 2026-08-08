@@ -83,9 +83,11 @@ done
 
 for pattern in \
   'if ! page="$(gh "${args[@]}")"; then' \
-  '(.errors == null)'; do
+  '(.errors == null)' \
+  '(.fullDatabaseId | type)' \
+  '(.createdAt | type == "string")'; do
   if [[ "$(grep -Fc -- "${pattern}" <<<"${executable}")" -ne 2 ]]; then
-    echo "pr-guardian audit reference must fail closed in both paginated GraphQL loops: ${pattern}" >&2
+    echo "pr-guardian audit reference must validate both paginated GraphQL loops: ${pattern}" >&2
     exit 1
   fi
 done

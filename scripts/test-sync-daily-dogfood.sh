@@ -98,6 +98,26 @@ if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
 JSON
   fail "reviewThreads validation accepted a thread without an id"
 fi
+comment_validator="$(awk '
+  /^  if ! jq -e '\''$/ { validator+=1; capture=(validator == 2); next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${comment_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "node": {
+      "comments": {
+        "nodes": [{}],
+        "pageInfo": {"hasNextPage": false, "endCursor": null}
+      }
+    }
+  }
+}
+JSON
+  fail "review comment pagination accepted a malformed comment node"
+fi
 rm -rf "${weak_guardian_dir}"
 trap - EXIT
 echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"

@@ -134,6 +134,13 @@ query($threadId:ID!, $cursor:String) {
     and (.data.node.comments as $comments
     | ($comments | type == "object")
       and ($comments.nodes | type == "array")
+      and all($comments.nodes[];
+        ((.fullDatabaseId | type) == "string" or (.fullDatabaseId | type) == "number")
+        and (.url | type == "string")
+        and ((.author == null) or ((.author | type == "object") and (.author.login | type == "string")))
+        and (.body | type == "string")
+        and (.createdAt | type == "string")
+        and (.outdated | type == "boolean"))
       and ($comments.pageInfo | type == "object")
       and ($comments.pageInfo.hasNextPage | type == "boolean")
       and (($comments.pageInfo.endCursor == null) or ($comments.pageInfo.endCursor | type == "string")))
