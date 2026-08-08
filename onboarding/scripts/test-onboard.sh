@@ -126,6 +126,29 @@ else
   fail "a full non-interactive pass failed: $(cat "$work/out3")"
 fi
 
+# A repository onboarded by an older release may already track the transient
+# snapshot. Upgrading must untrack it without deleting the refreshed local file.
+repo=$(make_repo repo3-upgrade)
+mkdir -p "$repo/.kaizen"
+printf '{"labels":["legacy"]}\n' > "$repo/.kaizen/onboarding-observations.json"
+git -C "$repo" add .kaizen/onboarding-observations.json
+git -C "$repo" commit -qm 'track legacy onboarding observations'
+KAIZEN_TEST_LOG="$work/log3-upgrade"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out3-upgrade" 2>&1 ); then
+  if git -C "$repo" ls-files --error-unmatch -- .kaizen/onboarding-observations.json >/dev/null 2>&1; then
+    fail "upgrade left onboarding observations tracked"
+  elif [ ! -f "$repo/.kaizen/onboarding-observations.json" ]; then
+    fail "upgrade deleted the local onboarding observations"
+  else
+    pass "upgrade untracks observations while preserving the local snapshot"
+  fi
+else
+  fail "upgrade from tracked observations failed: $(cat "$work/out3-upgrade")"
+fi
+
 # 4. Re-running is idempotent: init and smoke are skipped the second time.
 KAIZEN_TEST_LOG="$work/log4"; : > "$KAIZEN_TEST_LOG"
 export KAIZEN_TEST_LOG

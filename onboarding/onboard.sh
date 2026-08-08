@@ -329,6 +329,12 @@ if [ ! -f .kaizen/.gitignore ]; then
 elif ! grep -Fxq 'onboarding-observations.json' .kaizen/.gitignore; then
   printf '%s\n' 'onboarding-observations.json' >> .kaizen/.gitignore
 fi
+# Existing adopters may have committed this snapshot before it became transient
+# state. Remove only that exact path from the index while preserving the local
+# file that the contract checker refreshes below.
+if git ls-files --error-unmatch -- "$observations" >/dev/null 2>&1; then
+  git rm --cached --quiet -- "$observations"
+fi
 # Always recapture. Keeping an earlier snapshot means a maintainer who fixes the
 # labels or protection it reported as missing would see the same failure
 # forever, which contradicts the resume-and-re-run path this script promises.

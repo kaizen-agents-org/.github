@@ -87,7 +87,9 @@ skills/ + skills-manifest.json        vendored skills and their digests
 Commit all of the files listed above. `.kaizen/onboarding-observations.json` is
 different: `onboard.sh` regenerates this live labels and branch-protection
 snapshot for the contract checker, and `.kaizen/.gitignore` keeps it out of
-commits. In contrast, `docs/smoke-runs/*.json` is durable acceptance evidence
+commits. On an upgrade, `onboard.sh` also removes a previously committed snapshot
+from the index while leaving the refreshed local file in place. In contrast,
+`docs/smoke-runs/*.json` is durable acceptance evidence
 and should be committed. `~/.kaizen/` holds local state (registry, workspaces,
 logs) and belongs on your machine, not in the repository.
 
