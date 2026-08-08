@@ -9,6 +9,13 @@ if [[ ! -d "${source_root}/skills" ]]; then
   exit 1
 fi
 
+guardian_contract_check="${source_root}/scripts/check-pr-guardian-contract.sh"
+if [[ ! -f "${guardian_contract_check}" ]]; then
+  echo "missing pr-guardian contract check: ${guardian_contract_check}" >&2
+  exit 1
+fi
+bash "${guardian_contract_check}" "${source_root}/skills/pr-guardian/SKILL.md"
+
 if [[ "$#" -eq 0 ]]; then
   set -- \
     "${source_root}/../builder-agent" \

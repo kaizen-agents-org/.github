@@ -46,4 +46,21 @@ for skill in gh-link-issue-pr kaizen-bug-router pr-guardian; do
     || fail "synced skill does not match source: ${skill}"
 done
 
+invalid_source="${tmp}/invalid-source"
+invalid_target="${tmp}/invalid-target"
+mkdir -p "${invalid_source}/skills" "${invalid_source}/scripts"
+cp -R "${repo_root}/skills/gh-link-issue-pr" "${invalid_source}/skills/"
+cp -R "${repo_root}/skills/kaizen-bug-router" "${invalid_source}/skills/"
+cp -R "${repo_root}/skills/pr-guardian" "${invalid_source}/skills/"
+cp "${repo_root}/scripts/check-pr-guardian-contract.sh" "${invalid_source}/scripts/"
+sed -i.bak 's/(.id | type == "string")/malformed guardian contract/' \
+  "${invalid_source}/skills/pr-guardian/references/pr-feedback-audit.md"
+rm "${invalid_source}/skills/pr-guardian/references/pr-feedback-audit.md.bak"
+git init -q "${invalid_target}"
+if bash "${sync_script}" "${invalid_source}" "${invalid_target}" >/dev/null 2>&1; then
+  fail "sync accepted a malformed pr-guardian contract"
+fi
+[[ ! -e "${invalid_target}/skills" ]] \
+  || fail "sync wrote target skills before validating the pr-guardian contract"
+
 echo "PASS: shared skill sync accepts linked git worktree roots and rejects nested targets"

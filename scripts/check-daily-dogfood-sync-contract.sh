@@ -15,6 +15,7 @@ cd "${repo_root}"
 daily_workflow=".github/workflows/daily-dogfood-sync.yml"
 dogfood_workflow=".github/workflows/sync-daily-dogfood.yml"
 shared_skill_workflow=".github/workflows/sync-kaizen-shared-skills.yml"
+shared_skill_sync_script="scripts/sync-kaizen-shared-skills.sh"
 sync_script="scripts/sync-daily-dogfood.sh"
 pr_link_test="scripts/test-sync-daily-dogfood-pr-link.sh"
 monitor_contract_check="scripts/check-org-monitor-contract.sh"
@@ -34,6 +35,7 @@ for path in \
   "${daily_workflow}" \
   "${dogfood_workflow}" \
   "${shared_skill_workflow}" \
+  "${shared_skill_sync_script}" \
   "${sync_script}" \
   "${pr_link_test}" \
   "${monitor_contract_check}" \
@@ -221,6 +223,8 @@ grep -q "Shared skill sync blocked" "${shared_skill_workflow}"
 grep -q "available=false" "${shared_skill_workflow}"
 grep -q "Shared skill sync skipped" "${shared_skill_workflow}"
 grep -q "Verify synced skill copies" "${shared_skill_workflow}"
+grep -Fq 'scripts/check-pr-guardian-contract.sh' "${shared_skill_workflow}"
+grep -Fq 'bash "${guardian_contract_check}" "${source_root}/skills/pr-guardian/SKILL.md"' "${shared_skill_sync_script}"
 grep -q "Assert no target drifts silently" "${shared_skill_workflow}"
 grep -q "Shared skill drift unresolved" "${shared_skill_workflow}"
 grep -q "Shared skill sync incomplete" "${shared_skill_workflow}"
