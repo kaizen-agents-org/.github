@@ -336,7 +336,7 @@ fi
 # state. Remove only that exact path from the index while preserving the local
 # file that the contract checker refreshes below.
 if git ls-files --error-unmatch -- "$observations" >/dev/null 2>&1; then
-  git rm --cached --quiet -- "$observations"
+  git rm --cached --force --quiet -- "$observations"
 fi
 # Always recapture. Keeping an earlier snapshot means a maintainer who fixes the
 # labels or protection it reported as missing would see the same failure

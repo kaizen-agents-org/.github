@@ -133,7 +133,11 @@ mkdir -p "$repo/.kaizen"
 printf 'cache.tmp' > "$repo/.kaizen/.gitignore"
 printf '{"labels":["legacy"]}\n' > "$repo/.kaizen/onboarding-observations.json"
 git -C "$repo" add .kaizen/.gitignore .kaizen/onboarding-observations.json
-git -C "$repo" commit -qm 'track legacy onboarding observations'
+git -C "$repo" -c user.name='Onboarding Test' -c user.email='onboarding-test@example.invalid' \
+  commit -qm 'track legacy onboarding observations'
+printf '{"labels":["staged"]}\n' > "$repo/.kaizen/onboarding-observations.json"
+git -C "$repo" add .kaizen/onboarding-observations.json
+printf '{"labels":["dirty-worktree"]}\n' > "$repo/.kaizen/onboarding-observations.json"
 KAIZEN_TEST_LOG="$work/log3-upgrade"; : > "$KAIZEN_TEST_LOG"
 export KAIZEN_TEST_LOG
 if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
