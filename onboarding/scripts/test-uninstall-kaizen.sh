@@ -191,6 +191,9 @@ fi
 grep -q "git rm -r .kaizen" "$work/out7" \
   && pass "committed files are reported with the command to remove them" \
   || fail "the committed-file note is missing"
+grep -q "rm -f .kaizen/onboarding-observations.json" "$work/out7" \
+  && pass "ignored observations are reported with an explicit removal command" \
+  || fail "the ignored-observation removal command is missing"
 grep -q "gh label delete" "$work/out7" \
   && pass "labels are reported rather than deleted" \
   || fail "the label note is missing"

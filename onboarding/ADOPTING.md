@@ -191,9 +191,10 @@ uninstall.
 **It deliberately leaves three things alone**, and prints the exact commands
 for each:
 
-- **Committed files** (`.kaizen/`, the issue template, vendored skills, smoke
-  artifacts). They are in your git history, so removing them should be a commit
-  you author rather than something a script does behind you.
+- **Repository files** (`.kaizen/`, the issue template, vendored skills, smoke
+  artifacts). The printed cleanup first removes the ignored generated
+  `.kaizen/onboarding-observations.json`, then stages removal of the committed
+  files so the repository change remains a commit you author.
 - **Labels.** Deleting a label strips it from every issue that ever carried it,
   including closed ones.
 - **Branch protection, issues, and pull requests.** Protection is an
