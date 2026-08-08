@@ -55,12 +55,12 @@ done
 
 **完了判定**: checks が green の生成 PR が BLOCKED にならないことを新規 PR 1 件で確認。
 
-### A-3. WIP 制限を仕組みにする ✅
+### A-3. WIP 制限を仕組みにする ⬜
 
 評価レポート §4 の「作りすぎのムダ」対策。まず運用で、次に自動化で。
 
 1. ⬜ 即時(運用): scout automation のカデンツを 1 日 3 回 → **1 日 1 回**に減らす(`$CODEX_HOME/automations` と `.github/automations/README.md` の両方を更新)。バックログがゼロになったら戻すか判断。
-2. ✅ 自動化: kaizen-loop の issue 選択時に対象リポジトリの open 生成 PR 数を数え、上限(config で `wipLimit`、デフォルト 5)到達なら着手をスキップして理由をログに残す。scout プロンプトにも「open PR が上限到達のリポジトリには issue を作らない」を追記。組織全体の合算 cap は設けず、各リポジトリを独立に判定する。
+2. ⬜ 自動化: kaizen-loop の issue 選択時に対象リポジトリの open 生成 PR 数を数え、上限(config で `wipLimit`、デフォルト 5)到達なら着手をスキップして理由をログに残す。scout プロンプトにも「open PR が上限到達のリポジトリには issue を作らない」を追記。組織全体の合算 cap は設けず、各リポジトリを独立に判定する。対象リポジトリ単位の実装 ref と実観測を記録できるまでは未完了とする。
 3. ✅ `kaizen status --metrics` に open PR 滞留日数(最古の生成 PR の経過日数)を追加し、週次レビューで監視する。
 
 **完了判定**: 2026-07-05 v2 評価で確認済みなのは `safety.wipLimit` デフォルト 5、当時の組織全体の open 生成 PR 数による intake skip、`kaizen status --metrics` 反映まで。現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価の証拠範囲外なので、実装 ref を示した再検証と WIP 到達スキップの実観測を行う。scout カデンツ調整も継続監視する。

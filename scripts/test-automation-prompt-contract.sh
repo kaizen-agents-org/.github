@@ -341,6 +341,12 @@ assert_rejected \
   "**50 件** 以上"
 
 assert_rejected \
+  "playbook unverified WIP evidence qualification" \
+  "docs/improvement-playbook.ja.md" \
+  "現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価の証拠範囲外" \
+  "現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価で確認済み"
+
+assert_rejected \
   "scout documentation fixed-scout scope" \
   "docs/repo-improvement-scout.md" \
   "For the fixed organization-wide scout's generated-PR WIP guard" \
