@@ -281,6 +281,8 @@ require_text "${repo_root}/docs/improvement-playbook.ja.md" '組織全体の合�
 require_text "${repo_root}/docs/improvement-playbook.ja.md" '対象リポジトリで生成 PR の open 件数が **5 件** 以上の間は、そのリポジトリで新しい issue への着手'
 require_text "${repo_root}/docs/improvement-playbook.ja.md" '現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価の証拠範囲外'
 require_text "${repo_root}/docs/improvement-playbook.ja.md" '対象リポジトリ単位の実装 ref と実観測を記録できるまでは未完了とする。'
+require_text "${repo_root}/docs/improvement-playbook.ja.md" '### A-3. WIP 制限を仕組みにする ⬜'
+require_text "${repo_root}/docs/improvement-playbook.ja.md" '2. ⬜ 自動化: kaizen-loop の issue 選択時に対象リポジトリの open 生成 PR 数を数え'
 require_text "${scout_doc}" 'for the fixed organization-wide scout, the target repository has fewer than'
 require_text "${scout_doc}" "For the fixed organization-wide scout's generated-PR WIP guard, branches or PR titles prefixed with \`kaizen/\`, \`codex/\`, \`claude/\`, \`[scout]\`, \`[monitor]\`, or \`kaizen:\` count as generated."
 require_text "${scout_doc}" 'Those prefixes count as generated unless there is evidence that they are human-authored maintenance.'

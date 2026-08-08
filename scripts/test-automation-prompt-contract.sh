@@ -347,6 +347,18 @@ assert_rejected \
   "現在の対象リポジトリ単位・組織合算 cap なしという契約は同評価で確認済み"
 
 assert_rejected \
+  "playbook unverified WIP status markers" \
+  "docs/improvement-playbook.ja.md" \
+  "### A-3. WIP 制限を仕組みにする ⬜" \
+  "### A-3. WIP 制限を仕組みにする ✅"
+
+assert_rejected \
+  "playbook unverified WIP implementation marker" \
+  "docs/improvement-playbook.ja.md" \
+  "2. ⬜ 自動化:" \
+  "2. ✅ 自動化:"
+
+assert_rejected \
   "scout documentation fixed-scout scope" \
   "docs/repo-improvement-scout.md" \
   "For the fixed organization-wide scout's generated-PR WIP guard" \
