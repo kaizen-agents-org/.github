@@ -32,10 +32,11 @@ chmod +x "$bin/kaizen" "$bin/npm"
 # toolchain that other projects would also depend on.
 seed_home() {
   home="$work/$1"
+  local_path="$home/repo path 'quoted' \$(touch $home/pwned)"
   rm -rf "$home"
-  mkdir -p "$home/workspaces/example-org-demo" "$home/toolchain/kaizen-loop"
+  mkdir -p "$home/workspaces/example-org-demo" "$home/toolchain/kaizen-loop" "$local_path"
   printf 'marker\n' > "$home/workspaces/example-org-demo/marker"
-  SEED_HOME="$home" node -e '
+  SEED_HOME="$home" SEED_LOCAL_PATH="$local_path" node -e '
     const fs = require("node:fs");
     const home = process.env.SEED_HOME;
     fs.writeFileSync(`${home}/registry.json`, JSON.stringify({
@@ -43,7 +44,7 @@ seed_home() {
       projects: {
         "example-org-demo": {
           repo: "example-org/demo",
-          localPath: "/tmp/demo",
+          localPath: process.env.SEED_LOCAL_PATH,
           workspacePath: `${home}/workspaces/example-org-demo`,
           schedule: "02:00",
           enabled: true
@@ -194,9 +195,16 @@ grep -q "git rm -r .kaizen" "$work/out7" \
 grep -q "rm -f .kaizen/onboarding-observations.json" "$work/out7" \
   && pass "ignored observations are reported with an explicit removal command" \
   || fail "the ignored-observation removal command is missing"
-grep -q 'cd -- "/tmp/demo"' "$work/out2" \
-  && pass "repository cleanup is anchored to the selected checkout" \
-  || fail "the repository cleanup checkout is ambiguous"
+cleanup_cd=$(sed -n 's/^    \(cd -- .*\)$/\1/p' "$work/out2" | head -1)
+expected_home="$work/home-real"
+expected_checkout="$expected_home/repo path 'quoted' \$(touch $expected_home/pwned)"
+if [ -n "$cleanup_cd" ] &&
+   [ "$(sh -c "$cleanup_cd && pwd")" = "$expected_checkout" ] &&
+   [ ! -e "$expected_home/pwned" ]; then
+  pass "repository cleanup prints a shell-safe selected checkout"
+else
+  fail "the repository cleanup checkout is ambiguous or unsafe"
+fi
 grep -q "gh label delete" "$work/out7" \
   && pass "labels are reported rather than deleted" \
   || fail "the label note is missing"
