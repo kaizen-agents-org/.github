@@ -131,10 +131,15 @@ remote_url=$(git remote get-url origin 2>/dev/null) || {
   echo "error: this repository has no origin remote" >&2
   exit 2
 }
-publication_url=$(git remote get-url --push origin 2>/dev/null) || {
+publication_urls=$(git remote get-url --push --all origin 2>/dev/null) || {
   echo "error: this repository has no publication URL for origin" >&2
   exit 2
 }
+publication_url=$(printf '%s\n' "$publication_urls" | sed -n '1p')
+if [ "$publication_urls" != "$publication_url" ]; then
+  echo "error: origin must have exactly one publication URL" >&2
+  exit 2
+fi
 slug=$(printf '%s' "$remote_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
 case "$slug" in
   */*) : ;;

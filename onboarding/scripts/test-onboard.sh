@@ -231,6 +231,26 @@ else
   fi
 fi
 
+# Git publishes to every configured push URL. Reject multiple targets before
+# probing or installing rather than validating only the first destination.
+repo=$(make_repo repo2-multiple-push-urls)
+git -C "$repo" remote set-url --push origin "git@github.com:example-org/example-repo.git"
+git -C "$repo" remote set-url --add --push origin "https://github.com/example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-multiple-push-urls"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-multiple-push-urls" 2>&1 ); then
+  fail "onboarding accepted multiple publication URLs"
+else
+  if grep -q "origin must have exactly one publication URL" "$work/out2-multiple-push-urls" &&
+     [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "multiple publication URLs are refused before probing or installation"
+  else
+    fail "multiple publication URLs were reported too late or with the wrong message"
+  fi
+fi
+
 # 3. A full non-interactive pass runs the steps in order.
 repo=$(make_repo repo3)
 KAIZEN_TEST_LOG="$work/log3"; : > "$KAIZEN_TEST_LOG"

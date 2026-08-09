@@ -38,7 +38,9 @@ reproducible.
 
 Kaizen supports two Git publication paths. The effective publication URL is
 the value of `git remote get-url --push origin`, which may differ from the
-fetch URL. An HTTPS publication URL requires the credential-separated broker
+fetch URL. Onboarding requires exactly one push URL and rejects remotes with
+multiple `remote.origin.pushurl` entries because Git would publish to all of
+them. An HTTPS publication URL requires the credential-separated broker
 described below. An SSH publication URL, such as
 `git@github.com:owner/repository.git`, publishes with the runner account's SSH
 identity and does not use `KAIZEN_GITHUB_TOKEN_SOCKET`. For unattended SSH
