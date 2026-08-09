@@ -24,26 +24,11 @@ fi
 
 grep -Eq 'uses: actions/setup-node@[0-9a-f]{40}' "${workflow}"
 
-write_permission_pattern="(^|[[:space:]])permissions:[[:space:]]*['\"]?write-all['\"]?([[:space:]]|\$)|(^|[,{[:space:]])[[:space:]]*['\"]?[[:alnum:]_-]+['\"]?:[[:space:]]*['\"]?write['\"]?([,}#[:space:]]|\$)"
-for write_permission_fixture in \
-  'packages: write' \
-  "packages: 'write'" \
-  'checks: "write"' \
-  '"id-token": "write"' \
-  'permissions: write-all' \
-  "permissions: 'write-all'" \
-  'permissions: "write-all"' \
-  "permissions: {contents: read, id-token: 'write'}"
-do
-  if ! grep -Eq "${write_permission_pattern}" <<< "${write_permission_fixture}"; then
-    echo "write permission guard missed fixture: ${write_permission_fixture}" >&2
-    exit 1
-  fi
-done
-
-if grep -Eq "${write_permission_pattern}" "${workflow}"; then
-  echo 'pull-request contract workflow must remain read-only' >&2
-  exit 1
+kaizen_loop_root="${KAIZEN_LOOP_ROOT:-}"
+if [[ -z "${kaizen_loop_root}" ]]; then
+  common_git_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-common-dir)"
+  kaizen_loop_root="$(dirname "$(dirname "${common_git_dir}")")/kaizen-loop"
 fi
+node "${repo_root}/scripts/check-workflow-read-only-permissions.mjs" "${workflow}" "${kaizen_loop_root}"
 
 echo 'PASS: pull-request contract CI remains read-only and complete'
