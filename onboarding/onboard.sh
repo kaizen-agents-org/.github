@@ -127,15 +127,48 @@ repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$repo_root"
 
+if git config --local --includes --get-regexp '^url\..*\.(insteadOf|pushInsteadOf)$' >/dev/null 2>&1 ||
+   git config --worktree --includes --get-regexp '^url\..*\.(insteadOf|pushInsteadOf)$' >/dev/null 2>&1; then
+  cat >&2 <<EOF
+error: origin publication cannot use checkout-local Git URL rewrites
+
+Remove local or per-worktree url.*.insteadOf and url.*.pushInsteadOf rules
+before onboarding. Scheduled publication uses a dedicated clone that does not
+inherit them, so an authentication probe through a checkout rewrite would not
+validate its target.
+EOF
+  exit 2
+fi
+
 remote_url=$(git remote get-url origin 2>/dev/null) || {
   echo "error: this repository has no origin remote" >&2
   exit 2
 }
-slug=$(printf '%s' "$remote_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
-case "$slug" in
-  */*) : ;;
+remote_url_identity=$(printf '%s' "$remote_url" | tr '[:upper:]' '[:lower:]')
+case "$remote_url_identity" in
+  https://github.com/*|https://*@github.com/*|git@github.com:*|ssh://git@github.com/*) ;;
   *) echo "error: origin is not a GitHub remote: $remote_url" >&2; exit 2 ;;
 esac
+publication_urls=$(git remote get-url --push --all origin 2>/dev/null) || {
+  echo "error: this repository has no publication URL for origin" >&2
+  exit 2
+}
+publication_url=$(printf '%s\n' "$publication_urls" | sed -n '1p')
+if [ "$publication_urls" != "$publication_url" ]; then
+  echo "error: origin must have exactly one publication URL" >&2
+  exit 2
+fi
+publication_url_identity=$(printf '%s' "$publication_url" | tr '[:upper:]' '[:lower:]')
+slug=$(printf '%s' "$remote_url_identity" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+case "$slug" in
+  */*) : ;;
+  *) echo "error: invalid GitHub origin path: $remote_url" >&2; exit 2 ;;
+esac
+publication_slug=$(printf '%s' "$publication_url_identity" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+if [ "$publication_slug" != "$slug" ]; then
+  echo "error: origin fetch and publication URLs name different repositories" >&2
+  exit 2
+fi
 
 echo "Onboarding repository: $slug"
 echo "Checkout:              $repo_root"
@@ -144,7 +177,7 @@ echo "Manifest:              $manifest"
 # HTTPS publication is deliberately delegated to a root-owned broker so the
 # builder-capable process never receives a GitHub token. Refuse the common
 # default-clone configuration before installation or smoke work is attempted.
-case "$remote_url" in
+case "$publication_url_identity" in
   https://github.com/*|https://*@github.com/*)
     if [ -z "${KAIZEN_GITHUB_TOKEN_SOCKET:-}" ]; then
       cat >&2 <<EOF
@@ -164,6 +197,26 @@ EOF
         exit 2
         ;;
     esac
+    ;;
+  git@github.com:*|ssh://git@github.com/*)
+    probe_ref="HEAD:refs/heads/kaizen-onboarding-auth-check-$$"
+    if ! GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+      GIT_TERMINAL_PROMPT=0 \
+      GIT_SSH_COMMAND='ssh -F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes' \
+      git push --dry-run --no-verify "$publication_url" "$probe_ref"; then
+      cat >&2 <<EOF
+error: SSH origin cannot publish non-interactively
+
+Configure a default SSH identity or SSH_AUTH_SOCK and trust GitHub's host key,
+then re-run the dry-run push documented in onboarding/ADOPTING.md. This check
+runs before toolchain installation so publication failure is detected early.
+EOF
+      exit 2
+    fi
+    ;;
+  *)
+    echo "error: unsupported GitHub publication URL: $publication_url" >&2
+    exit 2
     ;;
 esac
 
