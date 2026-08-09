@@ -252,6 +252,27 @@ else
   fi
 fi
 
+# Checkout-local URL rewrites do not follow the scheduled runtime clone. They
+# must not make an authentication probe validate a different destination.
+repo=$(make_repo repo2-local-url-rewrite)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+git -C "$repo" config 'url.file:///private/tmp/kaizen-rewrite-target/.insteadOf' \
+  'git@github.com:'
+KAIZEN_TEST_LOG="$work/log2-local-url-rewrite"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-local-url-rewrite" 2>&1 ); then
+  fail "onboarding accepted a checkout-local Git URL rewrite"
+else
+  if grep -q "origin publication cannot use checkout-local Git URL rewrites" \
+       "$work/out2-local-url-rewrite" && [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "checkout-local Git URL rewrites are refused before probing or installation"
+  else
+    fail "checkout-local Git URL rewrite was reported too late or with the wrong message"
+  fi
+fi
+
 # 3. A full non-interactive pass runs the steps in order.
 repo=$(make_repo repo3)
 KAIZEN_TEST_LOG="$work/log3"; : > "$KAIZEN_TEST_LOG"
