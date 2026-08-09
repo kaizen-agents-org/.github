@@ -146,7 +146,7 @@ exec ${JSON.stringify(realGit)} "$@"
     );
     assert(response.ok === true, `valid request failed: ${JSON.stringify(response)}`);
     assert((await fsp.readFile(pushLog, 'utf8')).includes(`${sha}:refs/heads/feature/broker`),
-      'push did not use the validated SHA');
+      'push did not use the validated SHA and branch ref');
   });
 
   await runCase('a mismatched expectedSha is refused', async () => {
