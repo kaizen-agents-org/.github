@@ -24,7 +24,24 @@ fi
 
 grep -Eq 'uses: actions/setup-node@[0-9a-f]{40}' "${workflow}"
 
-if grep -Eq '(^|[[:space:]])permissions:[[:space:]]*write-all([[:space:]]|$)|(^|[,{[:space:]])[[:space:]]*[[:alnum:]_-]+:[[:space:]]*write([,}#[:space:]]|$)' "${workflow}"; then
+write_permission_pattern="(^|[[:space:]])permissions:[[:space:]]*['\"]?write-all['\"]?([[:space:]]|\$)|(^|[,{[:space:]])[[:space:]]*['\"]?[[:alnum:]_-]+['\"]?:[[:space:]]*['\"]?write['\"]?([,}#[:space:]]|\$)"
+for write_permission_fixture in \
+  'packages: write' \
+  "packages: 'write'" \
+  'checks: "write"' \
+  '"id-token": "write"' \
+  'permissions: write-all' \
+  "permissions: 'write-all'" \
+  'permissions: "write-all"' \
+  "permissions: {contents: read, id-token: 'write'}"
+do
+  if ! grep -Eq "${write_permission_pattern}" <<< "${write_permission_fixture}"; then
+    echo "write permission guard missed fixture: ${write_permission_fixture}" >&2
+    exit 1
+  fi
+done
+
+if grep -Eq "${write_permission_pattern}" "${workflow}"; then
   echo 'pull-request contract workflow must remain read-only' >&2
   exit 1
 fi
