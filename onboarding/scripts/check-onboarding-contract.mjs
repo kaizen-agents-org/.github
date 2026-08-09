@@ -6,6 +6,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isSuccessfulSmokeArtifact } from './validate-smoke-artifacts.mjs';
 
 const REQUIRED_PROTECTED_PATHS = [
   '.github/**',
@@ -264,17 +265,19 @@ async function checkSmokeArtifact(target) {
   let validArtifact = false;
   for (const artifact of artifacts) {
     try {
-      JSON.parse(await fs.readFile(artifact, 'utf8'));
-      validArtifact = true;
-      break;
+      const value = JSON.parse(await fs.readFile(artifact, 'utf8'));
+      if (isSuccessfulSmokeArtifact(value)) {
+        validArtifact = true;
+        break;
+      }
     } catch {
       // Keep looking so a malformed historical artifact does not hide a valid one.
     }
   }
   if (!validArtifact) {
     reportFailure(
-      'smoke artifact files exist but none contains valid JSON',
-      'replace or regenerate at least one artifact under docs/smoke-runs/'
+      'smoke artifact files exist but none proves a successful issue-to-PR run',
+      'run kaizen smoke with v0.1.2 or newer and commit its artifact under docs/smoke-runs/'
     );
   }
 }

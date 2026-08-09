@@ -43,7 +43,9 @@ YAML
 }
 JSON
   printf 'name: Kaizen\n' > "${target}/.github/ISSUE_TEMPLATE/kaizen.yml"
-  printf '{"ok":true}\n' > "${target}/docs/smoke-runs/smoke.json"
+  cat > "${target}/docs/smoke-runs/smoke.json" <<'JSON'
+{"version":1,"kind":"sandbox-e2e-smoke","result":"success","pullRequest":{"number":4,"url":"https://github.com/example-org/example-repo/pull/4","isDraft":false,"issueLinkRecognized":true}}
+JSON
   printf 'example skill\n' > "${target}/skills/example/SKILL.md"
   cat > "${target}/onboarding/versions.json" <<'JSON'
 {"kaizen-loop":"v0.1.0","builder-agent":"v0.1.0","verifier":"v0.1.0"}
@@ -185,6 +187,10 @@ mutate_smoke() {
   rm "$1/docs/smoke-runs/smoke.json"
 }
 
+mutate_false_success_smoke() {
+  printf '{"ok":true}\n' > "$1/docs/smoke-runs/smoke.json"
+}
+
 mutate_skill_digest() {
   printf 'drifted skill\n' > "$1/skills/example/SKILL.md"
 }
@@ -254,6 +260,7 @@ expect_failure status-checks 'branch protection must require at least one strict
 expect_failure conversation-resolution 'branch protection must require conversation resolution' mutate_conversation_resolution
 expect_failure admin-enforcement 'branch protection must enforce rules for administrators' mutate_admin_enforcement
 expect_failure missing-smoke 'no smoke artifact JSON file was found' mutate_smoke
+expect_failure false-success-smoke 'none proves a successful issue-to-PR run' mutate_false_success_smoke
 expect_failure skill-drift 'vendored skill does not match its manifest digest' mutate_skill_digest
 expect_failure skill-rehash 'skills manifest digest differs from the pinned skill bundle' mutate_skill_and_rehash
 expect_failure skill-symlink 'skills manifest path is not a regular file' mutate_skill_symlink
