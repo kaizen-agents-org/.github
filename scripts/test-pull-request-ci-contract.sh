@@ -7,7 +7,6 @@ workflow="${repo_root}/.github/workflows/pull-request-contracts.yml"
 test -s "${workflow}"
 grep -Fq 'pull_request:' "${workflow}"
 grep -Fq 'types: [opened, synchronize, reopened, ready_for_review]' "${workflow}"
-grep -Fq 'contents: read' "${workflow}"
 grep -Fq 'cancel-in-progress: true' "${workflow}"
 grep -Fq 'ref: ${{ steps.versions.outputs.kaizen_loop }}' "${workflow}"
 grep -Fq 'run: bash scripts/run-pr-contracts.sh' "${workflow}"
@@ -30,5 +29,19 @@ if [[ -z "${kaizen_loop_root}" ]]; then
   kaizen_loop_root="$(dirname "$(dirname "${common_git_dir}")")/kaizen-loop"
 fi
 node "${repo_root}/scripts/check-workflow-read-only-permissions.mjs" "${workflow}" "${kaizen_loop_root}"
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "${tmp_dir}"' EXIT
+missing_permissions_workflow="${tmp_dir}/missing-permissions.yml"
+awk '
+  /^permissions:$/ { skipping = 1; next }
+  skipping && /^  / { next }
+  { skipping = 0; print }
+' "${workflow}" > "${missing_permissions_workflow}"
+printf '\n# contents: read\n' >> "${missing_permissions_workflow}"
+if node "${repo_root}/scripts/check-workflow-read-only-permissions.mjs" "${missing_permissions_workflow}" "${kaizen_loop_root}"; then
+  echo 'workflow-level permissions must be required structurally' >&2
+  exit 1
+fi
 
 echo 'PASS: pull-request contract CI remains read-only and complete'
