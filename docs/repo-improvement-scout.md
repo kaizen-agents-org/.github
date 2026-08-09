@@ -39,6 +39,13 @@ cannot also be enabled as per-repository scouts; enablement rejects those
 repository identities case-insensitively to prevent duplicate discovery and
 issue creation.
 
+Before the fixed scout fetches or reads a located checkout, it normalizes the
+checkout's `origin` URL across supported HTTPS and SSH GitHub forms and requires
+the complete repository identity to match the intended `kaizen-agents-org`
+target. A checkout with a missing, ambiguous, fork, or different origin is not
+used as local evidence; the scout reports the mismatch and falls back to the
+target repository's GitHub default-branch content.
+
 ## What It Looks For
 
 The scout looks for bounded, evidence-backed improvements that can become one focused PR:
