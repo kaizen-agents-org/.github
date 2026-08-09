@@ -305,10 +305,13 @@ kaizen doctor --repair || {
 step "7/8 Run the acceptance smoke pass"
 if [ "$skip_smoke" -eq 1 ]; then
   echo "Skipped by --skip-smoke."
-elif ls docs/smoke-runs/*.json >/dev/null 2>&1; then
-  echo "A smoke artifact already exists under docs/smoke-runs/; skipping."
+elif node "$script_dir/scripts/validate-smoke-artifacts.mjs" docs/smoke-runs; then
+  echo "A successful issue-to-PR smoke artifact already exists under docs/smoke-runs/; skipping."
   echo "Delete it and re-run to force a fresh smoke pass."
 else
+  if ls docs/smoke-runs/*.json >/dev/null 2>&1; then
+    echo "Existing smoke artifacts do not prove a successful issue-to-PR run; running a fresh smoke pass."
+  fi
   echo "The smoke pass creates a real sandbox issue and pull request on $slug."
   if confirm "Run the smoke pass now?"; then
     kaizen smoke --yes

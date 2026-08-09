@@ -19,6 +19,7 @@ pass() { echo "ok: $1"; }
 stub_tree="$work/onboarding"
 mkdir -p "$stub_tree/scripts" "$stub_tree/profiles"
 cp "$onboarding_dir/onboard.sh" "$stub_tree/onboard.sh"
+cp "$onboarding_dir/scripts/validate-smoke-artifacts.mjs" "$stub_tree/scripts/validate-smoke-artifacts.mjs"
 cp "$onboarding_dir/profiles/pilot-node.yml" "$stub_tree/profiles/" 2>/dev/null || \
   printf 'safety:\n  wipLimit: 2\n' > "$stub_tree/profiles/pilot-node.yml"
 printf '{"kaizen-loop":"v0.1.0","builder-agent":"v0.1.0","verifier":"v0.1.0"}\n' \
@@ -57,7 +58,10 @@ policy:
   mode: pr-only
 CONFIG
     ;;
-  smoke) mkdir -p "$PWD/docs/smoke-runs" && printf '{"ok":true}\n' > "$PWD/docs/smoke-runs/run.json" ;;
+  smoke)
+    mkdir -p "$PWD/docs/smoke-runs"
+    printf '%s\n' '{"version":1,"kind":"sandbox-e2e-smoke","result":"success","pullRequest":{"number":4,"url":"https://github.com/example-org/example-repo/pull/4","isDraft":false,"issueLinkRecognized":true}}' > "$PWD/docs/smoke-runs/run.json"
+    ;;
 esac
 EOF
 chmod +x "$bin/kaizen"
@@ -127,6 +131,26 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   fi
 else
   fail "a full non-interactive pass failed: $(cat "$work/out3")"
+fi
+
+# A v0.1.1 false-success artifact did not prove that a PR was opened. A re-run
+# must replace that evidence instead of treating the presence of JSON as proof.
+repo=$(make_repo repo3-false-success-upgrade)
+mkdir -p "$repo/docs/smoke-runs"
+printf '{"ok":true}\n' > "$repo/docs/smoke-runs/run.json"
+KAIZEN_TEST_LOG="$work/log3-false-success-upgrade"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out3-false-success-upgrade" 2>&1 ); then
+  if grep -q 'kaizen smoke --yes' "$KAIZEN_TEST_LOG" &&
+     node "$onboarding_dir/scripts/validate-smoke-artifacts.mjs" "$repo/docs/smoke-runs"; then
+    pass "a false-success artifact triggers a fresh issue-to-PR smoke"
+  else
+    fail "a false-success artifact was reused during upgrade"
+  fi
+else
+  fail "upgrade from a false-success artifact failed: $(cat "$work/out3-false-success-upgrade")"
 fi
 
 # Machine-local excludes must not replace the repository-owned ignore rule.
