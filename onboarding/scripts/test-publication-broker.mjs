@@ -145,6 +145,8 @@ exec ${JSON.stringify(realGit)} "$@"
       'valid request'
     );
     assert(response.ok === true, `valid request failed: ${JSON.stringify(response)}`);
+    assert((await fsp.readFile(pushLog, 'utf8')).includes(`${sha}:refs/heads/feature/broker`),
+      'push did not use the validated SHA and branch ref');
   });
 
   await runCase('a mismatched expectedSha is refused', async () => {
@@ -210,10 +212,9 @@ exec ${JSON.stringify(realGit)} "$@"
     assert(response.ok === false && response.error === 'unsafe-push-url', 'confusing URL was not refused');
   });
 
-  await runCase('the push log records only the validated sha and ref without credentials', async () => {
+  await runCase('refused requests do not push or expose credentials', async () => {
     const pushes = (await fsp.readFile(pushLog, 'utf8')).trim().split('\n');
     assert(pushes.length === 1, `refused requests triggered pushes: ${pushes.length}`);
-    assert(pushes[0].includes(`${sha}:refs/heads/feature/broker`), 'push did not use the validated SHA');
     assert(!pushes[0].includes('test-token'), 'token appeared in Git arguments');
     assert(!brokerErrors.includes('test-token'), 'token appeared in broker logs');
   });
