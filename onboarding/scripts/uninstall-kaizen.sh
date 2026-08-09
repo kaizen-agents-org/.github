@@ -96,16 +96,33 @@ registry_field() {
   ' 2>/dev/null || true
 }
 
+# Validate localPath while it is still a complete JavaScript string. POSIX
+# command substitution strips trailing newlines, so checking it afterward can
+# silently validate a different path from the one stored in the registry.
+registry_repository_path() {
+  [ -f "$registry" ] || return 0
+  REGISTRY="$registry" SLUG="$project" node -e '
+    const fs = require("node:fs");
+    try {
+      const data = JSON.parse(fs.readFileSync(process.env.REGISTRY, "utf8"));
+      const value = (data.projects ?? {})[process.env.SLUG]?.localPath;
+      if (typeof value === "string") {
+        if (/[\r\n]/.test(value)) {
+          process.stderr.write(
+            "error: registry localPath contains a carriage return or newline; refusing to generate cleanup commands\n"
+          );
+          process.exit(2);
+        }
+        process.stdout.write(value);
+      }
+    } catch {}
+  '
+}
+
 registered=$(registry_field repo)
-repository_path_with_sentinel=$(registry_field localPath; printf '\001')
-repository_path=${repository_path_with_sentinel%?}
-case "$repository_path" in
-  *'
-'*)
-    echo "error: registry localPath must not contain newlines" >&2
-    exit 2
-    ;;
-esac
+if ! repository_path=$(registry_repository_path); then
+  exit 2
+fi
 repository_path_command=$(shell_quote "${repository_path:-/path/to/the/selected/repository}")
 workspace=$(registry_field workspacePath)
 [ -n "$workspace" ] || workspace="$kaizen_home/workspaces/$project"
