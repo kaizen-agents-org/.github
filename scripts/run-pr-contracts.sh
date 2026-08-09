@@ -14,6 +14,7 @@ bash scripts/test-sync-kaizen-shared-skills-pr-link.sh
 bash scripts/test-onboarding-versions-sandbox.sh
 bash scripts/test-onboarding-branch-protection.sh
 bash onboarding/scripts/test-onboard.sh
+node onboarding/scripts/test-publication-broker.mjs
 bash onboarding/scripts/test-onboarding-contract.sh
 bash onboarding/scripts/test-install-kaizen.sh
 bash onboarding/scripts/test-uninstall-kaizen.sh

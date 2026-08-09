@@ -304,6 +304,7 @@ Run the positive fixture and focused negative fixtures with:
 
 ```sh
 onboarding/scripts/test-onboarding-contract.sh
+node onboarding/scripts/test-publication-broker.mjs
 ```
 
 The fixture suite also verifies that the checker leaves the target unchanged

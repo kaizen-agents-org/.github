@@ -76,6 +76,11 @@ make_repo() {
   printf '%s' "$target"
 }
 
+# The broker itself has separate socket fixtures. Onboarding only needs to
+# prove that the socket is configured before it starts expensive work.
+KAIZEN_GITHUB_TOKEN_SOCKET="$work/broker.sock"
+export KAIZEN_GITHUB_TOKEN_SOCKET
+
 # 1. --yes without --profile must be refused: an unattended run cannot choose
 #    a throughput policy on the adopter's behalf.
 repo=$(make_repo repo1)
@@ -98,6 +103,43 @@ else
   grep -q "run onboard.sh from inside the repository" "$work/out2" \
     && pass "running outside a repository is refused" \
     || fail "outside-repository message was wrong"
+fi
+
+# An HTTPS clone without broker configuration must fail before installation or
+# any builder-capable Kaizen command runs.
+repo=$(make_repo repo2-no-broker)
+KAIZEN_TEST_LOG="$work/log2-no-broker"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-no-broker" 2>&1 ); then
+  fail "HTTPS onboarding without a publication broker was accepted"
+else
+  if grep -q "HTTPS origin requires KAIZEN_GITHUB_TOKEN_SOCKET" "$work/out2-no-broker" &&
+     [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "missing HTTPS publication broker is refused before installation"
+  else
+    fail "missing broker was reported too late or with the wrong message"
+  fi
+fi
+
+# User-info HTTPS remotes are still HTTPS GitHub publication, and a relative
+# broker path cannot satisfy the client trust check.
+repo=$(make_repo repo2-relative-broker)
+git -C "$repo" remote set-url origin "https://runner@github.com/example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-relative-broker"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && KAIZEN_GITHUB_TOKEN_SOCKET=broker.sock PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-relative-broker" 2>&1 ); then
+  fail "user-info HTTPS remote accepted a relative broker socket"
+else
+  if grep -q "KAIZEN_GITHUB_TOKEN_SOCKET must be an absolute path" "$work/out2-relative-broker" &&
+     [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "user-info HTTPS remote requires an absolute broker socket before installation"
+  else
+    fail "user-info HTTPS or relative socket preflight was incomplete"
+  fi
 fi
 
 # 3. A full non-interactive pass runs the steps in order.

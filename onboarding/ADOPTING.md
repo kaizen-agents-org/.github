@@ -2,8 +2,9 @@
 
 This guide is for a maintainer adding the Kaizen issue-to-pull-request loop to a
 repository they own. You need `git`, `gh` (authenticated), Node 20 or newer,
-`pnpm`, and administrator rights on the repository if you want the branch
-protection applied for you.
+`pnpm`, a running GitHub publication broker for the usual HTTPS clone, and
+administrator rights on the repository if you want the branch protection
+applied for you.
 
 The toolchain is built from source at its pinned tags rather than installed as
 prebuilt packages, so the first install compiles three repositories and takes a
@@ -31,6 +32,77 @@ sh /path/to/kaizen-onboarding/onboarding/onboard.sh
 
 Pin the clone to a release tag once one exists, so the kit you onboard with is
 reproducible.
+
+## Configure HTTPS publication
+
+Kaizen does not put a GitHub token in `smoke`, `run`, or any builder process.
+For an HTTPS `origin`, a small root-owned broker validates one specific push and
+performs it in a separate process. Install the broker in a root-owned location,
+create a socket directory whose entire path is root-owned and not group- or
+world-writable. Name the unprivileged account that runs Kaizen so request
+validation cannot gain root privileges:
+
+```sh
+kaizen_group=kaizen-publisher # create this group with only the Kaizen runner
+kaizen_gid=1234              # replace with that group's numeric GID
+
+sudo install -o root -g "$kaizen_group" -m 0755 \
+  onboarding/scripts/kaizen-publication-broker.mjs \
+  /usr/local/libexec/kaizen-publication-broker
+sudo install -d -o root -g "$kaizen_group" -m 0755 /opt/kaizen/run
+
+sudo env KAIZEN_PUBLICATION_BROKER_TOKEN="$(gh auth token)" \
+  /usr/local/libexec/kaizen-publication-broker \
+    --socket /opt/kaizen/run/github-publication.sock \
+    --socket-gid "$kaizen_gid" \
+    --run-uid "$(id -u)" \
+    --run-gid "$kaizen_gid" \
+    --runtime-dir /var/tmp \
+    --allow owner/repository:main
+```
+
+Use the default branch after the colon in every `--allow` entry. Repeat
+`--allow` when one broker serves several repositories. The broker refuses tags,
+the configured default branch, repositories outside this list, and any request
+whose commit does not match the source branch tip. It creates the socket as
+`root:<socket-gid>` with mode `0660`; `--socket-gid` and `--run-gid` must name
+the same dedicated group whose only member is the Kaizen runner. The broker also
+requires the request checkout to be owned by that runner with mode `0700`. The
+broker refuses to start when
+any directory above the socket is group- or world-writable. On macOS,
+`/var/run` is group-writable and is refused, while `/opt/kaizen/run` created as
+above passes the ownership checks.
+
+The root-only Git and askpass workspace defaults to `/var/tmp`. If that
+filesystem is mounted `noexec`, create a root-owned executable directory and
+pass it with `--runtime-dir`; its ancestors must not be group- or world-writable.
+
+Run the broker under a root service manager so it starts before scheduled
+Kaizen jobs and restarts after token rotation. The token belongs only in that
+service's environment. Broker logs contain refusals and successful repository,
+branch, and commit identifiers, but never the credential. If startup reports an
+existing socket, verify that no broker is running and remove that exact stale
+socket before restarting; the broker never replaces an existing path.
+
+Validation of the caller-controlled checkout runs as `--run-uid/--run-gid`.
+The final credentialed Git process remains inside the root broker because the
+token must not become observable to builder code running as that same account.
+It uses a new root-only bare repository, ignores caller Git configuration and
+hooks, and reads only the already-validated object database. This still makes
+the broker a narrow high-privilege boundary: keep Node and Git patched, use a
+repository-scoped token, and allow-list only repositories this machine must
+publish.
+
+In the shell or service definition that starts Kaizen, configure only the
+socket—not the token:
+
+```sh
+export KAIZEN_GITHUB_TOKEN_SOCKET=/opt/kaizen/run/github-publication.sock
+```
+
+`onboard.sh` detects an HTTPS origin without this setting before it installs the
+toolchain or begins the smoke pass. The broker still validates the full request;
+the environment check is only an early configuration error.
 
 It walks eight steps and stops to ask you three things. Those three are the
 decisions you own; everything else is mechanical:
