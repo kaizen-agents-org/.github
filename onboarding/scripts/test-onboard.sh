@@ -273,6 +273,28 @@ else
   fi
 fi
 
+# A linked worktree can carry a separate config.worktree with the same rewrite
+# behavior, so inspect that scope independently of the shared local config.
+repo=$(make_repo repo2-worktree-url-rewrite)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+git -C "$repo" config extensions.worktreeConfig true
+git -C "$repo" config --worktree \
+  'url.git@github.com:other-org/.pushInsteadOf' 'git@github.com:example-org/'
+KAIZEN_TEST_LOG="$work/log2-worktree-url-rewrite"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-worktree-url-rewrite" 2>&1 ); then
+  fail "onboarding accepted a per-worktree Git URL rewrite"
+else
+  if grep -q "origin publication cannot use checkout-local Git URL rewrites" \
+       "$work/out2-worktree-url-rewrite" && [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "per-worktree Git URL rewrites are refused before probing or installation"
+  else
+    fail "per-worktree Git URL rewrite was reported too late or with the wrong message"
+  fi
+fi
+
 # 3. A full non-interactive pass runs the steps in order.
 repo=$(make_repo repo3)
 KAIZEN_TEST_LOG="$work/log3"; : > "$KAIZEN_TEST_LOG"

@@ -127,13 +127,15 @@ repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$repo_root"
 
-if git config --local --get-regexp '^url\..*\.(insteadOf|pushInsteadOf)$' >/dev/null 2>&1; then
+if git config --local --get-regexp '^url\..*\.(insteadOf|pushInsteadOf)$' >/dev/null 2>&1 ||
+   git config --worktree --get-regexp '^url\..*\.(insteadOf|pushInsteadOf)$' >/dev/null 2>&1; then
   cat >&2 <<EOF
 error: origin publication cannot use checkout-local Git URL rewrites
 
-Remove local url.*.insteadOf and url.*.pushInsteadOf rules before onboarding.
-Scheduled publication uses a dedicated clone that does not inherit them, so an
-authentication probe through a local rewrite would not validate its target.
+Remove local or per-worktree url.*.insteadOf and url.*.pushInsteadOf rules
+before onboarding. Scheduled publication uses a dedicated clone that does not
+inherit them, so an authentication probe through a checkout rewrite would not
+validate its target.
 EOF
   exit 2
 fi
