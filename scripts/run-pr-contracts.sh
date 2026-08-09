@@ -18,4 +18,5 @@ bash onboarding/scripts/test-onboarding-contract.sh
 bash onboarding/scripts/test-install-kaizen.sh
 bash onboarding/scripts/test-uninstall-kaizen.sh
 bash onboarding/scripts/test-toolchain-update.sh
+bash scripts/check-weekly-metrics-contract.sh
 bash scripts/test-check-doc-links.sh
