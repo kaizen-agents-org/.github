@@ -184,7 +184,7 @@ EOF
     if ! GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
       GIT_TERMINAL_PROMPT=0 \
       GIT_SSH_COMMAND='ssh -F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes' \
-      git push --dry-run "$publication_url" "$probe_ref"; then
+      git push --dry-run --no-verify "$publication_url" "$probe_ref"; then
       cat >&2 <<EOF
 error: SSH origin cannot publish non-interactively
 

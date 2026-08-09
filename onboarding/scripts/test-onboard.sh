@@ -163,7 +163,7 @@ export KAIZEN_TEST_LOG
 if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
       sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
       >"$work/out2-ssh" 2>&1 ); then
-  probe_line=$(grep -n '^git push --dry-run ' "$KAIZEN_TEST_LOG" | cut -d: -f1)
+  probe_line=$(grep -n '^git push --dry-run --no-verify ' "$KAIZEN_TEST_LOG" | cut -d: -f1)
   install_line=$(grep -n 'install-kaizen.sh' "$KAIZEN_TEST_LOG" | cut -d: -f1)
   if [ -n "$probe_line" ] && [ -n "$install_line" ] &&
      [ "$probe_line" -lt "$install_line" ] &&
@@ -188,7 +188,7 @@ if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET &&
   fail "SSH onboarding continued after publication preflight failure"
 else
   if grep -q "SSH origin cannot publish non-interactively" "$work/out2-ssh-failure" &&
-     grep -q '^git push --dry-run ' "$KAIZEN_TEST_LOG" &&
+     grep -q '^git push --dry-run --no-verify ' "$KAIZEN_TEST_LOG" &&
      ! grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG"; then
     pass "failed SSH write access is refused before installation"
   else
@@ -205,7 +205,7 @@ export KAIZEN_TEST_LOG
 if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
       sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
       >"$work/out2-https-fetch-ssh-push" 2>&1 ); then
-  grep -q '^git push --dry-run git@github.com:example-org/example-repo.git ' "$KAIZEN_TEST_LOG" \
+  grep -q '^git push --dry-run --no-verify git@github.com:example-org/example-repo.git ' "$KAIZEN_TEST_LOG" \
     && pass "HTTPS fetch with SSH push uses the SSH publication preflight" \
     || fail "HTTPS fetch with SSH push did not probe the effective push URL"
 else
