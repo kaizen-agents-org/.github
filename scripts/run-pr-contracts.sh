@@ -6,6 +6,7 @@ cd "${repo_root}"
 
 bash scripts/test-pull-request-ci-contract.sh
 bash scripts/test-automation-prompt-contract.sh
+bash scripts/test-dogfood-selection-label-contract.sh
 bash scripts/test-sync-daily-dogfood.sh
 bash scripts/test-sync-daily-dogfood-pr-link.sh
 bash scripts/test-sync-kaizen-shared-skills.sh
