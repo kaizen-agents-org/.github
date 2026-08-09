@@ -144,6 +144,10 @@ remote_url=$(git remote get-url origin 2>/dev/null) || {
   echo "error: this repository has no origin remote" >&2
   exit 2
 }
+case "$remote_url" in
+  https://github.com/*|https://*@github.com/*|git@github.com:*|ssh://git@github.com/*) ;;
+  *) echo "error: origin is not a GitHub remote: $remote_url" >&2; exit 2 ;;
+esac
 publication_urls=$(git remote get-url --push --all origin 2>/dev/null) || {
   echo "error: this repository has no publication URL for origin" >&2
   exit 2
@@ -156,7 +160,7 @@ fi
 slug=$(printf '%s' "$remote_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
 case "$slug" in
   */*) : ;;
-  *) echo "error: origin is not a GitHub remote: $remote_url" >&2; exit 2 ;;
+  *) echo "error: invalid GitHub origin path: $remote_url" >&2; exit 2 ;;
 esac
 publication_slug=$(printf '%s' "$publication_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
 slug_identity=$(printf '%s' "$slug" | tr '[:upper:]' '[:lower:]')

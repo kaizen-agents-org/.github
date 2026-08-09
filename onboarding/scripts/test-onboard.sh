@@ -295,6 +295,28 @@ else
   fi
 fi
 
+# A hostname containing github.com is not necessarily GitHub. Validate the URL
+# form before extracting a repository slug from it.
+repo=$(make_repo repo2-lookalike-host)
+git -C "$repo" remote set-url origin \
+  "https://notgithub.com/example-org/example-repo.git"
+git -C "$repo" remote set-url --push origin \
+  "https://github.com/example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-lookalike-host"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-lookalike-host" 2>&1 ); then
+  fail "onboarding accepted a GitHub lookalike fetch host"
+else
+  if grep -q "origin is not a GitHub remote" "$work/out2-lookalike-host" &&
+     [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "GitHub lookalike hosts are refused before probing or installation"
+  else
+    fail "GitHub lookalike host was reported too late or with the wrong message"
+  fi
+fi
+
 # 3. A full non-interactive pass runs the steps in order.
 repo=$(make_repo repo3)
 KAIZEN_TEST_LOG="$work/log3"; : > "$KAIZEN_TEST_LOG"
