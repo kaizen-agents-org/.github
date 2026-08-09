@@ -277,4 +277,4 @@ install_from_source builder-agent "$(read_version builder-agent)" builder-agent 
 install_from_source verifier "$(read_version verifier)" verifier pnpm packages/core
 
 echo
-echo "Kaizen toolchain installed. Verify with: kaizen doctor"
+echo "Kaizen toolchain installed. Verify with: kaizen doctor --repair"

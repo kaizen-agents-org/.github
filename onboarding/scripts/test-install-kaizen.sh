@@ -202,6 +202,11 @@ if KAIZEN_TEST_NPM_LOG="$log" KAIZEN_HOME="$work/home" PATH="$bin:$PATH" \
   grep -q "install -g github:kaizen-agents-org/verifier" "$log" \
     && fail "verifier was installed with npm install -g, which cannot work" \
     || pass "verifier is not installed through npm install -g"
+  if grep -q "Verify with: kaizen doctor --repair" "$work/out6"; then
+    pass "successful install recommends the supported repair check"
+  else
+    fail "successful install recommends an obsolete doctor command"
+  fi
 else
   fail "a real install failed: $(cat "$work/out6")"
 fi
