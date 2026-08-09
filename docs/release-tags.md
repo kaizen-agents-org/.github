@@ -48,7 +48,7 @@ following against the exact commits to be tagged:
   `kaizen doctor` successfully.
 - A Kaizen smoke run passes with the pinned set.
 
-The currently released set is `{kaizen-loop: v0.1.1, builder-agent: v0.1.0,
+The currently released set is `{kaizen-loop: v0.1.2, builder-agent: v0.1.0,
 verifier: v0.1.0}`, recorded in
 [`onboarding/versions.json`](../onboarding/versions.json), which is the
 authority; the JSON above is a shape example.
