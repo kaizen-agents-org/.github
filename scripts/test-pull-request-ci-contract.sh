@@ -24,7 +24,7 @@ fi
 
 grep -Eq 'uses: actions/setup-node@[0-9a-f]{40}' "${workflow}"
 
-if grep -Eq '(^|[[:space:]])(contents|pull-requests|issues|actions): write' "${workflow}"; then
+if grep -Eq '(^|[[:space:]])permissions:[[:space:]]*write-all([[:space:]]|$)|(^|[,{[:space:]])[[:space:]]*[[:alnum:]_-]+:[[:space:]]*write([,}#[:space:]]|$)' "${workflow}"; then
   echo 'pull-request contract workflow must remain read-only' >&2
   exit 1
 fi
