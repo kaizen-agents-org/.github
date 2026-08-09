@@ -155,7 +155,7 @@ exec ${JSON.stringify(realGit)} "$@"
     assert(response.ok === false && response.error === 'expected-sha-mismatch', 'wrong SHA was not refused');
   });
 
-  await runCase('a checkout not owned by the runner is refused', async () => {
+  await runCase('a non-private checkout is refused', async () => {
     await fsp.chmod(publication, 0o750);
     const response = assertBoundedSingleLineResponse(
       await request(`${JSON.stringify(valid)}\n`),
