@@ -123,7 +123,19 @@ registered=$(registry_field repo)
 if ! repository_path=$(registry_repository_path); then
   exit 2
 fi
-repository_path_command=$(shell_quote "${repository_path:-/path/to/the/selected/repository}")
+if [ -z "$repository_path" ] && command -v git >/dev/null 2>&1; then
+  current_remote=$(git remote get-url origin 2>/dev/null || true)
+  current_repo=$(printf '%s' "$current_remote" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+  current_project=$(printf '%s' "$current_repo" | tr '/' '-')
+  if [ "$current_project" = "$project" ]; then
+    repository_path=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  fi
+fi
+if [ -n "$repository_path" ]; then
+  repository_checkout_instruction="    cd -- $(shell_quote "$repository_path")"
+else
+  repository_checkout_instruction='    First change into the actual repository checkout; its path is no longer in the registry.'
+fi
 workspace=$(registry_field workspacePath)
 [ -n "$workspace" ] || workspace="$kaizen_home/workspaces/$project"
 
@@ -261,7 +273,7 @@ Left in place, because they are yours to remove:
   Committed files. They are in your git history, so removing them should be a
   commit you author and review. Run these from the selected repository checkout:
 
-    cd -- $repository_path_command
+$repository_checkout_instruction
     rm -f .kaizen/onboarding-observations.json .kaizen/onboarding-observations.json.labels
     git rm -r .kaizen .github/ISSUE_TEMPLATE/kaizen.yml
 

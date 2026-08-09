@@ -195,6 +195,13 @@ grep -q "git rm -r .kaizen" "$work/out7" \
 grep -q "rm -f .kaizen/onboarding-observations.json" "$work/out7" \
   && pass "ignored observations are reported with an explicit removal command" \
   || fail "the ignored-observation removal command is missing"
+if grep -q "/path/to/the/selected/repository" "$work/out7"; then
+  fail "a repeated uninstall prints a non-working checkout placeholder"
+elif grep -q "First change into the actual repository checkout" "$work/out7"; then
+  pass "a repeated uninstall requires a real checkout path"
+else
+  fail "a repeated uninstall does not explain how to select the checkout"
+fi
 cleanup_cd=$(sed -n 's/^    \(cd -- .*\)$/\1/p' "$work/out2" | head -1)
 expected_home="$work/home-real"
 expected_checkout="$expected_home/repo path 'quoted' \$(touch $expected_home/pwned)"
