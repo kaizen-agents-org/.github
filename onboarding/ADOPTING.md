@@ -43,17 +43,21 @@ world-writable. Name the unprivileged account that runs Kaizen so request
 validation cannot gain root privileges:
 
 ```sh
-sudo install -o root -g wheel -m 0755 \
+kaizen_group=kaizen-publisher # create this group with only the Kaizen runner
+kaizen_gid=1234              # replace with that group's numeric GID
+
+sudo install -o root -g "$kaizen_group" -m 0755 \
   onboarding/scripts/kaizen-publication-broker.mjs \
   /usr/local/libexec/kaizen-publication-broker
-sudo install -d -o root -g wheel -m 0755 /opt/kaizen/run
+sudo install -d -o root -g "$kaizen_group" -m 0755 /opt/kaizen/run
 
 sudo env KAIZEN_PUBLICATION_BROKER_TOKEN="$(gh auth token)" \
   /usr/local/libexec/kaizen-publication-broker \
     --socket /opt/kaizen/run/github-publication.sock \
-    --socket-gid "$(id -g)" \
+    --socket-gid "$kaizen_gid" \
     --run-uid "$(id -u)" \
-    --run-gid "$(id -g)" \
+    --run-gid "$kaizen_gid" \
+    --runtime-dir /var/tmp \
     --allow owner/repository:main
 ```
 
@@ -61,9 +65,17 @@ Use the default branch after the colon in every `--allow` entry. Repeat
 `--allow` when one broker serves several repositories. The broker refuses tags,
 the configured default branch, repositories outside this list, and any request
 whose commit does not match the source branch tip. It creates the socket as
-`root:<socket-gid>` with mode `0660`; the selected group must include the Kaizen
-runner. On macOS, `/var/run` is group-writable and is rejected by the client,
-while `/opt/kaizen/run` created as above passes the ownership checks.
+`root:<socket-gid>` with mode `0660`; `--socket-gid` and `--run-gid` must name
+the same dedicated group whose only member is the Kaizen runner. The broker also
+requires the request checkout to be owned by that runner with mode `0700`. The
+broker refuses to start when
+any directory above the socket is group- or world-writable. On macOS,
+`/var/run` is group-writable and is refused, while `/opt/kaizen/run` created as
+above passes the ownership checks.
+
+The root-only Git and askpass workspace defaults to `/var/tmp`. If that
+filesystem is mounted `noexec`, create a root-owned executable directory and
+pass it with `--runtime-dir`; its ancestors must not be group- or world-writable.
 
 Run the broker under a root service manager so it starts before scheduled
 Kaizen jobs and restarts after token rotation. The token belongs only in that

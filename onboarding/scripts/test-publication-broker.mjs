@@ -29,10 +29,21 @@ async function request(payload) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection(socketPath);
     const chunks = [];
+    let settled = false;
+    const finish = (action, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      action(value);
+    };
+    const deadline = setTimeout(() => {
+      socket.destroy();
+      finish(reject, new Error(`broker did not answer within 30s: ${brokerErrors}`));
+    }, 30_000);
     socket.on('connect', () => socket.end(payload));
     socket.on('data', (chunk) => chunks.push(chunk));
-    socket.on('error', reject);
-    socket.on('end', () => resolve(Buffer.concat(chunks)));
+    socket.on('error', (error) => finish(reject, error));
+    socket.on('end', () => finish(resolve, Buffer.concat(chunks)));
   });
 }
 
@@ -66,6 +77,7 @@ try {
   await fsp.writeFile(path.join(source, 'README.md'), 'fixture\n');
   git(['-C', source, 'add', 'README.md']);
   git(['-C', source, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture']);
+  await fsp.mkdir(publication, { mode: 0o700 });
   git(['clone', '-q', '--bare', '--no-local', source, publication]);
   const sha = git(['-C', publication, 'rev-parse', 'refs/heads/feature/broker']);
 
@@ -92,6 +104,7 @@ exec ${JSON.stringify(realGit)} "$@"
     '--run-uid', String(uid || 1),
     '--run-gid', String(gid),
     '--git', shim,
+    '--runtime-dir', fixture,
     '--push-timeout-ms', '10000'
   ], {
     env: { ...process.env, KAIZEN_PUBLICATION_BROKER_TOKEN: 'test-token' },
@@ -125,6 +138,14 @@ exec ${JSON.stringify(realGit)} "$@"
     'wrong expectedSha'
   );
   assert(response.ok === false && response.error === 'expected-sha-mismatch', 'wrong SHA was not refused');
+
+  await fsp.chmod(publication, 0o750);
+  response = assertBoundedSingleLineResponse(
+    await request(`${JSON.stringify(valid)}\n`),
+    'non-private checkout'
+  );
+  assert(response.ok === false && response.error === 'invalid-cwd', 'non-private checkout was not refused');
+  await fsp.chmod(publication, 0o700);
 
   response = assertBoundedSingleLineResponse(
     await request(`${JSON.stringify({ ...valid, expectedRepo: 'other/repo', pushUrl: 'https://github.com/other/repo.git' })}\n`),

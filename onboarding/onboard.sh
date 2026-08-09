@@ -145,7 +145,7 @@ echo "Manifest:              $manifest"
 # builder-capable process never receives a GitHub token. Refuse the common
 # default-clone configuration before installation or smoke work is attempted.
 case "$remote_url" in
-  https://github.com/*)
+  https://github.com/*|https://*@github.com/*)
     if [ -z "${KAIZEN_GITHUB_TOKEN_SOCKET:-}" ]; then
       cat >&2 <<EOF
 error: HTTPS origin requires KAIZEN_GITHUB_TOKEN_SOCKET
@@ -157,6 +157,13 @@ fail only when it tries to publish.
 EOF
       exit 2
     fi
+    case "$KAIZEN_GITHUB_TOKEN_SOCKET" in
+      /*) ;;
+      *)
+        echo "error: KAIZEN_GITHUB_TOKEN_SOCKET must be an absolute path" >&2
+        exit 2
+        ;;
+    esac
     ;;
 esac
 

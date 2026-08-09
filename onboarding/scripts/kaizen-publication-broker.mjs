@@ -24,6 +24,7 @@ function usage() {
   --run-gid GID             Kaizen runner GID used for request validation (required)
   --socket-gid GID          Group allowed to connect (default: --run-gid)
   --git PATH                Trusted Git executable (default: /usr/bin/git)
+  --runtime-dir PATH        Root-only push workspace parent (default: /var/tmp)
   --push-timeout-ms MS      Per-push timeout (default: ${DEFAULT_PUSH_TIMEOUT_MS})
   --help                    Show this help
 
@@ -54,6 +55,7 @@ function parseArguments(argv) {
     allows: new Map(),
     git: '/usr/bin/git',
     pushTimeoutMs: DEFAULT_PUSH_TIMEOUT_MS,
+    runtimeDir: '/var/tmp',
     testMode: false
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -66,7 +68,7 @@ function parseArguments(argv) {
       options.testMode = true;
       continue;
     }
-    if (!['--socket', '--allow', '--run-uid', '--run-gid', '--socket-gid', '--git', '--push-timeout-ms'].includes(argument)) {
+    if (!['--socket', '--allow', '--run-uid', '--run-gid', '--socket-gid', '--git', '--runtime-dir', '--push-timeout-ms'].includes(argument)) {
       throw new Error(`unknown option: ${argument}`);
     }
     const value = argv[index + 1];
@@ -82,6 +84,7 @@ function parseArguments(argv) {
     else if (argument === '--run-gid') options.runGid = parseInteger(value, argument);
     else if (argument === '--socket-gid') options.socketGid = parseInteger(value, argument);
     else if (argument === '--git') options.git = value;
+    else if (argument === '--runtime-dir') options.runtimeDir = value;
     else options.pushTimeoutMs = parseInteger(value, argument, { minimum: 10_000 });
   }
   if (!options.socket || !path.isAbsolute(options.socket)) throw new Error('--socket must be an absolute path');
@@ -89,7 +92,11 @@ function parseArguments(argv) {
   if (options.runUid === undefined) throw new Error('--run-uid is required');
   if (options.runGid === undefined) throw new Error('--run-gid is required');
   if (options.socketGid === undefined) options.socketGid = options.runGid;
+  if (!options.testMode && options.socketGid !== options.runGid) {
+    throw new Error('--socket-gid must equal --run-gid so one dedicated runner group controls access');
+  }
   if (!path.isAbsolute(options.git)) throw new Error('--git must be an absolute path');
+  if (!path.isAbsolute(options.runtimeDir)) throw new Error('--runtime-dir must be an absolute path');
   if (options.pushTimeoutMs > 60 * 60 * 1000) throw new Error('--push-timeout-ms may not exceed 3600000');
   return options;
 }
@@ -112,6 +119,27 @@ function assertSecureRootDirectory(directory) {
     if (parent === current) break;
     current = parent;
   }
+}
+
+function resolveSafeRuntimeDirectory(directory) {
+  const resolved = fs.realpathSync(directory);
+  const stat = fs.lstatSync(resolved);
+  if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== 0 ||
+      ((stat.mode & 0o022) !== 0 && (stat.mode & 0o1000) === 0)) {
+    throw new Error(`runtime directory must be root-owned and non-writable or sticky: ${resolved}`);
+  }
+  let current = path.dirname(resolved);
+  while (true) {
+    const ancestor = fs.lstatSync(current);
+    if (!ancestor.isDirectory() || ancestor.isSymbolicLink() || ancestor.uid !== 0 ||
+        (ancestor.mode & 0o022) !== 0) {
+      throw new Error(`runtime directory ancestor must be immutable and root-owned: ${current}`);
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return resolved;
 }
 
 function assertTrustedExecutable(executable, testMode) {
@@ -189,7 +217,12 @@ async function validateRequest(request, options) {
   let cwd;
   try {
     cwd = await fsp.realpath(request.cwd);
-    if (!(await fsp.stat(cwd)).isDirectory()) throw new Error('not a directory');
+    const cwdStat = await fsp.stat(cwd);
+    const ownerMatches = cwdStat.uid === options.runUid ||
+      (options.testMode && typeof process.getuid === 'function' && process.getuid() === 0);
+    if (!cwdStat.isDirectory() || !ownerMatches || (cwdStat.mode & 0o077) !== 0) {
+      throw new Error('cwd is not private to the configured runner');
+    }
   } catch {
     throw new RequestError('invalid-cwd');
   }
@@ -307,7 +340,7 @@ function gitChecked(options, args, overrides = {}) {
 }
 
 async function pushValidatedRef(validated, options, token) {
-  const temporaryRoot = options.testMode ? os.tmpdir() : '/var/tmp';
+  const temporaryRoot = options.testMode ? os.tmpdir() : options.runtimeDir;
   const temporary = await fsp.mkdtemp(path.join(temporaryRoot, 'kaizen-publication-broker-'));
   try {
     await fsp.chmod(temporary, 0o700);
@@ -356,10 +389,14 @@ function log(event, details = {}) {
 function writeResponse(socket, value) {
   const output = `${JSON.stringify(value)}\n`;
   if (Buffer.byteLength(output) > MAX_RESPONSE_BYTES || output.split('\n').length !== 2) {
-    socket.end('{"ok":false,"error":"internal-response-error"}\n');
+    socket.end('{"ok":false,"error":"internal-response-error"}\n', () => {
+      setTimeout(() => socket.destroy(), 1_000).unref();
+    });
     return;
   }
-  socket.end(output);
+  socket.end(output, () => {
+    setTimeout(() => socket.destroy(), 1_000).unref();
+  });
 }
 
 async function main() {
@@ -378,6 +415,7 @@ async function main() {
     }
   } else {
     assertSecureRootDirectory(path.dirname(options.socket));
+    options.runtimeDir = resolveSafeRuntimeDirectory(options.runtimeDir);
   }
   options.git = assertTrustedExecutable(options.git, options.testMode);
   for (const entry of options.allows.values()) {
@@ -402,7 +440,10 @@ async function main() {
     let bytes = 0;
     let finished = false;
     socket.setTimeout(10_000, () => {
-      if (finished) return;
+      if (finished) {
+        socket.destroy();
+        return;
+      }
       finished = true;
       log('request-refused', { reason: 'request-timeout' });
       writeResponse(socket, { ok: false, error: 'request-timeout' });
@@ -458,9 +499,14 @@ async function main() {
   server.maxConnections = 32;
 
   await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(options.socket, resolve);
+    const startupError = (error) => reject(error);
+    server.once('error', startupError);
+    server.listen(options.socket, () => {
+      server.off('error', startupError);
+      resolve();
+    });
   });
+  server.on('error', (error) => log('server-error', { reason: error.code ?? 'server-error' }));
   try {
     if (options.testMode) {
       fs.chmodSync(options.socket, 0o600);
@@ -480,7 +526,13 @@ async function main() {
   });
 
   const shutdown = (signal) => {
-    server.close(() => {
+    const exitCode = signal === 'SIGINT' ? 130 : 143;
+    let exited = false;
+    let deadline;
+    const finish = () => {
+      if (exited) return;
+      exited = true;
+      if (deadline) clearTimeout(deadline);
       try {
         const current = fs.lstatSync(options.socket);
         if (current.isSocket() && current.dev === socketStat.dev && current.ino === socketStat.ino) {
@@ -489,8 +541,10 @@ async function main() {
       } catch (error) {
         if (error.code !== 'ENOENT') log('socket-cleanup-failed', { reason: error.code ?? 'unknown' });
       }
-      process.exit(signal === 'SIGINT' ? 130 : 143);
-    });
+      process.exit(exitCode);
+    };
+    deadline = setTimeout(finish, 30_000);
+    server.close(finish);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
