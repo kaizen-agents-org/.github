@@ -13,8 +13,18 @@ if (!workflowPath || !kaizenLoopRoot) {
 const requireFromKaizen = createRequire(path.join(path.resolve(kaizenLoopRoot), 'package.json'));
 const { parse } = requireFromKaizen('yaml');
 const workflow = parse(fs.readFileSync(workflowPath, 'utf8'));
+const workflowPermissions = workflow?.permissions;
+if (
+  !workflowPermissions ||
+  typeof workflowPermissions !== 'object' ||
+  Array.isArray(workflowPermissions) ||
+  workflowPermissions.contents !== 'read'
+) {
+  console.error('workflow permissions must explicitly declare contents: read');
+  process.exit(1);
+}
 const permissionBlocks = [
-  ['workflow', workflow?.permissions],
+  ['workflow', workflowPermissions],
   ...Object.entries(workflow?.jobs ?? {}).map(([name, job]) => [`job ${name}`, job?.permissions])
 ];
 
