@@ -307,6 +307,28 @@ grep -q "skills-manifest.json" "$work/out12" \
   && pass "the notes point at the manifest for the vendored file list" \
   || fail "the manifest-derived removal command is missing"
 
+# 14. Reject a registry checkout path containing a newline. Command
+#     substitution normally strips trailing newlines, which could otherwise
+#     make the printed cleanup command target a different directory.
+home=$(seed_home home-newline)
+NEWLINE_HOME="$home" node -e '
+  const fs = require("node:fs");
+  const file = `${process.env.NEWLINE_HOME}/registry.json`;
+  const d = JSON.parse(fs.readFileSync(file, "utf8"));
+  d.projects["example-org-demo"].localPath = "/tmp/repository\n";
+  fs.writeFileSync(file, JSON.stringify(d, null, 2) + "\n");
+'
+KAIZEN_TEST_LOG="$work/log-newline"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if KAIZEN_HOME="$home" PATH="$bin:$PATH" \
+     sh "$uninstaller" --project example-org-demo --dry-run >"$work/out14" 2>&1; then
+  fail "a newline-containing repository path was accepted"
+else
+  grep -q "registry localPath must not contain newlines" "$work/out14" \
+    && pass "a newline-containing repository path is rejected" \
+    || fail "newline-path rejection gave the wrong message"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "uninstall-kaizen fixtures failed with $failures failure(s)." >&2

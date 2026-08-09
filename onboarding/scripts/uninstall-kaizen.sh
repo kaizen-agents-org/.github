@@ -97,7 +97,15 @@ registry_field() {
 }
 
 registered=$(registry_field repo)
-repository_path=$(registry_field localPath)
+repository_path_with_sentinel=$(registry_field localPath; printf '\001')
+repository_path=${repository_path_with_sentinel%?}
+case "$repository_path" in
+  *'
+'*)
+    echo "error: registry localPath must not contain newlines" >&2
+    exit 2
+    ;;
+esac
 repository_path_command=$(shell_quote "${repository_path:-/path/to/the/selected/repository}")
 workspace=$(registry_field workspacePath)
 [ -n "$workspace" ] || workspace="$kaizen_home/workspaces/$project"
