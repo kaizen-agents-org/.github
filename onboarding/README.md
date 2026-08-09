@@ -272,7 +272,7 @@ detected:
 {
   "version": 1,
   "toolchain": {
-    "kaizen-loop": "v0.1.2",
+    "kaizen-loop": "v0.1.3",
     "builder-agent": "v0.1.0",
     "verifier": "v0.1.0"
   },

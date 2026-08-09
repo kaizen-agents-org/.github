@@ -44,15 +44,18 @@ following against the exact commits to be tagged:
   `bin`, and the command appears to work only because an older copy is still on
   `PATH`. The installer therefore clones each pinned tag, builds it, and links
   it — one path for all three components.
-- A clean-machine install from `onboarding/versions.json` can run
-  `kaizen doctor --project <slug>` against a **registered project** and report
-  `gh auth` as passing.
+- A clean-machine install from `onboarding/versions.json` can run the supported
+  onboarding repair check, `kaizen doctor --repair`, and then run
+  `kaizen doctor --project <slug>` against a **registered project** with
+  `gh auth` reported as passing.
 
-  The `--project` part is the point. Without it `doctor` returns before it
-  calls GitHub, so it passes even when every GitHub operation is broken. That
-  is exactly how `v0.1.2` shipped: tests, typecheck, `check:dist` and an
-  install smoke all passed, and the build could not talk to GitHub at all,
-  because nothing in this list exercised a code path that runs `gh`.
+  These checks serve different purposes: `--repair` validates and repairs the
+  local onboarding setup, while `--project` is the additional release gate
+  that exercises GitHub. Without a registered project, `doctor` returns before
+  it calls GitHub, so it passes even when every GitHub operation is broken.
+  That is how `v0.1.2` shipped: tests, typecheck, `check:dist` and an install
+  smoke all passed, and the build could not talk to GitHub at all, because
+  nothing in this list exercised a code path that runs `gh`.
 - A Kaizen smoke run passes with the pinned set.
 
 The currently released set is `{kaizen-loop: v0.1.3, builder-agent: v0.1.0,
@@ -88,6 +91,7 @@ Run this checklist for each compatible set.
 
    ```sh
    onboarding/scripts/install-kaizen.sh
+   kaizen doctor --repair           # supported local onboarding check
    kaizen doctor --project <slug>   # must name a registered project
    builder-agent --version
    verifier --version
