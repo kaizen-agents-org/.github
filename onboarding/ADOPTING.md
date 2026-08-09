@@ -10,7 +10,7 @@ prebuilt packages, so the first install compiles three repositories and takes a
 few minutes. `pnpm` is needed because one of them is a pnpm workspace.
 
 > **Status: the pinned set installs.** `onboarding/versions.json` pins
-> `kaizen-loop v0.1.2`, `builder-agent v0.1.0`, and `verifier v0.1.0`, and a
+> `kaizen-loop v0.1.3`, `builder-agent v0.1.0`, and `verifier v0.1.0`, and a
 > clean install from that set produces three working commands. This has been
 > verified on macOS only, and no third-party maintainer has yet run it on a
 > machine nobody here controls, so expect rough edges and please report them.
