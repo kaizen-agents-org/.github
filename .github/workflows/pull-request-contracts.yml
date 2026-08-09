@@ -1,0 +1,51 @@
+name: Pull Request Contracts
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pull-request-contracts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Verify organization contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out organization assets
+        uses: actions/checkout@v4
+        with:
+          path: organization
+
+      - name: Resolve pinned Kaizen version
+        id: versions
+        run: echo "kaizen_loop=$(node -p \"require('./organization/onboarding/versions.json')['kaizen-loop']\")" >> "$GITHUB_OUTPUT"
+
+      - name: Check out pinned Kaizen schema
+        uses: actions/checkout@v4
+        with:
+          repository: kaizen-agents-org/kaizen-loop
+          ref: ${{ steps.versions.outputs.kaizen_loop }}
+          path: kaizen-loop
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: kaizen-loop/package-lock.json
+
+      - name: Build pinned Kaizen schema
+        working-directory: kaizen-loop
+        run: npm ci && npm run build
+
+      - name: Verify contracts
+        working-directory: organization
+        env:
+          KAIZEN_LOOP_ROOT: ${{ github.workspace }}/kaizen-loop
+        run: bash scripts/run-pr-contracts.sh
