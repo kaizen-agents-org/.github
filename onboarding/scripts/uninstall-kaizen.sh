@@ -66,6 +66,9 @@ fi
 
 say() { printf '%s\n' "$1"; }
 plan() { printf '  %s %s\n' "$1" "$2"; }
+shell_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
 
 confirm() {
   [ "$assume_yes" -eq 1 ] && return 0
@@ -93,7 +96,46 @@ registry_field() {
   ' 2>/dev/null || true
 }
 
+# Validate localPath while it is still a complete JavaScript string. POSIX
+# command substitution strips trailing newlines, so checking it afterward can
+# silently validate a different path from the one stored in the registry.
+registry_repository_path() {
+  [ -f "$registry" ] || return 0
+  REGISTRY="$registry" SLUG="$project" node -e '
+    const fs = require("node:fs");
+    try {
+      const data = JSON.parse(fs.readFileSync(process.env.REGISTRY, "utf8"));
+      const value = (data.projects ?? {})[process.env.SLUG]?.localPath;
+      if (typeof value === "string") {
+        if (/[\r\n]/.test(value)) {
+          process.stderr.write(
+            "error: registry localPath contains a carriage return or newline; refusing to generate cleanup commands\n"
+          );
+          process.exit(2);
+        }
+        process.stdout.write(value);
+      }
+    } catch {}
+  '
+}
+
 registered=$(registry_field repo)
+if ! repository_path=$(registry_repository_path); then
+  exit 2
+fi
+if [ -z "$repository_path" ] && command -v git >/dev/null 2>&1; then
+  current_remote=$(git remote get-url origin 2>/dev/null || true)
+  current_repo=$(printf '%s' "$current_remote" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+  current_project=$(printf '%s' "$current_repo" | tr '/' '-')
+  if [ "$current_project" = "$project" ]; then
+    repository_path=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  fi
+fi
+if [ -n "$repository_path" ]; then
+  repository_checkout_instruction="    cd -- $(shell_quote "$repository_path")"
+else
+  repository_checkout_instruction='    First change into the actual repository checkout; its path is no longer in the registry.'
+fi
 workspace=$(registry_field workspacePath)
 [ -n "$workspace" ] || workspace="$kaizen_home/workspaces/$project"
 
@@ -229,8 +271,10 @@ cat <<EOF
 Left in place, because they are yours to remove:
 
   Committed files. They are in your git history, so removing them should be a
-  commit you author and review:
+  commit you author and review. Run these from the selected repository checkout:
 
+$repository_checkout_instruction
+    rm -f .kaizen/onboarding-observations.json .kaizen/onboarding-observations.json.labels
     git rm -r .kaizen .github/ISSUE_TEMPLATE/kaizen.yml
 
   Vendored skills, if onboarding added them. Remove only the files the manifest

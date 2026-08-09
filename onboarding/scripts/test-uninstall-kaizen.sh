@@ -32,10 +32,11 @@ chmod +x "$bin/kaizen" "$bin/npm"
 # toolchain that other projects would also depend on.
 seed_home() {
   home="$work/$1"
+  local_path="$home/repo path 'quoted' \$(touch $home/pwned)"
   rm -rf "$home"
-  mkdir -p "$home/workspaces/example-org-demo" "$home/toolchain/kaizen-loop"
+  mkdir -p "$home/workspaces/example-org-demo" "$home/toolchain/kaizen-loop" "$local_path"
   printf 'marker\n' > "$home/workspaces/example-org-demo/marker"
-  SEED_HOME="$home" node -e '
+  SEED_HOME="$home" SEED_LOCAL_PATH="$local_path" node -e '
     const fs = require("node:fs");
     const home = process.env.SEED_HOME;
     fs.writeFileSync(`${home}/registry.json`, JSON.stringify({
@@ -43,7 +44,7 @@ seed_home() {
       projects: {
         "example-org-demo": {
           repo: "example-org/demo",
-          localPath: "/tmp/demo",
+          localPath: process.env.SEED_LOCAL_PATH,
           workspacePath: `${home}/workspaces/example-org-demo`,
           schedule: "02:00",
           enabled: true
@@ -191,6 +192,26 @@ fi
 grep -q "git rm -r .kaizen" "$work/out7" \
   && pass "committed files are reported with the command to remove them" \
   || fail "the committed-file note is missing"
+grep -q "rm -f .kaizen/onboarding-observations.json" "$work/out7" \
+  && pass "ignored observations are reported with an explicit removal command" \
+  || fail "the ignored-observation removal command is missing"
+if grep -q "/path/to/the/selected/repository" "$work/out7"; then
+  fail "a repeated uninstall prints a non-working checkout placeholder"
+elif grep -q "First change into the actual repository checkout" "$work/out7"; then
+  pass "a repeated uninstall requires a real checkout path"
+else
+  fail "a repeated uninstall does not explain how to select the checkout"
+fi
+cleanup_cd=$(sed -n 's/^    \(cd -- .*\)$/\1/p' "$work/out2" | head -1)
+expected_home="$work/home-real"
+expected_checkout="$expected_home/repo path 'quoted' \$(touch $expected_home/pwned)"
+if [ -n "$cleanup_cd" ] &&
+   [ "$(sh -c "$cleanup_cd && pwd")" = "$expected_checkout" ] &&
+   [ ! -e "$expected_home/pwned" ]; then
+  pass "repository cleanup prints a shell-safe selected checkout"
+else
+  fail "the repository cleanup checkout is ambiguous or unsafe"
+fi
 grep -q "gh label delete" "$work/out7" \
   && pass "labels are reported rather than deleted" \
   || fail "the label note is missing"
@@ -292,6 +313,46 @@ fi
 grep -q "skills-manifest.json" "$work/out12" \
   && pass "the notes point at the manifest for the vendored file list" \
   || fail "the manifest-derived removal command is missing"
+
+# 14. Reject registry checkout paths containing line breaks before command
+#     substitution can truncate them into the path of a different checkout.
+for line_break in lf cr; do
+  home=$(seed_home "home-$line_break-path")
+  truncated_path="$home/repository"
+  mkdir -p "$truncated_path"
+  printf 'must survive\n' > "$truncated_path/marker"
+  NEWLINE_HOME="$home" TRUNCATED_PATH="$truncated_path" LINE_BREAK="$line_break" node -e '
+    const fs = require("node:fs");
+    const file = `${process.env.NEWLINE_HOME}/registry.json`;
+    const data = JSON.parse(fs.readFileSync(file, "utf8"));
+    const suffix = process.env.LINE_BREAK === "lf" ? "\n" : "\r";
+    data.projects["example-org-demo"].localPath = process.env.TRUNCATED_PATH + suffix;
+    fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
+  '
+  KAIZEN_TEST_LOG="$work/log-$line_break-path"; : > "$KAIZEN_TEST_LOG"
+  export KAIZEN_TEST_LOG
+  if KAIZEN_HOME="$home" PATH="$bin:$PATH" \
+       sh "$uninstaller" --project example-org-demo --yes >"$work/out-$line_break-path" 2>&1; then
+    fail "a $line_break-bearing repository path was accepted"
+  else
+    grep -q "localPath contains a carriage return or newline" "$work/out-$line_break-path" \
+      && pass "a $line_break-bearing repository path is rejected clearly" \
+      || fail "$line_break-bearing repository path lacked actionable diagnostics"
+    if grep -Eq '(^|[[:space:]])(cd|rm|git rm)([[:space:]]|$)' "$work/out-$line_break-path"; then
+      fail "$line_break-bearing repository path emitted cleanup commands"
+    else
+      pass "$line_break-bearing repository path emits no cleanup commands"
+    fi
+    [ -f "$truncated_path/marker" ] \
+      && pass "the truncated $line_break repository path is untouched" \
+      || fail "the truncated $line_break repository path was modified"
+    if has_project "$home" example-org-demo && [ -d "$home/workspaces/example-org-demo" ]; then
+      pass "invalid $line_break repository path leaves Kaizen state untouched"
+    else
+      fail "invalid $line_break repository path removed Kaizen state"
+    fi
+  fi
+done
 
 echo
 if [ "$failures" -gt 0 ]; then
