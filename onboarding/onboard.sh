@@ -146,7 +146,9 @@ case "$slug" in
   *) echo "error: origin is not a GitHub remote: $remote_url" >&2; exit 2 ;;
 esac
 publication_slug=$(printf '%s' "$publication_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
-if [ "$publication_slug" != "$slug" ]; then
+slug_identity=$(printf '%s' "$slug" | tr '[:upper:]' '[:lower:]')
+publication_slug_identity=$(printf '%s' "$publication_slug" | tr '[:upper:]' '[:lower:]')
+if [ "$publication_slug_identity" != "$slug_identity" ]; then
   echo "error: origin fetch and publication URLs name different repositories" >&2
   exit 2
 fi

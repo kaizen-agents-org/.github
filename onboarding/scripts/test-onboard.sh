@@ -199,6 +199,7 @@ fi
 # Publication follows the configured push URL, not the fetch URL. An HTTPS
 # fetch with SSH push therefore uses the SSH preflight without a broker.
 repo=$(make_repo repo2-https-fetch-ssh-push)
+git -C "$repo" remote set-url origin "https://github.com/Example-Org/Example-Repo.git"
 git -C "$repo" remote set-url --push origin "git@github.com:example-org/example-repo.git"
 KAIZEN_TEST_LOG="$work/log2-https-fetch-ssh-push"; : > "$KAIZEN_TEST_LOG"
 export KAIZEN_TEST_LOG
@@ -206,7 +207,7 @@ if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
       sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
       >"$work/out2-https-fetch-ssh-push" 2>&1 ); then
   grep -q '^git push --dry-run --no-verify git@github.com:example-org/example-repo.git ' "$KAIZEN_TEST_LOG" \
-    && pass "HTTPS fetch with SSH push uses the SSH publication preflight" \
+    && pass "case-varied HTTPS fetch with SSH push uses the SSH publication preflight" \
     || fail "HTTPS fetch with SSH push did not probe the effective push URL"
 else
   fail "HTTPS fetch with SSH push incorrectly required the HTTPS broker"
