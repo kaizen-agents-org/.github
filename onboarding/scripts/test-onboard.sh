@@ -116,6 +116,9 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   grep -q "Onboarding complete" "$work/out3" \
     && pass "a passing contract reports completion" \
     || fail "completion message missing"
+  grep -q 'Commit .kaizen/config.yml, .kaizen/.gitignore,' "$work/out3" \
+    && pass "completion message includes the generated ignore rule" \
+    || fail "completion message omitted .kaizen/.gitignore"
   if grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore" &&
      git -C "$repo" check-ignore -q .kaizen/onboarding-observations.json; then
     pass "observations are excluded from adopter commits"
@@ -124,6 +127,22 @@ if ( cd "$repo" && PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
   fi
 else
   fail "a full non-interactive pass failed: $(cat "$work/out3")"
+fi
+
+# Machine-local excludes must not replace the repository-owned ignore rule.
+repo=$(make_repo repo3-global-ignore)
+printf '%s\n' 'onboarding-observations.json' > "$work/global-excludes"
+KAIZEN_TEST_LOG="$work/log3-global-ignore"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && git config core.excludesFile "$work/global-excludes" && \
+      PATH="$bin:$PATH" KAIZEN_TEST_LOG="$KAIZEN_TEST_LOG" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out3-global-ignore" 2>&1 ); then
+  grep -Fxq 'onboarding-observations.json' "$repo/.kaizen/.gitignore" \
+    && pass "global excludes do not replace the repository-owned ignore rule" \
+    || fail "global excludes prevented the repository-owned ignore rule"
+else
+  fail "onboarding with global observations exclude failed: $(cat "$work/out3-global-ignore")"
 fi
 
 # A repository onboarded by an older release may already track the transient

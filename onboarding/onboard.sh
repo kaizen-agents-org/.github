@@ -332,7 +332,8 @@ mkdir -p .kaizen
 if [ ! -f .kaizen/.gitignore ]; then
   : > .kaizen/.gitignore
 fi
-if ! git check-ignore -q -- "$observations"; then
+if ! grep -Fxq 'onboarding-observations.json' .kaizen/.gitignore ||
+   ! git check-ignore -q -- "$observations"; then
   if [ -s .kaizen/.gitignore ] && [ "$(tail -c 1 .kaizen/.gitignore | wc -l)" -eq 0 ]; then
     printf '\n' >> .kaizen/.gitignore
   fi
@@ -443,8 +444,9 @@ if [ "$contract_status" -eq 0 ]; then
 Onboarding complete for $slug.
 
 Next:
-  1. Commit .kaizen/config.yml, .github/ISSUE_TEMPLATE/kaizen.yml, and the
-     smoke artifact under docs/smoke-runs/.
+  1. Commit .kaizen/config.yml, .kaizen/.gitignore,
+     .github/ISSUE_TEMPLATE/kaizen.yml, and the smoke artifact under
+     docs/smoke-runs/.
   2. Open a Kaizen issue and let the scheduled run pick it up, or run
      'kaizen fix <issue>' to process one now.
 
