@@ -273,6 +273,29 @@ else
   fi
 fi
 
+# Local includes can introduce the same rewrite behavior as direct config.
+repo=$(make_repo repo2-included-url-rewrite)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+cat >"$repo/.git/included-rewrite" <<'EOF'
+[url "git@github.com:other-org/"]
+  insteadOf = git@github.com:example-org/
+EOF
+git -C "$repo" config --local include.path included-rewrite
+KAIZEN_TEST_LOG="$work/log2-included-url-rewrite"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-included-url-rewrite" 2>&1 ); then
+  fail "onboarding accepted a URL rewrite from an included local config"
+else
+  if grep -q "origin publication cannot use checkout-local Git URL rewrites" \
+       "$work/out2-included-url-rewrite" && [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "included local Git URL rewrites are refused before probing or installation"
+  else
+    fail "included local Git URL rewrite was reported too late or with the wrong message"
+  fi
+fi
+
 # A linked worktree can carry a separate config.worktree with the same rewrite
 # behavior, so inspect that scope independently of the shared local config.
 repo=$(make_repo repo2-worktree-url-rewrite)
