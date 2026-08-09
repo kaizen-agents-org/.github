@@ -42,6 +42,18 @@ chmod +x "$stub_tree/scripts/check-onboarding-contract.sh"
 
 bin="$work/bin"
 mkdir -p "$bin"
+KAIZEN_TEST_REAL_GIT=$(command -v git)
+export KAIZEN_TEST_REAL_GIT
+cat > "$bin/git" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "push" ]; then
+  printf 'git %s\n' "$*" >> "$KAIZEN_TEST_LOG"
+  exit "${KAIZEN_TEST_SSH_PUSH_STATUS:-0}"
+fi
+exec "$KAIZEN_TEST_REAL_GIT" "$@"
+EOF
+chmod +x "$bin/git"
+
 cat > "$bin/kaizen" <<'EOF'
 #!/bin/sh
 printf 'kaizen %s\n' "$*" >> "$KAIZEN_TEST_LOG"
@@ -142,9 +154,8 @@ else
   fi
 fi
 
-# An SSH origin uses the runner's SSH identity and must not require the HTTPS
-# publication broker. External commands are stubbed, so this only exercises the
-# onboarding preflight and step ordering.
+# An SSH publication URL uses the runner's SSH identity and must prove write
+# capability before installation without requiring the HTTPS broker.
 repo=$(make_repo repo2-ssh)
 git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
 KAIZEN_TEST_LOG="$work/log2-ssh"; : > "$KAIZEN_TEST_LOG"
@@ -152,14 +163,72 @@ export KAIZEN_TEST_LOG
 if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
       sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
       >"$work/out2-ssh" 2>&1 ); then
-  if grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG" &&
+  probe_line=$(grep -n '^git push --dry-run ' "$KAIZEN_TEST_LOG" | cut -d: -f1)
+  install_line=$(grep -n 'install-kaizen.sh' "$KAIZEN_TEST_LOG" | cut -d: -f1)
+  if [ -n "$probe_line" ] && [ -n "$install_line" ] &&
+     [ "$probe_line" -lt "$install_line" ] &&
      grep -q "Onboarding complete" "$work/out2-ssh"; then
-    pass "SSH onboarding does not require the HTTPS publication broker"
+    pass "SSH write access is checked before installation without the HTTPS broker"
   else
-    fail "SSH onboarding bypassed preflight but did not complete"
+    fail "SSH publication preflight was missing, late, or did not complete"
   fi
 else
   fail "SSH onboarding incorrectly required the HTTPS publication broker"
+fi
+
+# A failed SSH dry-run push must stop before any toolchain work begins.
+repo=$(make_repo repo2-ssh-failure)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-ssh-failure"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET &&
+     KAIZEN_TEST_SSH_PUSH_STATUS=1 PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-ssh-failure" 2>&1 ); then
+  fail "SSH onboarding continued after publication preflight failure"
+else
+  if grep -q "SSH origin cannot publish non-interactively" "$work/out2-ssh-failure" &&
+     grep -q '^git push --dry-run ' "$KAIZEN_TEST_LOG" &&
+     ! grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG"; then
+    pass "failed SSH write access is refused before installation"
+  else
+    fail "failed SSH write access was reported too late or with the wrong message"
+  fi
+fi
+
+# Publication follows the configured push URL, not the fetch URL. An HTTPS
+# fetch with SSH push therefore uses the SSH preflight without a broker.
+repo=$(make_repo repo2-https-fetch-ssh-push)
+git -C "$repo" remote set-url --push origin "git@github.com:example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-https-fetch-ssh-push"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-https-fetch-ssh-push" 2>&1 ); then
+  grep -q '^git push --dry-run git@github.com:example-org/example-repo.git ' "$KAIZEN_TEST_LOG" \
+    && pass "HTTPS fetch with SSH push uses the SSH publication preflight" \
+    || fail "HTTPS fetch with SSH push did not probe the effective push URL"
+else
+  fail "HTTPS fetch with SSH push incorrectly required the HTTPS broker"
+fi
+
+# Conversely, an SSH fetch with an HTTPS push URL still requires the broker.
+repo=$(make_repo repo2-ssh-fetch-https-push)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+git -C "$repo" remote set-url --push origin "https://github.com/example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-ssh-fetch-https-push"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-ssh-fetch-https-push" 2>&1 ); then
+  fail "SSH fetch with HTTPS push bypassed the publication broker"
+else
+  if grep -q "HTTPS origin requires KAIZEN_GITHUB_TOKEN_SOCKET" "$work/out2-ssh-fetch-https-push" &&
+     [ ! -s "$KAIZEN_TEST_LOG" ]; then
+    pass "SSH fetch with HTTPS push requires the publication broker"
+  else
+    fail "SSH fetch with HTTPS push used the wrong publication preflight"
+  fi
 fi
 
 # 3. A full non-interactive pass runs the steps in order.
