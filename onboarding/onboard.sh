@@ -144,7 +144,8 @@ remote_url=$(git remote get-url origin 2>/dev/null) || {
   echo "error: this repository has no origin remote" >&2
   exit 2
 }
-case "$remote_url" in
+remote_url_identity=$(printf '%s' "$remote_url" | tr '[:upper:]' '[:lower:]')
+case "$remote_url_identity" in
   https://github.com/*|https://*@github.com/*|git@github.com:*|ssh://git@github.com/*) ;;
   *) echo "error: origin is not a GitHub remote: $remote_url" >&2; exit 2 ;;
 esac
@@ -157,15 +158,14 @@ if [ "$publication_urls" != "$publication_url" ]; then
   echo "error: origin must have exactly one publication URL" >&2
   exit 2
 fi
-slug=$(printf '%s' "$remote_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+publication_url_identity=$(printf '%s' "$publication_url" | tr '[:upper:]' '[:lower:]')
+slug=$(printf '%s' "$remote_url_identity" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
 case "$slug" in
   */*) : ;;
   *) echo "error: invalid GitHub origin path: $remote_url" >&2; exit 2 ;;
 esac
-publication_slug=$(printf '%s' "$publication_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
-slug_identity=$(printf '%s' "$slug" | tr '[:upper:]' '[:lower:]')
-publication_slug_identity=$(printf '%s' "$publication_slug" | tr '[:upper:]' '[:lower:]')
-if [ "$publication_slug_identity" != "$slug_identity" ]; then
+publication_slug=$(printf '%s' "$publication_url_identity" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+if [ "$publication_slug" != "$slug" ]; then
   echo "error: origin fetch and publication URLs name different repositories" >&2
   exit 2
 fi
@@ -177,7 +177,7 @@ echo "Manifest:              $manifest"
 # HTTPS publication is deliberately delegated to a root-owned broker so the
 # builder-capable process never receives a GitHub token. Refuse the common
 # default-clone configuration before installation or smoke work is attempted.
-case "$publication_url" in
+case "$publication_url_identity" in
   https://github.com/*|https://*@github.com/*)
     if [ -z "${KAIZEN_GITHUB_TOKEN_SOCKET:-}" ]; then
       cat >&2 <<EOF
