@@ -16,6 +16,7 @@ const pushLog = path.join(fixture, 'push.log');
 const realGit = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
 let broker;
 let brokerErrors = '';
+let completedCases = 0;
 
 function git(args, options = {}) {
   return execFileSync(realGit, args, { encoding: 'utf8', ...options }).trim();
@@ -23,6 +24,19 @@ function git(args, options = {}) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function runCase(name, action) {
+  try {
+    await action();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    const failure = `FAIL: ${name}: ${reason}`;
+    console.error(failure);
+    throw new Error(failure);
+  }
+  completedCases += 1;
+  console.log(`ok: ${name}`);
 }
 
 async function request(payload) {
@@ -125,66 +139,89 @@ exec ${JSON.stringify(realGit)} "$@"
     forceWithLease: '--force-with-lease=refs/heads/feature/broker:'
   };
 
-  let response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify(valid)}\n`),
-    'valid request'
-  );
-  assert(response.ok === true, `valid request failed: ${JSON.stringify(response)}`);
-  assert((await fsp.readFile(pushLog, 'utf8')).includes(`${sha}:refs/heads/feature/broker`),
-    'push did not use the validated SHA');
+  await runCase('a valid request is pushed', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify(valid)}\n`),
+      'valid request'
+    );
+    assert(response.ok === true, `valid request failed: ${JSON.stringify(response)}`);
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify({ ...valid, expectedSha: '0'.repeat(40) })}\n`),
-    'wrong expectedSha'
-  );
-  assert(response.ok === false && response.error === 'expected-sha-mismatch', 'wrong SHA was not refused');
+  await runCase('a mismatched expectedSha is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify({ ...valid, expectedSha: '0'.repeat(40) })}\n`),
+      'wrong expectedSha'
+    );
+    assert(response.ok === false && response.error === 'expected-sha-mismatch', 'wrong SHA was not refused');
+  });
 
-  await fsp.chmod(publication, 0o750);
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify(valid)}\n`),
-    'non-private checkout'
-  );
-  assert(response.ok === false && response.error === 'invalid-cwd', 'non-private checkout was not refused');
-  await fsp.chmod(publication, 0o700);
+  await runCase('a checkout not owned by the runner is refused', async () => {
+    await fsp.chmod(publication, 0o750);
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify(valid)}\n`),
+      'non-private checkout'
+    );
+    assert(response.ok === false && response.error === 'invalid-cwd', 'non-private checkout was not refused');
+    await fsp.chmod(publication, 0o700);
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify({ ...valid, expectedRepo: 'other/repo', pushUrl: 'https://github.com/other/repo.git' })}\n`),
-    'disallowed repository'
-  );
-  assert(response.ok === false && response.error === 'repository-not-allowed', 'disallowed repository was not refused');
+  await runCase('a repository outside the allow-list is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify({ ...valid, expectedRepo: 'other/repo', pushUrl: 'https://github.com/other/repo.git' })}\n`),
+      'disallowed repository'
+    );
+    assert(response.ok === false && response.error === 'repository-not-allowed', 'disallowed repository was not refused');
+  });
 
-  response = assertBoundedSingleLineResponse(await request('{not json}\n'), 'malformed JSON');
-  assert(response.ok === false && response.error === 'malformed-json', 'malformed JSON was not refused');
+  await runCase('a malformed JSON request is refused', async () => {
+    const response = assertBoundedSingleLineResponse(await request('{not json}\n'), 'malformed JSON');
+    assert(response.ok === false && response.error === 'malformed-json', 'malformed JSON was not refused');
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify(valid)}\n${JSON.stringify(valid)}\n`),
-    'multi-line response'
-  );
-  assert(response.ok === false && response.error === 'invalid-framing', 'multiple request lines were not refused');
+  await runCase('a multi-line request is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify(valid)}\n${JSON.stringify(valid)}\n`),
+      'multi-line response'
+    );
+    assert(response.ok === false && response.error === 'invalid-framing', 'multiple request lines were not refused');
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify({ ...valid, padding: 'x'.repeat(70 * 1024) })}\n`),
-    'oversized response'
-  );
-  assert(response.ok === false && response.error === 'request-too-large', 'oversized request was not refused');
+  await runCase('an over-sized request is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify({ ...valid, padding: 'x'.repeat(70 * 1024) })}\n`),
+      'oversized response'
+    );
+    assert(response.ok === false && response.error === 'request-too-large', 'oversized request was not refused');
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify({ ...valid, refspec: 'main:refs/heads/main' })}\n`),
-    'default branch'
-  );
-  assert(response.ok === false && response.error === 'default-branch-refused', 'default branch was not refused');
+  await runCase('pushing the default branch is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify({ ...valid, refspec: 'main:refs/heads/main' })}\n`),
+      'default branch'
+    );
+    assert(response.ok === false && response.error === 'default-branch-refused', 'default branch was not refused');
+  });
 
-  response = assertBoundedSingleLineResponse(
-    await request(`${JSON.stringify({ ...valid, pushUrl: 'https://github.com@evil.example/owner/repo.git' })}\n`),
-    'URL confusion'
-  );
-  assert(response.ok === false && response.error === 'unsafe-push-url', 'confusing URL was not refused');
+  await runCase('an unsafe push URL is refused', async () => {
+    const response = assertBoundedSingleLineResponse(
+      await request(`${JSON.stringify({ ...valid, pushUrl: 'https://github.com@evil.example/owner/repo.git' })}\n`),
+      'URL confusion'
+    );
+    assert(response.ok === false && response.error === 'unsafe-push-url', 'confusing URL was not refused');
+  });
 
-  const pushes = (await fsp.readFile(pushLog, 'utf8')).trim().split('\n');
-  assert(pushes.length === 1, `refused requests triggered pushes: ${pushes.length}`);
-  assert(!pushes[0].includes('test-token'), 'token appeared in Git arguments');
-  assert(!brokerErrors.includes('test-token'), 'token appeared in broker logs');
-  console.log('PASS publication broker socket fixtures passed');
+  await runCase('the push log records only the validated sha and ref without credentials', async () => {
+    const pushes = (await fsp.readFile(pushLog, 'utf8')).trim().split('\n');
+    assert(pushes.length === 1, `refused requests triggered pushes: ${pushes.length}`);
+    assert(pushes[0].includes(`${sha}:refs/heads/feature/broker`), 'push did not use the validated SHA');
+    assert(!pushes[0].includes('test-token'), 'token appeared in Git arguments');
+    assert(!brokerErrors.includes('test-token'), 'token appeared in broker logs');
+  });
+
+  const expectedCases = 10;
+  assert(completedCases === expectedCases,
+    `FAIL: case count: expected ${expectedCases}, reported ${completedCases}`);
+  console.log(`All publication broker fixtures passed (${completedCases} cases).`);
 } finally {
   if (broker && broker.exitCode === null) {
     broker.kill('SIGTERM');
