@@ -142,6 +142,26 @@ else
   fi
 fi
 
+# An SSH origin uses the runner's SSH identity and must not require the HTTPS
+# publication broker. External commands are stubbed, so this only exercises the
+# onboarding preflight and step ordering.
+repo=$(make_repo repo2-ssh)
+git -C "$repo" remote set-url origin "git@github.com:example-org/example-repo.git"
+KAIZEN_TEST_LOG="$work/log2-ssh"; : > "$KAIZEN_TEST_LOG"
+export KAIZEN_TEST_LOG
+if ( cd "$repo" && unset KAIZEN_GITHUB_TOKEN_SOCKET && PATH="$bin:$PATH" \
+      sh "$stub_tree/onboard.sh" --yes --profile pilot-node --check test \
+      >"$work/out2-ssh" 2>&1 ); then
+  if grep -q "install-kaizen.sh" "$KAIZEN_TEST_LOG" &&
+     grep -q "Onboarding complete" "$work/out2-ssh"; then
+    pass "SSH onboarding does not require the HTTPS publication broker"
+  else
+    fail "SSH onboarding bypassed preflight but did not complete"
+  fi
+else
+  fail "SSH onboarding incorrectly required the HTTPS publication broker"
+fi
+
 # 3. A full non-interactive pass runs the steps in order.
 repo=$(make_repo repo3)
 KAIZEN_TEST_LOG="$work/log3"; : > "$KAIZEN_TEST_LOG"

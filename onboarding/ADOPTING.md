@@ -2,7 +2,8 @@
 
 This guide is for a maintainer adding the Kaizen issue-to-pull-request loop to a
 repository they own. You need `git`, `gh` (authenticated), Node 20 or newer,
-`pnpm`, a running GitHub publication broker for the usual HTTPS clone, and
+`pnpm`, either a running GitHub publication broker for the usual HTTPS clone or
+a working SSH origin, and
 administrator rights on the repository if you want the branch protection
 applied for you.
 
@@ -33,7 +34,21 @@ sh /path/to/kaizen-onboarding/onboarding/onboard.sh
 Pin the clone to a release tag once one exists, so the kit you onboard with is
 reproducible.
 
-## Configure HTTPS publication
+## Configure publication authentication
+
+Kaizen supports two Git publication paths. An HTTPS `origin` requires the
+credential-separated broker described below. An SSH `origin`, such as
+`git@github.com:owner/repository.git`, publishes with the runner account's SSH
+identity and does not use `KAIZEN_GITHUB_TOKEN_SOCKET`. For unattended SSH
+publication, make sure the runner can authenticate without a prompt and already
+trusts GitHub's host key. The publication process ignores custom user SSH
+configuration, so use a default identity or `SSH_AUTH_SOCK`; verify the exact
+runner environment before onboarding:
+
+```sh
+GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+  GIT_SSH_COMMAND='ssh -F /dev/null' git ls-remote origin
+```
 
 Kaizen does not put a GitHub token in `smoke`, `run`, or any builder process.
 For an HTTPS `origin`, a small root-owned broker validates one specific push and
@@ -102,7 +117,8 @@ export KAIZEN_GITHUB_TOKEN_SOCKET=/opt/kaizen/run/github-publication.sock
 
 `onboard.sh` detects an HTTPS origin without this setting before it installs the
 toolchain or begins the smoke pass. The broker still validates the full request;
-the environment check is only an early configuration error.
+the environment check is only an early configuration error. SSH origins bypass
+this broker check because they use the SSH publication path described above.
 
 It walks eight steps and stops to ask you three things. Those three are the
 decisions you own; everything else is mechanical:
