@@ -77,15 +77,33 @@ sudo install -o root -g "$kaizen_group" -m 0755 \
   /usr/local/libexec/kaizen-publication-broker
 sudo install -d -o root -g "$kaizen_group" -m 0755 /opt/kaizen/run
 
-sudo env KAIZEN_PUBLICATION_BROKER_TOKEN="$(gh auth token)" \
-  /usr/local/libexec/kaizen-publication-broker \
+# Write the token to a root-owned file that only root can read. Never pass it
+# with `sudo env VAR=...`: that places the credential in the argument vector,
+# where any local process can read it with ps -- which would defeat the whole
+# point of the broker.
+sudo install -o root -g wheel -m 0600 /dev/null /etc/kaizen-broker-token
+gh auth token | sudo tee /etc/kaizen-broker-token >/dev/null
+
+sudo /usr/local/libexec/kaizen-publication-broker \
     --socket /opt/kaizen/run/github-publication.sock \
     --socket-gid "$kaizen_gid" \
     --run-uid "$(id -u)" \
     --run-gid "$kaizen_gid" \
     --runtime-dir /var/tmp \
+    --token-file /etc/kaizen-broker-token \
     --allow owner/repository:main
 ```
+
+`--token-stdin` is available when piping the token is preferable to storing it
+(`gh auth token | sudo /usr/local/libexec/kaizen-publication-broker --token-stdin ...`). The
+`KAIZEN_PUBLICATION_BROKER_TOKEN` environment variable still works but is
+deprecated; the broker logs `token-source-insecure` when it is used, because
+the usual way of setting it exposes the token through `ps`.
+
+Give the broker its own credential rather than reusing an account-wide token.
+A fine-grained personal access token limited to the target repositories, with
+only the permissions needed to push a branch, keeps a broker compromise from
+reaching the rest of the account.
 
 Use the default branch after the colon in every `--allow` entry. Repeat
 `--allow` when one broker serves several repositories. The broker refuses tags,
