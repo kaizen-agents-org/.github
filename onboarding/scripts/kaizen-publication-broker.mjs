@@ -28,7 +28,11 @@ function usage() {
   --push-timeout-ms MS      Per-push timeout (default: ${DEFAULT_PUSH_TIMEOUT_MS})
   --help                    Show this help
 
-The broker token is read from KAIZEN_PUBLICATION_BROKER_TOKEN.`);
+The broker token is read from --token-file (a root-owned 0600 file), from
+stdin with --token-stdin, or, as a deprecated fallback, from
+KAIZEN_PUBLICATION_BROKER_TOKEN. Prefer --token-file: passing the token with
+"sudo env VAR=..." places it in the argument vector, where any local process
+can read it through ps.`);
 }
 
 function parseInteger(value, option, { minimum = 0 } = {}) {
@@ -68,7 +72,11 @@ function parseArguments(argv) {
       options.testMode = true;
       continue;
     }
-    if (!['--socket', '--allow', '--run-uid', '--run-gid', '--socket-gid', '--git', '--runtime-dir', '--push-timeout-ms'].includes(argument)) {
+    if (argument === '--token-stdin') {
+      options.tokenStdin = true;
+      continue;
+    }
+    if (!['--socket', '--allow', '--run-uid', '--run-gid', '--socket-gid', '--git', '--runtime-dir', '--push-timeout-ms', '--token-file'].includes(argument)) {
       throw new Error(`unknown option: ${argument}`);
     }
     const value = argv[index + 1];
@@ -83,6 +91,7 @@ function parseArguments(argv) {
     } else if (argument === '--run-uid') options.runUid = parseInteger(value, argument, { minimum: 1 });
     else if (argument === '--run-gid') options.runGid = parseInteger(value, argument);
     else if (argument === '--socket-gid') options.socketGid = parseInteger(value, argument);
+    else if (argument === '--token-file') options.tokenFile = value;
     else if (argument === '--git') options.git = value;
     else if (argument === '--runtime-dir') options.runtimeDir = value;
     else options.pushTimeoutMs = parseInteger(value, argument, { minimum: 10_000 });
@@ -386,6 +395,42 @@ function log(event, details = {}) {
   process.stderr.write(`${JSON.stringify({ timestamp: new Date().toISOString(), event, ...details })}\n`);
 }
 
+// Read the broker token without ever placing it in argv. `sudo env VAR=...`
+// puts the credential in the sudo process's argument vector, which is
+// world-readable through ps, defeating the containment this broker exists to
+// provide. A root-owned 0600 file (or stdin) keeps it out of the process table.
+function readBrokerToken(options) {
+  if (options.tokenFile) {
+    const stat = fs.statSync(options.tokenFile);
+    if (!stat.isFile()) throw new Error(`--token-file is not a regular file: ${options.tokenFile}`);
+    if (stat.uid !== 0) throw new Error(`--token-file must be owned by root: ${options.tokenFile}`);
+    if ((stat.mode & 0o077) !== 0) {
+      throw new Error(`--token-file must not be group- or world-accessible: ${options.tokenFile}`);
+    }
+    return fs.readFileSync(options.tokenFile, 'utf8').replace(/\r?\n$/, '');
+  }
+  if (options.tokenStdin) {
+    return fs.readFileSync(0, 'utf8').replace(/\r?\n$/, '');
+  }
+  const fromEnv = process.env.KAIZEN_PUBLICATION_BROKER_TOKEN;
+  if (fromEnv) {
+    log('token-source-insecure', {
+      reason: 'KAIZEN_PUBLICATION_BROKER_TOKEN is set; prefer --token-file so the token never reaches argv'
+    });
+  }
+  return fromEnv;
+}
+
+// git's stderr is the only description of why a push failed. Redact anything
+// that looks like a credential before it reaches a log the operator may paste.
+function redactSecrets(text) {
+  return String(text ?? '')
+    .replace(/gh[pousr]_[A-Za-z0-9]{20,}/g, '[REDACTED]')
+    .replace(/github_pat_[A-Za-z0-9_]{20,}/g, '[REDACTED]')
+    .replace(/(https:\/\/)[^@\s/]+(@)/g, '$1[REDACTED]$2')
+    .slice(0, 4000);
+}
+
 function writeResponse(socket, value) {
   const output = `${JSON.stringify(value)}\n`;
   if (Buffer.byteLength(output) > MAX_RESPONSE_BYTES || output.split('\n').length !== 2) {
@@ -425,9 +470,9 @@ async function main() {
       throw new Error(`invalid default branch in --allow: ${entry.defaultBranch}`);
     }
   }
-  const token = process.env.KAIZEN_PUBLICATION_BROKER_TOKEN;
+  const token = readBrokerToken(options);
   if (!token || token.includes('\0') || token.includes('\n') || token.includes('\r')) {
-    throw new Error('KAIZEN_PUBLICATION_BROKER_TOKEN must contain one non-empty line');
+    throw new Error('the broker token must be one non-empty line');
   }
   if (fs.existsSync(options.socket)) {
     throw new Error(`socket path already exists; inspect and remove it before restart: ${options.socket}`);
@@ -488,7 +533,20 @@ async function main() {
         writeResponse(socket, { ok: true });
       } catch (error) {
         const reason = error instanceof RequestError ? error.code : 'internal-error';
-        log('request-refused', { reason });
+        // Without this the only description of a push failure -- git's own
+        // stderr, already attached to the error by runChild -- is discarded,
+        // and every distinct cause collapses into an opaque "git-failed".
+        const details = { reason };
+        if (error?.result) {
+          details.exitCode = error.result.code;
+          const stderr = redactSecrets(error.result.stderr);
+          const stdout = redactSecrets(error.result.stdout);
+          if (stderr) details.stderr = stderr;
+          if (stdout) details.stdout = stdout;
+        } else if (!(error instanceof RequestError)) {
+          details.message = redactSecrets(error?.message);
+        }
+        log('request-refused', details);
         writeResponse(socket, { ok: false, error: reason });
       } finally {
         activePushes -= 1;
