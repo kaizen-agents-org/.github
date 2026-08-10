@@ -95,7 +95,7 @@ sudo /usr/local/libexec/kaizen-publication-broker \
 ```
 
 `--token-stdin` is available when piping the token is preferable to storing it
-(`gh auth token | sudo kaizen-publication-broker --token-stdin ...`). The
+(`gh auth token | sudo /usr/local/libexec/kaizen-publication-broker --token-stdin ...`). The
 `KAIZEN_PUBLICATION_BROKER_TOKEN` environment variable still works but is
 deprecated; the broker logs `token-source-insecure` when it is used, because
 the usual way of setting it exposes the token through `ps`.

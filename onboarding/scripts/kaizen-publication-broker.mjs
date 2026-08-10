@@ -401,13 +401,23 @@ function log(event, details = {}) {
 // provide. A root-owned 0600 file (or stdin) keeps it out of the process table.
 function readBrokerToken(options) {
   if (options.tokenFile) {
-    const stat = fs.statSync(options.tokenFile);
-    if (!stat.isFile()) throw new Error(`--token-file is not a regular file: ${options.tokenFile}`);
-    if (stat.uid !== 0) throw new Error(`--token-file must be owned by root: ${options.tokenFile}`);
-    if ((stat.mode & 0o077) !== 0) {
-      throw new Error(`--token-file must not be group- or world-accessible: ${options.tokenFile}`);
+    // Open once with O_NOFOLLOW and validate that descriptor with fstat, then
+    // read from the same descriptor. Validating the path with statSync and
+    // reading it afterwards would check one file and read another if the path
+    // were swapped in between, and statSync would follow a symlink planted
+    // there. The descriptor cannot be redirected once opened.
+    const descriptor = fs.openSync(options.tokenFile, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+    try {
+      const stat = fs.fstatSync(descriptor);
+      if (!stat.isFile()) throw new Error(`--token-file is not a regular file: ${options.tokenFile}`);
+      if (stat.uid !== 0) throw new Error(`--token-file must be owned by root: ${options.tokenFile}`);
+      if ((stat.mode & 0o077) !== 0) {
+        throw new Error(`--token-file must not be group- or world-accessible: ${options.tokenFile}`);
+      }
+      return fs.readFileSync(descriptor, 'utf8').replace(/\r?\n$/, '');
+    } finally {
+      fs.closeSync(descriptor);
     }
-    return fs.readFileSync(options.tokenFile, 'utf8').replace(/\r?\n$/, '');
   }
   if (options.tokenStdin) {
     return fs.readFileSync(0, 'utf8').replace(/\r?\n$/, '');
