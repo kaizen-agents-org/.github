@@ -1,6 +1,10 @@
 Managed template: `kaizen-agents-org/.github/onboarding/automations/scout.prompt.template.md`.
 <!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->
 <!-- scout-target: {{REPOSITORY}} -->
+<!-- scout-labels: {{LABEL_NAMES}} -->
+<!-- scout-wip-limit: {{WIP_LIMIT}} -->
+<!-- scout-open-issue-limit: 4 -->
+<!-- scout-creation-limit: {{CREATION_LIMIT}} -->
 
 Scout `{{REPOSITORY}}` for small, evidence-backed repository-local improvements.
 Use the repository default branch as the source of truth. Do not create work

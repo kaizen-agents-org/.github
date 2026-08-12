@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 20
     steps: &scout-steps
       - name: Check out the prompt
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Fetch the repository default branch rather than an event-specific
           # revision, so the model never treats feature-branch content as fact.
@@ -82,6 +82,10 @@ jobs:
           fi
           # Compare the declared field, not an incidental repository mention.
           rendered_target="$(sed -n 's/^<!-- scout-target: \([^[:space:]]*\) -->$/\1/p' "$prompt")"
+          labels="$(sed -n 's/^<!-- scout-labels: \(.*\) -->$/\1/p' "$prompt")"
+          wip_limit="$(sed -n 's/^<!-- scout-wip-limit: \([0-9][0-9]*\) -->$/\1/p' "$prompt")"
+          open_issue_limit="$(sed -n 's/^<!-- scout-open-issue-limit: \([0-9][0-9]*\) -->$/\1/p' "$prompt")"
+          creation_limit="$(sed -n 's/^<!-- scout-creation-limit: \([0-9][0-9]*\) -->$/\1/p' "$prompt")"
           expected_target="${{ github.repository }}"
           if [ "$(printf '%s' "$rendered_target" | tr '[:upper:]' '[:lower:]')" != \
                "$(printf '%s' "$expected_target" | tr '[:upper:]' '[:lower:]')" ]; then
@@ -109,9 +113,136 @@ jobs:
           fi
           git update-ref "refs/remotes/origin/${default_branch}" HEAD
           echo "KAIZEN_SCOUT_DEFAULT_BRANCH=${default_branch}" >> "$GITHUB_ENV"
+          if [[ -z "$labels" ]] ||
+             ! [[ "$wip_limit" =~ ^[1-4]$ && "$open_issue_limit" =~ ^[1-4]$ &&
+                  "$creation_limit" =~ ^[1-2]$ ]]; then
+            echo "::error::$prompt contains invalid scout limits." >&2
+            exit 1
+          fi
+          echo "KAIZEN_SCOUT_TARGET=${expected_target}" >> "$GITHUB_ENV"
+          echo "KAIZEN_SCOUT_LABELS=${labels}" >> "$GITHUB_ENV"
+          echo "KAIZEN_SCOUT_WIP_LIMIT=${wip_limit}" >> "$GITHUB_ENV"
+          echo "KAIZEN_SCOUT_OPEN_ISSUE_LIMIT=${open_issue_limit}" >> "$GITHUB_ENV"
+          echo "KAIZEN_SCOUT_CREATION_LIMIT=${creation_limit}" >> "$GITHUB_ENV"
 
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code@2.1.228 >/dev/null 2>&1
+
+      - name: Prepare bounded issue creator
+        run: |
+          set -euo pipefail
+          creator="${RUNNER_TEMP}/kaizen-scout-create-issue"
+          cat > "$creator" <<'SCOUT_CREATE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          args=()
+          has_title=false
+          has_body=false
+          provided_labels=()
+          while [[ $# -gt 0 ]]; do
+            case "$1" in
+              --title)
+                [[ $# -ge 2 ]] || exit 2
+                has_title=true
+                [[ "$2" == "[scout] "* ]] || {
+                  echo "issue title must start with [scout]" >&2
+                  exit 2
+                }
+                args+=("$1" "$2")
+                shift 2
+                ;;
+              --body)
+                [[ $# -ge 2 ]] || exit 2
+                has_body=true
+                args+=("$1" "$2")
+                shift 2
+                ;;
+              --label)
+                [[ $# -ge 2 ]] || exit 2
+                provided_labels+=("$2")
+                args+=("$1" "$2")
+                shift 2
+                ;;
+              *)
+                echo "unsupported issue-create argument: $1" >&2
+                exit 2
+                ;;
+            esac
+          done
+          [[ "$has_title" == true && "$has_body" == true ]] || {
+            echo "issue creation requires --title and --body" >&2
+            exit 2
+          }
+          normalize_labels() {
+            printf '%s\n' "$1" | tr ',' '\n' | LC_ALL=C sort | paste -sd, -
+          }
+          provided_csv="$(IFS=,; printf '%s' "${provided_labels[*]}")"
+          if [[ "$(normalize_labels "$provided_csv")" != \
+                "$(normalize_labels "$KAIZEN_SCOUT_LABELS")" ]]; then
+            echo "issue labels do not match the rendered scout policy" >&2
+            exit 2
+          fi
+
+          counter="${RUNNER_TEMP}/kaizen-scout-created-count"
+          lock_dir="${RUNNER_TEMP}/kaizen-scout-create.lock"
+          if ! mkdir "$lock_dir"; then
+            echo "another scout issue creation is in progress" >&2
+            exit 1
+          fi
+          trap 'rmdir "$lock_dir"' EXIT
+          created=0
+          [[ ! -f "$counter" ]] || read -r created < "$counter"
+          if (( created >= KAIZEN_SCOUT_CREATION_LIMIT )); then
+            echo "scout creation limit reached" >&2
+            exit 1
+          fi
+
+          open_prs="$(gh pr list --repo "$KAIZEN_SCOUT_TARGET" --state open \
+            --limit "$KAIZEN_SCOUT_WIP_LIMIT" --json number --jq 'length')"
+          if (( open_prs >= KAIZEN_SCOUT_WIP_LIMIT )); then
+            echo "scout WIP limit reached" >&2
+            exit 1
+          fi
+          open_issues="$(gh issue list --repo "$KAIZEN_SCOUT_TARGET" --state open \
+            --label kaizen --limit "$KAIZEN_SCOUT_OPEN_ISSUE_LIMIT" \
+            --json number --jq 'length')"
+          if (( open_issues >= KAIZEN_SCOUT_OPEN_ISSUE_LIMIT )); then
+            echo "scout open-issue limit reached" >&2
+            exit 1
+          fi
+
+          gh issue create --repo "$KAIZEN_SCOUT_TARGET" "${args[@]}"
+          printf '%s\n' "$((created + 1))" > "$counter"
+          SCOUT_CREATE
+          chmod 700 "$creator"
+          echo "KAIZEN_SCOUT_CREATE_ISSUE=${creator}" >> "$GITHUB_ENV"
+
+          label_creator="${RUNNER_TEMP}/kaizen-scout-create-label"
+          cat > "$label_creator" <<'SCOUT_LABEL'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          owner="${KAIZEN_SCOUT_TARGET%%/*}"
+          [[ $# -eq 1 && "${owner,,}" == "kaizen-agents-org" ]] || exit 2
+          case "$1" in
+            kaizen:authorized)
+              color=5319E7
+              description="Approved for Kaizen execution"
+              ;;
+            kaizen:ready)
+              color=0E8A16
+              description="Eligible for scheduled Kaizen selection"
+              ;;
+            *)
+              echo "unsupported scout label: $1" >&2
+              exit 2
+              ;;
+          esac
+          gh label create "$1" --repo "$KAIZEN_SCOUT_TARGET" \
+            --color "$color" --description "$description"
+          SCOUT_LABEL
+          chmod 700 "$label_creator"
+          echo "KAIZEN_SCOUT_CREATE_LABEL=${label_creator}" >> "$GITHUB_ENV"
 
       - name: Run the scout
         env:
@@ -134,6 +265,10 @@ jobs:
           printf '\n\nThe runner verified that `%s` targets `%s` and checked out its default branch. Treat `origin/%s` as the authoritative ref for this run.\n' \
             "$GITHUB_WORKSPACE" "${{ github.repository }}" \
             "$KAIZEN_SCOUT_DEFAULT_BRANCH" >> "${prompt_file}"
+          printf '\nCreate eligible issues only through `%s` with `--title`, `--body`, and the exact configured `--label` values; it rechecks backlog and per-run limits before every creation.\n' \
+            "$KAIZEN_SCOUT_CREATE_ISSUE" >> "${prompt_file}"
+          printf 'When a required organization execution label is missing, bootstrap only `kaizen:authorized` or `kaizen:ready` through `%s LABEL`.\n' \
+            "$KAIZEN_SCOUT_CREATE_LABEL" >> "${prompt_file}"
           allowed_tools="Bash(gh repo view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label list:*),Bash(git -C ${GITHUB_WORKSPACE} log:*),Bash(git -C ${GITHUB_WORKSPACE} show:*),Bash(git -C ${GITHUB_WORKSPACE} diff:*),Read,Grep,Glob"
           if [ "${KAIZEN_SCOUT_DRY_RUN}" = "true" ]; then
             printf '\n\nReport findings only. Do not create any issue during this run.\n' \
@@ -141,7 +276,7 @@ jobs:
           else
             # These are the only mutations in the scout contract. In
             # particular, do not grant gh api or existing-issue mutations.
-            allowed_tools="${allowed_tools},Bash(gh issue create:*),Bash(gh label create:*)"
+            allowed_tools="${allowed_tools},Bash(${KAIZEN_SCOUT_CREATE_ISSUE}:*),Bash(${KAIZEN_SCOUT_CREATE_LABEL}:*)"
           fi
 
           # --allowedTools restricts the agent to reading the repository and

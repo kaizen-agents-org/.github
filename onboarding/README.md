@@ -65,6 +65,20 @@ onboarding/scripts/enable-scout.sh \
 `--dry-run` enforces the same output-path preconditions as a real run: the
 `--output` path must not already exist, and its parent directory must exist.
 
+The default GitHub Actions runner requires the rendered prompt and workflow at
+fixed repository paths. From the target repository, create the directories,
+copy the reference workflow, and render to its expected prompt path:
+
+```sh
+mkdir -p .github/kaizen .github/workflows
+cp onboarding/automations/scout.workflow.yml .github/workflows/scout.yml
+onboarding/scripts/enable-scout.sh \
+  --repo owner/repository \
+  --readiness-evidence /path/to/scout-readiness.json \
+  --output .github/kaizen/scout.prompt.md \
+  --confirm owner/repository
+```
+
 The evidence is a snapshot produced or reviewed by the repository owner:
 
 ```json

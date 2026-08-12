@@ -27,8 +27,9 @@ Renders an opt-in repository scout prompt to --output. Applying requires
 prints the rendered prompt without writing the output file.
 
 The rendered prompt carries its own target and limits and names no runner.
-Schedule it with GitHub Actions (see ../automations/scout.workflow.yml, the
-default for adopters), Codex Automation, Claude Routines, or run it by hand.
+For the default GitHub Actions runner, copy ../automations/scout.workflow.yml to
+.github/workflows/scout.yml and render --output .github/kaizen/scout.prompt.md.
+Codex Automation, Claude Routines, and manual runs may use a runner-owned path.
 docs/scout-contract.md defines what any runner must guarantee.
 USAGE
 }
@@ -213,6 +214,7 @@ if (![isoWeek(reviewDate), isoWeek(previousWeek)].includes(metrics.isoWeek)) {
 const renderedLabels = labels.split(',').map((label) => `\`${label}\``).join(', ');
 const replacements = new Map([
   ['{{REPOSITORY}}', repository],
+  ['{{LABEL_NAMES}}', labels],
   ['{{LABELS}}', renderedLabels],
   ['{{WIP_LIMIT}}', String(wipLimit)],
   ['{{CREATION_LIMIT}}', creationText]

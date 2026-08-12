@@ -55,17 +55,73 @@ grep -Fq 'Bash(git -C ${GITHUB_WORKSPACE} log:*)' "${workflow}" \
 if grep -Eq 'Bash\(git (log|show|diff):\*\)' "${workflow}"; then
   fail "scout allows git reads that omit the verified checkout"
 fi
+grep -Fq 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' "${workflow}" \
+  || fail "scout checkout action is not pinned to a reviewed commit"
 if grep -Fq 'Bash(gh:*)' "${workflow}"; then
   fail "scout grants unrestricted gh access"
 fi
-grep -Fq 'Bash(gh issue create:*)' "${workflow}" \
-  || fail "scout cannot create eligible findings"
-grep -Fq 'Bash(gh label create:*)' "${workflow}" \
+if grep -Fq 'Bash(gh issue create:*)' "${workflow}"; then
+  fail "scout bypasses the bounded issue creator"
+fi
+grep -Fq 'Bash(${KAIZEN_SCOUT_CREATE_ISSUE}:*)' "${workflow}" \
+  || fail "scout cannot invoke the bounded issue creator"
+grep -Fq 'created >= KAIZEN_SCOUT_CREATION_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not enforce the per-run limit"
+grep -Fq 'open_prs >= KAIZEN_SCOUT_WIP_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not recheck WIP"
+grep -Fq 'open_issues >= KAIZEN_SCOUT_OPEN_ISSUE_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not recheck the issue backlog"
+if grep -Fq 'Bash(gh label create:*)' "${workflow}"; then
+  fail "scout bypasses the restricted label creator"
+fi
+grep -Fq 'Bash(${KAIZEN_SCOUT_CREATE_LABEL}:*)' "${workflow}" \
   || fail "organization scout cannot bootstrap required execution labels"
 if sed -n '/if \[ "${KAIZEN_SCOUT_DRY_RUN}" = "true" \]; then/,/else/p' "${workflow}" \
   | grep -Eq 'Bash\(gh (issue|label) create:\*\)'; then
   fail "dry-run scout receives a mutation tool"
 fi
+
+mkdir -p "${fixture}/bin" "${fixture}/creator-run"
+sed -n '/^          #!\/usr\/bin\/env bash$/,/^          SCOUT_CREATE$/{
+  /^          SCOUT_CREATE$/q
+  p
+}' "${workflow}" \
+  | sed 's/^          //' \
+  > "${fixture}/kaizen-scout-create-issue"
+chmod 700 "${fixture}/kaizen-scout-create-issue"
+cat > "${fixture}/bin/gh" <<'FAKE_GH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1 $2" in
+  "pr list") printf '%s\n' "${SCOUT_TEST_OPEN_PRS:-0}" ;;
+  "issue list") printf '%s\n' "${SCOUT_TEST_OPEN_ISSUES:-0}" ;;
+  "issue create")
+    printf 'create\n' >> "${SCOUT_TEST_LOG}"
+    printf 'https://github.com/owner/repository/issues/1\n'
+    ;;
+  *) exit 2 ;;
+esac
+FAKE_GH
+chmod 700 "${fixture}/bin/gh"
+
+export PATH="${fixture}/bin:${PATH}"
+export RUNNER_TEMP="${fixture}/creator-run"
+export KAIZEN_SCOUT_TARGET=owner/repository
+export KAIZEN_SCOUT_LABELS=kaizen
+export KAIZEN_SCOUT_WIP_LIMIT=4
+export KAIZEN_SCOUT_OPEN_ISSUE_LIMIT=4
+export KAIZEN_SCOUT_CREATION_LIMIT=1
+export SCOUT_TEST_LOG="${fixture}/create.log"
+export SCOUT_TEST_OPEN_PRS=0
+export SCOUT_TEST_OPEN_ISSUES=0
+"${fixture}/kaizen-scout-create-issue" \
+  --title '[scout] bounded finding' --body 'Evidence.' --label kaizen >/dev/null
+if "${fixture}/kaizen-scout-create-issue" \
+  --title '[scout] excess finding' --body 'Evidence.' --label kaizen >/dev/null 2>&1; then
+  fail "bounded issue creator exceeded the per-run creation limit"
+fi
+[[ "$(grep -c '^create$' "${SCOUT_TEST_LOG}")" -eq 1 ]] \
+  || fail "bounded issue creator did not create exactly one issue"
 
 prompt_targets_repository() {
   local prompt_file="$1"
