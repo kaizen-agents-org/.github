@@ -38,6 +38,13 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Compatibility manifest ownership
    - Release and install verification checklist
 
+1. [First External Issue-to-Merge Run](./first-external-run-2026-08-12.md)
+   - Verified evidence for the first run outside this organization
+   - The four release-blocking defects it exposed, and why dogfooding hid them
+   - Design lessons for kaizen-loop: error propagation, postcondition checks,
+     harness artifacts, test-mode blind spots, environment assumptions
+   - Known-broken list and reproduction steps
+
 1. [Onboarding](../onboarding/README.md)
    - Explicit branch-protection preview and apply workflow
    - Required administrator permissions
