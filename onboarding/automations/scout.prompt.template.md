@@ -8,8 +8,8 @@ from local-only, feature-branch-only, dirty, or stale unmerged content.
 
 Before collecting evidence, use a runner-supplied checkout only when the runner
 explicitly states that it verified the checkout's `origin`, checked out the
-target's default branch, and names the authoritative ref. Otherwise, resolve
-the current default branch with
+target's default branch, and names the authoritative ref. If the runner did not
+supply that context, resolve the current default branch with
 `gh repo view {{REPOSITORY}} --json defaultBranchRef --jq
 '.defaultBranchRef.name'` and require a non-empty result. Never assume the
 runner's current directory is the target repository. Locate a target checkout
