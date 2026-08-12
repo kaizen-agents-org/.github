@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 enable="${repo_root}/onboarding/scripts/enable-scout.sh"
 validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
+workflow="${repo_root}/onboarding/automations/scout.workflow.yml"
 fixture_base="${KAIZEN_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 fixture="$(mktemp -d "${fixture_base%/}/scout-fleet-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
@@ -22,6 +23,126 @@ grep -Fq '`weeklyReadiness: true` adds the repository to the read-only weekly re
 grep -Fq 'fleet membership is not write authorization' \
   "${repo_root}/onboarding/README.md" \
   || fail "onboarding docs treat fleet scope as write authorization"
+
+grep -Fq 'persist-credentials: false' "${workflow}" \
+  || fail "scout checkout persists a mutation-capable job token"
+grep -Fq 'issues: write' "${workflow}" \
+  || fail "normal scout lacks issue creation permission"
+grep -Fq 'scout-dry-run:' "${workflow}" \
+  || fail "scout does not isolate dry runs in a read-only job"
+[[ "$(grep -Ec '^  issues: read$' "${workflow}")" -eq 1 ]] \
+  || fail "dry-run default must grant exactly read-only issue access"
+grep -Fq 'scout-target:' "${repo_root}/onboarding/automations/scout.prompt.template.md" \
+  || fail "rendered scout prompt lacks a machine-readable target"
+grep -Fq 'rendered_target="$(sed -n' "${workflow}" \
+  || fail "scout runner does not parse the declared target"
+grep -Fq '@anthropic-ai/claude-code@2.1.228' "${workflow}" \
+  || fail "scout runner does not pin Claude Code"
+if grep -Fq '@anthropic-ai/claude-code@latest' "${workflow}"; then
+  fail "scout runner installs an unreviewed latest Claude Code release"
+fi
+grep -Fq -- '--permission-mode dontAsk' "${workflow}" \
+  || fail "scout does not deny unlisted tools"
+grep -Fq -- '--disallowedTools "Edit,Write"' "${workflow}" \
+  || fail "scout does not explicitly disallow file mutation tools"
+if grep -Fq -- '--permission-mode acceptEdits' "${workflow}"; then
+  fail "scout automatically accepts file edits"
+fi
+grep -Fq 'git update-ref "refs/remotes/origin/${default_branch}" HEAD' "${workflow}" \
+  || fail "scout runner does not prepare an authoritative default-branch ref"
+grep -Fq 'Bash(git -C ${GITHUB_WORKSPACE} log:*)' "${workflow}" \
+  || fail "scout git reads do not name the verified checkout"
+if grep -Eq 'Bash\(git (log|show|diff):\*\)' "${workflow}"; then
+  fail "scout allows git reads that omit the verified checkout"
+fi
+grep -Fq 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' "${workflow}" \
+  || fail "scout checkout action is not pinned to a reviewed commit"
+if grep -Fq 'Bash(gh:*)' "${workflow}"; then
+  fail "scout grants unrestricted gh access"
+fi
+if grep -Fq 'Bash(gh issue create:*)' "${workflow}"; then
+  fail "scout bypasses the bounded issue creator"
+fi
+grep -Fq 'Bash(${KAIZEN_SCOUT_CREATE_ISSUE}:*)' "${workflow}" \
+  || fail "scout cannot invoke the bounded issue creator"
+grep -Fq 'created >= KAIZEN_SCOUT_CREATION_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not enforce the per-run limit"
+grep -Fq 'open_prs >= KAIZEN_SCOUT_WIP_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not recheck WIP"
+grep -Fq 'open_issues >= KAIZEN_SCOUT_OPEN_ISSUE_LIMIT' "${workflow}" \
+  || fail "bounded issue creator does not recheck the issue backlog"
+if grep -Fq 'Bash(gh label create:*)' "${workflow}"; then
+  fail "scout bypasses the restricted label creator"
+fi
+grep -Fq 'Bash(${KAIZEN_SCOUT_CREATE_LABEL}:*)' "${workflow}" \
+  || fail "organization scout cannot bootstrap required execution labels"
+if sed -n '/if \[ "${KAIZEN_SCOUT_DRY_RUN}" = "true" \]; then/,/else/p' "${workflow}" \
+  | grep -Eq 'Bash\(gh (issue|label) create:\*\)'; then
+  fail "dry-run scout receives a mutation tool"
+fi
+
+mkdir -p "${fixture}/bin" "${fixture}/creator-run"
+sed -n '/^          #!\/usr\/bin\/env bash$/,/^          SCOUT_CREATE$/{
+  /^          SCOUT_CREATE$/q
+  p
+}' "${workflow}" \
+  | sed 's/^          //' \
+  > "${fixture}/kaizen-scout-create-issue"
+chmod 700 "${fixture}/kaizen-scout-create-issue"
+cat > "${fixture}/bin/gh" <<'FAKE_GH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1 $2" in
+  "pr list") printf '%s\n' "${SCOUT_TEST_OPEN_PRS:-0}" ;;
+  "issue list") printf '%s\n' "${SCOUT_TEST_OPEN_ISSUES:-0}" ;;
+  "issue create")
+    printf 'create\n' >> "${SCOUT_TEST_LOG}"
+    printf 'https://github.com/owner/repository/issues/1\n'
+    ;;
+  *) exit 2 ;;
+esac
+FAKE_GH
+chmod 700 "${fixture}/bin/gh"
+
+export PATH="${fixture}/bin:${PATH}"
+export RUNNER_TEMP="${fixture}/creator-run"
+export KAIZEN_SCOUT_TARGET=owner/repository
+export KAIZEN_SCOUT_LABELS=kaizen
+export KAIZEN_SCOUT_WIP_LIMIT=4
+export KAIZEN_SCOUT_OPEN_ISSUE_LIMIT=4
+export KAIZEN_SCOUT_CREATION_LIMIT=1
+export SCOUT_TEST_LOG="${fixture}/create.log"
+export SCOUT_TEST_OPEN_PRS=0
+export SCOUT_TEST_OPEN_ISSUES=0
+"${fixture}/kaizen-scout-create-issue" \
+  --title '[scout] bounded finding' --body 'Evidence.' --label kaizen >/dev/null
+if "${fixture}/kaizen-scout-create-issue" \
+  --title '[scout] excess finding' --body 'Evidence.' --label kaizen >/dev/null 2>&1; then
+  fail "bounded issue creator exceeded the per-run creation limit"
+fi
+[[ "$(grep -c '^create$' "${SCOUT_TEST_LOG}")" -eq 1 ]] \
+  || fail "bounded issue creator did not create exactly one issue"
+
+prompt_targets_repository() {
+  local prompt_file="$1"
+  local repository="$2"
+  local rendered_target
+  rendered_target="$(sed -n 's/^<!-- scout-target: \([^[:space:]]*\) -->$/\1/p' "$prompt_file")"
+  [[ "$(printf '%s' "$rendered_target" | tr '[:upper:]' '[:lower:]')" == \
+     "$(printf '%s' "$repository" | tr '[:upper:]' '[:lower:]')" ]]
+}
+
+printf '%s\n' \
+  '<!-- scout-target: other/repository -->' \
+  'Scout owner/repository only as an incidental mention.' \
+  > "${fixture}/wrong-target-prompt.md"
+if prompt_targets_repository "${fixture}/wrong-target-prompt.md" owner/repository; then
+  fail "incidental repository mention bypassed declared-target validation"
+fi
+printf '%s\n' '<!-- scout-target: OWNER/REPOSITORY -->' \
+  > "${fixture}/case-target-prompt.md"
+prompt_targets_repository "${fixture}/case-target-prompt.md" owner/repository \
+  || fail "declared-target validation is case-sensitive"
 
 node -e '
 const fs = require("fs");

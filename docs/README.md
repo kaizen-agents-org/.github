@@ -70,7 +70,15 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
+1. [Scout Contract](./scout-contract.md)
+   - What any scout must guarantee, independent of what runs it
+   - Issues-only boundary, default-branch evidence, creation and backlog limits
+   - Why execution authorization is not a scout decision
+   - Runner options: GitHub Actions (default), Codex Automation, Claude
+     Routines, manual
+
 1. [Repository Improvement Scout](./repo-improvement-scout.md)
+   - How this organization runs its own scout, as a Codex automation
    - Proactive repo-local improvement discovery
    - `[scout]` issue creation rules
    - Source prompt stored under `../automations/`

@@ -1,11 +1,19 @@
 Managed template: `kaizen-agents-org/.github/onboarding/automations/scout.prompt.template.md`.
 <!-- automation-contract: automation=scout; issues=[scout]; prs=none; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- scout-target: {{REPOSITORY}} -->
+<!-- scout-labels: {{LABEL_NAMES}} -->
+<!-- scout-wip-limit: {{WIP_LIMIT}} -->
+<!-- scout-open-issue-limit: 4 -->
+<!-- scout-creation-limit: {{CREATION_LIMIT}} -->
 
 Scout `{{REPOSITORY}}` for small, evidence-backed repository-local improvements.
 Use the repository default branch as the source of truth. Do not create work
 from local-only, feature-branch-only, dirty, or stale unmerged content.
 
-Before collecting evidence, resolve the current default branch with
+Before collecting evidence, use a runner-supplied checkout only when the runner
+explicitly states that it verified the checkout's `origin`, checked out the
+target's default branch, and names the authoritative ref. If the runner did not
+supply that context, resolve the current default branch with
 `gh repo view {{REPOSITORY}} --json defaultBranchRef --jq
 '.defaultBranchRef.name'` and require a non-empty result. Never assume the
 runner's current directory is the target repository. Locate a target checkout

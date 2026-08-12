@@ -22,9 +22,15 @@ usage: enable-scout.sh --repo owner/repo --readiness-evidence FILE --output FILE
                        [--labels label1,label2] [--wip-limit N]
                        [--creation-limit N] [--confirm owner/repo] [--dry-run]
 
-Renders and installs an opt-in repository scout prompt. Applying requires
+Renders an opt-in repository scout prompt to --output. Applying requires
 --confirm to exactly match --repo. --dry-run validates all prerequisites and
 prints the rendered prompt without writing the output file.
+
+The rendered prompt carries its own target and limits and names no runner.
+For the default GitHub Actions runner, copy ../automations/scout.workflow.yml to
+.github/workflows/scout.yml and render --output .github/kaizen/scout.prompt.md.
+Codex Automation, Claude Routines, and manual runs may use a runner-owned path.
+docs/scout-contract.md defines what any runner must guarantee.
 USAGE
 }
 
@@ -208,6 +214,7 @@ if (![isoWeek(reviewDate), isoWeek(previousWeek)].includes(metrics.isoWeek)) {
 const renderedLabels = labels.split(',').map((label) => `\`${label}\``).join(', ');
 const replacements = new Map([
   ['{{REPOSITORY}}', repository],
+  ['{{LABEL_NAMES}}', labels],
   ['{{LABELS}}', renderedLabels],
   ['{{WIP_LIMIT}}', String(wipLimit)],
   ['{{CREATION_LIMIT}}', creationText]
