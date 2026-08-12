@@ -1,6 +1,16 @@
 # Repository Improvement Scout
 
-The Kaizen Agents organization uses a Codex automation named `Kaizen Agents repo improvement scout` to actively find small, repo-local improvement issues for the normal Kaizen issue-to-PR loop.
+This document describes **how this organization runs its own scout**: a Codex
+automation named `Kaizen Agents repo improvement scout` that finds small,
+repo-local improvement issues for the normal Kaizen issue-to-PR loop.
+
+What a scout must guarantee, independent of what runs it, is defined in
+[Scout Contract](./scout-contract.md). Codex Automation is one conforming
+runner. GitHub Actions is the default for adopters because it assumes only a
+repository; see
+[`../onboarding/automations/scout.workflow.yml`](../onboarding/automations/scout.workflow.yml).
+Read the contract first if you are wiring a scout somewhere new — this file
+records one deployment, not the definition.
 
 The scout is the improve layer in the [Automation Roles](./automation-roles.md) model. It is separate from [Organization Monitor](./org-monitor.md): the organization monitor is conservative coordination health checking, while the scout is proactive backlog discovery.
 
@@ -31,7 +41,10 @@ coordination repositories:
 An opt-in per-repository scout rendered from
 [`../onboarding/automations/scout.prompt.template.md`](../onboarding/automations/scout.prompt.template.md)
 and enabled through [`../onboarding/scripts/enable-scout.sh`](../onboarding/scripts/enable-scout.sh)
-scans exactly its explicitly configured `owner/repository`. That target may be a
+scans exactly its explicitly configured `owner/repository`. The rendered prompt
+carries its own target and limits and names no runner, so it can be scheduled by
+GitHub Actions, Codex Automation, Claude Routines, or pasted into an agent
+session by hand. That target may be a
 newly onboarded organization repository or an external repository; it does not
 need to appear in the fixed organization-wide list. Enabling one target does not
 expand the fixed scout or authorize any other repository. The four fixed targets

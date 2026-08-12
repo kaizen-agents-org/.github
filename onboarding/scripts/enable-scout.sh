@@ -22,9 +22,14 @@ usage: enable-scout.sh --repo owner/repo --readiness-evidence FILE --output FILE
                        [--labels label1,label2] [--wip-limit N]
                        [--creation-limit N] [--confirm owner/repo] [--dry-run]
 
-Renders and installs an opt-in repository scout prompt. Applying requires
+Renders an opt-in repository scout prompt to --output. Applying requires
 --confirm to exactly match --repo. --dry-run validates all prerequisites and
 prints the rendered prompt without writing the output file.
+
+The rendered prompt carries its own target and limits and names no runner.
+Schedule it with GitHub Actions (see ../automations/scout.workflow.yml, the
+default for adopters), Codex Automation, Claude Routines, or run it by hand.
+docs/scout-contract.md defines what any runner must guarantee.
 USAGE
 }
 

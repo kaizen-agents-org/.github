@@ -1,0 +1,129 @@
+# Reference scout runner for GitHub Actions.
+#
+# Copy this into the *target* repository as .github/workflows/scout.yml and
+# commit the rendered prompt produced by onboarding/scripts/enable-scout.sh
+# alongside it. See docs/scout-contract.md for what a runner must guarantee.
+#
+# This is the default runner because it assumes the least: a repository, which
+# an adopter necessarily has, plus a model credential. Codex Automation and
+# Claude Routines are equally valid runners, but each requires an account with
+# that provider.
+#
+# The workflow supplies the environment. Everything about *what to look for*
+# lives in the rendered prompt, and the contract limits are baked into it at
+# render time -- do not restate them here, or the two will drift.
+
+name: Kaizen Scout
+
+on:
+  schedule:
+    # Once a day. The contract's backlog stop condition means a scout goes quiet
+    # when work is already queued, so a higher cadence mostly produces empty
+    # runs; raise it only if the backlog is genuinely being drained.
+    - cron: "45 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report findings without creating issues."
+        required: false
+        type: boolean
+        default: false
+
+# Contents stay read-only: a scout that cannot push cannot push by accident.
+# `issues: write` covers creating issues and applying labels that already exist.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  # Two scouts running at once would each see the other's issues as not yet
+  # created and could file the same finding twice.
+  group: kaizen-scout-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  scout:
+    name: scout
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the prompt
+        uses: actions/checkout@v4
+
+      - name: Verify the rendered prompt is present
+        run: |
+          set -euo pipefail
+          prompt=.github/kaizen/scout.prompt.md
+          if [ ! -f "$prompt" ]; then
+            echo "::error::$prompt is missing." >&2
+            echo "Render it with onboarding/scripts/enable-scout.sh and commit it." >&2
+            exit 1
+          fi
+          # Fail closed on an unrendered template rather than sending
+          # placeholders to a model that would then guess a target.
+          if grep -q '{{[A-Z_]*}}' "$prompt"; then
+            echo "::error::$prompt still contains template placeholders." >&2
+            exit 1
+          fi
+          # The prompt names its own target. A prompt rendered for a different
+          # repository must not run here -- it would file issues elsewhere.
+          if ! grep -qF "${{ github.repository }}" "$prompt"; then
+            echo "::error::$prompt was rendered for a different repository." >&2
+            exit 1
+          fi
+
+      - name: Run the scout
+        env:
+          # `gh` in the prompt authenticates with this. It carries exactly the
+          # permissions declared above -- no repository secret is needed for
+          # GitHub access, only for the model call below.
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAIZEN_SCOUT_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set." >&2
+            echo "Add it as a repository secret, or adapt this step to the agent you use." >&2
+            exit 1
+          fi
+
+          npm install -g @anthropic-ai/claude-code@latest >/dev/null 2>&1
+
+          prompt_file=.github/kaizen/scout.prompt.md
+          if [ "${KAIZEN_SCOUT_DRY_RUN}" = "true" ]; then
+            prompt_file="${RUNNER_TEMP}/scout.prompt.md"
+            cp .github/kaizen/scout.prompt.md "${prompt_file}"
+            printf '\n\nReport findings only. Do not create any issue during this run.\n' \
+              >> "${prompt_file}"
+          fi
+
+          # --allowedTools restricts the agent to reading the repository and
+          # talking to GitHub through gh. It cannot write files or push, which
+          # is the contract's issues-only boundary enforced by the runner rather
+          # than by the prompt alone.
+          claude --print \
+            --permission-mode acceptEdits \
+            --allowedTools "Bash(gh:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Read,Grep,Glob" \
+            "$(cat "${prompt_file}")"
+
+      - name: Report what was filed
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "### Kaizen scout" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          # Surface the current backlog so an empty run is distinguishable from
+          # a run that was correctly stopped by the backlog limit.
+          gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --search '"[scout]" in:title' \
+            --json number,title,createdAt \
+            --jq '.[] | "- #\(.number) \(.title)"' \
+            >> "$GITHUB_STEP_SUMMARY" 2>/dev/null \
+            || echo "_No open scout issues._" >> "$GITHUB_STEP_SUMMARY"
