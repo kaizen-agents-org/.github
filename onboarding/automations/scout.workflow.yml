@@ -57,6 +57,10 @@ jobs:
       - name: Check out the prompt
         uses: actions/checkout@v4
         with:
+          # Fetch the repository default branch rather than an event-specific
+          # revision, so the model never treats feature-branch content as fact.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
           # Do not leave the job token in git configuration where the model
           # could discover it during a dry run.
           persist-credentials: false
@@ -76,12 +80,38 @@ jobs:
             echo "::error::$prompt still contains template placeholders." >&2
             exit 1
           fi
-          # The prompt names its own target. A prompt rendered for a different
-          # repository must not run here -- it would file issues elsewhere.
-          if ! grep -qiF "${{ github.repository }}" "$prompt"; then
+          # Compare the declared field, not an incidental repository mention.
+          rendered_target="$(sed -n 's/^<!-- scout-target: \([^[:space:]]*\) -->$/\1/p' "$prompt")"
+          expected_target="${{ github.repository }}"
+          if [ "$(printf '%s' "$rendered_target" | tr '[:upper:]' '[:lower:]')" != \
+               "$(printf '%s' "$expected_target" | tr '[:upper:]' '[:lower:]')" ]; then
             echo "::error::$prompt was rendered for a different repository." >&2
             exit 1
           fi
+
+          # actions/checkout fetched the default branch above. Verify that its
+          # origin is the configured target before declaring it authoritative.
+          normalize_repository() {
+            printf '%s' "$1" \
+              | sed -E 's#^https://github\.com/##; s#^git@github\.com:##; s#\.git$##' \
+              | tr '[:upper:]' '[:lower:]'
+          }
+          origin="$(git remote get-url origin)"
+          if [ "$(normalize_repository "$origin")" != \
+               "$(normalize_repository "$expected_target")" ]; then
+            echo "::error::checkout origin does not match $expected_target." >&2
+            exit 1
+          fi
+          default_branch="${{ github.event.repository.default_branch }}"
+          if [ -z "$default_branch" ]; then
+            echo "::error::the repository default branch is unavailable." >&2
+            exit 1
+          fi
+          git update-ref "refs/remotes/origin/${default_branch}" HEAD
+          echo "KAIZEN_SCOUT_DEFAULT_BRANCH=${default_branch}" >> "$GITHUB_ENV"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.228 >/dev/null 2>&1
 
       - name: Run the scout
         env:
@@ -99,13 +129,13 @@ jobs:
             exit 1
           fi
 
-          npm install -g @anthropic-ai/claude-code@latest >/dev/null 2>&1
-
-          prompt_file=.github/kaizen/scout.prompt.md
-          allowed_tools="Bash(gh repo view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label list:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Read,Grep,Glob"
+          prompt_file="${RUNNER_TEMP}/scout.prompt.md"
+          cp .github/kaizen/scout.prompt.md "${prompt_file}"
+          printf '\n\nThe runner verified that `%s` targets `%s` and checked out its default branch. Treat `origin/%s` as the authoritative ref for this run.\n' \
+            "$GITHUB_WORKSPACE" "${{ github.repository }}" \
+            "$KAIZEN_SCOUT_DEFAULT_BRANCH" >> "${prompt_file}"
+          allowed_tools="Bash(gh repo view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label list:*),Bash(git -C ${GITHUB_WORKSPACE} log:*),Bash(git -C ${GITHUB_WORKSPACE} show:*),Bash(git -C ${GITHUB_WORKSPACE} diff:*),Read,Grep,Glob"
           if [ "${KAIZEN_SCOUT_DRY_RUN}" = "true" ]; then
-            prompt_file="${RUNNER_TEMP}/scout.prompt.md"
-            cp .github/kaizen/scout.prompt.md "${prompt_file}"
             printf '\n\nReport findings only. Do not create any issue during this run.\n' \
               >> "${prompt_file}"
           else
@@ -119,8 +149,9 @@ jobs:
           # tools nor a write-capable token, so the boundary does not depend on
           # the natural-language prompt.
           claude --print \
-            --permission-mode acceptEdits \
+            --permission-mode dontAsk \
             --allowedTools "${allowed_tools}" \
+            --disallowedTools "Edit,Write" \
             "$(cat "${prompt_file}")"
 
       - name: Report what was filed

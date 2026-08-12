@@ -32,8 +32,29 @@ grep -Fq 'scout-dry-run:' "${workflow}" \
   || fail "scout does not isolate dry runs in a read-only job"
 [[ "$(grep -Ec '^  issues: read$' "${workflow}")" -eq 1 ]] \
   || fail "dry-run default must grant exactly read-only issue access"
-grep -Fq 'grep -qiF "${{ github.repository }}" "$prompt"' "${workflow}" \
-  || fail "scout target verification is case-sensitive"
+grep -Fq 'scout-target:' "${repo_root}/onboarding/automations/scout.prompt.template.md" \
+  || fail "rendered scout prompt lacks a machine-readable target"
+grep -Fq 'rendered_target="$(sed -n' "${workflow}" \
+  || fail "scout runner does not parse the declared target"
+grep -Fq '@anthropic-ai/claude-code@2.1.228' "${workflow}" \
+  || fail "scout runner does not pin Claude Code"
+if grep -Fq '@anthropic-ai/claude-code@latest' "${workflow}"; then
+  fail "scout runner installs an unreviewed latest Claude Code release"
+fi
+grep -Fq -- '--permission-mode dontAsk' "${workflow}" \
+  || fail "scout does not deny unlisted tools"
+grep -Fq -- '--disallowedTools "Edit,Write"' "${workflow}" \
+  || fail "scout does not explicitly disallow file mutation tools"
+if grep -Fq -- '--permission-mode acceptEdits' "${workflow}"; then
+  fail "scout automatically accepts file edits"
+fi
+grep -Fq 'git update-ref "refs/remotes/origin/${default_branch}" HEAD' "${workflow}" \
+  || fail "scout runner does not prepare an authoritative default-branch ref"
+grep -Fq 'Bash(git -C ${GITHUB_WORKSPACE} log:*)' "${workflow}" \
+  || fail "scout git reads do not name the verified checkout"
+if grep -Eq 'Bash\(git (log|show|diff):\*\)' "${workflow}"; then
+  fail "scout allows git reads that omit the verified checkout"
+fi
 if grep -Fq 'Bash(gh:*)' "${workflow}"; then
   fail "scout grants unrestricted gh access"
 fi
@@ -45,6 +66,27 @@ if sed -n '/if \[ "${KAIZEN_SCOUT_DRY_RUN}" = "true" \]; then/,/else/p' "${workf
   | grep -Eq 'Bash\(gh (issue|label) create:\*\)'; then
   fail "dry-run scout receives a mutation tool"
 fi
+
+prompt_targets_repository() {
+  local prompt_file="$1"
+  local repository="$2"
+  local rendered_target
+  rendered_target="$(sed -n 's/^<!-- scout-target: \([^[:space:]]*\) -->$/\1/p' "$prompt_file")"
+  [[ "$(printf '%s' "$rendered_target" | tr '[:upper:]' '[:lower:]')" == \
+     "$(printf '%s' "$repository" | tr '[:upper:]' '[:lower:]')" ]]
+}
+
+printf '%s\n' \
+  '<!-- scout-target: other/repository -->' \
+  'Scout owner/repository only as an incidental mention.' \
+  > "${fixture}/wrong-target-prompt.md"
+if prompt_targets_repository "${fixture}/wrong-target-prompt.md" owner/repository; then
+  fail "incidental repository mention bypassed declared-target validation"
+fi
+printf '%s\n' '<!-- scout-target: OWNER/REPOSITORY -->' \
+  > "${fixture}/case-target-prompt.md"
+prompt_targets_repository "${fixture}/case-target-prompt.md" owner/repository \
+  || fail "declared-target validation is case-sensitive"
 
 node -e '
 const fs = require("fs");

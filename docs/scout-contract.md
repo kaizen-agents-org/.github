@@ -69,7 +69,7 @@ the limit stay in the report.
 
 No new issues when the target already has enough open work: a configured limit
 on open issues carrying the intake label, and a configured limit on open
-generated pull requests.
+pull requests, regardless of provenance.
 
 This is what stops an unattended scout from filling a backlog nobody is
 draining. A scout that runs three times a day against a repository nobody is
@@ -107,6 +107,9 @@ separate.
 
 An issue is only filed when it can go to the next run as written — concrete
 evidence, a bounded change, no open question for a human to answer first.
+Every created issue includes a `PR linkage requirement` section that requires
+an implementation PR to use a GitHub closing keyword and to verify the expected
+`closingIssuesReferences` before it is reported ready.
 
 A finding that needs discussion is a report line, not an issue.
 
@@ -118,7 +121,7 @@ A finding that needs discussion is a report line, not an issue.
 | Labels | Applied to created issues; must include the intake label the loop filters on |
 | Creation limit | Issues per run (1–2) |
 | Open-issue limit | Stop when the target has this many open intake-labelled issues |
-| WIP limit | Stop when the target has this many open generated pull requests |
+| WIP limit | Stop when the target has this many open pull requests, regardless of provenance |
 
 ## Permissions a runner must grant
 
