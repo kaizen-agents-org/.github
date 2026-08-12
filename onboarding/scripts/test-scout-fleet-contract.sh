@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 enable="${repo_root}/onboarding/scripts/enable-scout.sh"
 validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
+workflow="${repo_root}/onboarding/automations/scout.workflow.yml"
 fixture_base="${KAIZEN_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 fixture="$(mktemp -d "${fixture_base%/}/scout-fleet-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
@@ -22,6 +23,28 @@ grep -Fq '`weeklyReadiness: true` adds the repository to the read-only weekly re
 grep -Fq 'fleet membership is not write authorization' \
   "${repo_root}/onboarding/README.md" \
   || fail "onboarding docs treat fleet scope as write authorization"
+
+grep -Fq 'persist-credentials: false' "${workflow}" \
+  || fail "scout checkout persists a mutation-capable job token"
+grep -Fq 'issues: write' "${workflow}" \
+  || fail "normal scout lacks issue creation permission"
+grep -Fq 'scout-dry-run:' "${workflow}" \
+  || fail "scout does not isolate dry runs in a read-only job"
+[[ "$(grep -Ec '^  issues: read$' "${workflow}")" -eq 1 ]] \
+  || fail "dry-run default must grant exactly read-only issue access"
+grep -Fq 'grep -qiF "${{ github.repository }}" "$prompt"' "${workflow}" \
+  || fail "scout target verification is case-sensitive"
+if grep -Fq 'Bash(gh:*)' "${workflow}"; then
+  fail "scout grants unrestricted gh access"
+fi
+grep -Fq 'Bash(gh issue create:*)' "${workflow}" \
+  || fail "scout cannot create eligible findings"
+grep -Fq 'Bash(gh label create:*)' "${workflow}" \
+  || fail "organization scout cannot bootstrap required execution labels"
+if sed -n '/if \[ "${KAIZEN_SCOUT_DRY_RUN}" = "true" \]; then/,/else/p' "${workflow}" \
+  | grep -Eq 'Bash\(gh (issue|label) create:\*\)'; then
+  fail "dry-run scout receives a mutation tool"
+fi
 
 node -e '
 const fs = require("fs");

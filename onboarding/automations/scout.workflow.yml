@@ -30,10 +30,11 @@ on:
         default: false
 
 # Contents stay read-only: a scout that cannot push cannot push by accident.
-# `issues: write` covers creating issues and applying labels that already exist.
+# Dry runs inherit these read-only defaults. The normal job explicitly elevates
+# issues access just for creating issues and bootstrapping required labels.
 permissions:
   contents: read
-  issues: write
+  issues: read
   pull-requests: read
 
 concurrency:
@@ -45,11 +46,20 @@ concurrency:
 jobs:
   scout:
     name: scout
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    steps:
+    steps: &scout-steps
       - name: Check out the prompt
         uses: actions/checkout@v4
+        with:
+          # Do not leave the job token in git configuration where the model
+          # could discover it during a dry run.
+          persist-credentials: false
 
       - name: Verify the rendered prompt is present
         run: |
@@ -68,16 +78,15 @@ jobs:
           fi
           # The prompt names its own target. A prompt rendered for a different
           # repository must not run here -- it would file issues elsewhere.
-          if ! grep -qF "${{ github.repository }}" "$prompt"; then
+          if ! grep -qiF "${{ github.repository }}" "$prompt"; then
             echo "::error::$prompt was rendered for a different repository." >&2
             exit 1
           fi
 
       - name: Run the scout
         env:
-          # `gh` in the prompt authenticates with this. It carries exactly the
-          # permissions declared above -- no repository secret is needed for
-          # GitHub access, only for the model call below.
+          # This token is write-capable only in the normal scout job. The dry
+          # run job reuses these steps with an issues: read token.
           GH_TOKEN: ${{ github.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           KAIZEN_SCOUT_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
@@ -93,20 +102,25 @@ jobs:
           npm install -g @anthropic-ai/claude-code@latest >/dev/null 2>&1
 
           prompt_file=.github/kaizen/scout.prompt.md
+          allowed_tools="Bash(gh repo view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label list:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Read,Grep,Glob"
           if [ "${KAIZEN_SCOUT_DRY_RUN}" = "true" ]; then
             prompt_file="${RUNNER_TEMP}/scout.prompt.md"
             cp .github/kaizen/scout.prompt.md "${prompt_file}"
             printf '\n\nReport findings only. Do not create any issue during this run.\n' \
               >> "${prompt_file}"
+          else
+            # These are the only mutations in the scout contract. In
+            # particular, do not grant gh api or existing-issue mutations.
+            allowed_tools="${allowed_tools},Bash(gh issue create:*),Bash(gh label create:*)"
           fi
 
           # --allowedTools restricts the agent to reading the repository and
-          # talking to GitHub through gh. It cannot write files or push, which
-          # is the contract's issues-only boundary enforced by the runner rather
-          # than by the prompt alone.
+          # a small set of gh subcommands. Dry runs receive neither mutation
+          # tools nor a write-capable token, so the boundary does not depend on
+          # the natural-language prompt.
           claude --print \
             --permission-mode acceptEdits \
-            --allowedTools "Bash(gh:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Read,Grep,Glob" \
+            --allowedTools "${allowed_tools}" \
             "$(cat "${prompt_file}")"
 
       - name: Report what was filed
@@ -127,3 +141,10 @@ jobs:
             --jq '.[] | "- #\(.number) \(.title)"' \
             >> "$GITHUB_STEP_SUMMARY" 2>/dev/null \
             || echo "_No open scout issues._" >> "$GITHUB_STEP_SUMMARY"
+
+  scout-dry-run:
+    name: scout (dry run)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps: *scout-steps
