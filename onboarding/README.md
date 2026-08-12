@@ -272,9 +272,9 @@ detected:
 {
   "version": 1,
   "toolchain": {
-    "kaizen-loop": "v0.1.3",
+    "kaizen-loop": "v0.1.6",
     "builder-agent": "v0.1.0",
-    "verifier": "v0.1.0"
+    "verifier": "v0.1.1"
   },
   "files": {
     "skills/example/SKILL.md": "<64 lowercase hex characters>"
