@@ -32,19 +32,25 @@ Separating them means:
 The rules below are identical for all three. What differs is *who enforces
 them*, and that difference is worth being explicit about.
 
-| Implementation | Schedule | Model | Who applies the rules |
-| --- | --- | --- | --- |
-| Codex Automation | Codex app | Codex | The agent, by following its prompt |
-| Claude Routines | Routines | Claude | The agent, by following its prompt |
-| **API client** | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | **The client, in code** |
+| Implementation | Schedule | Model | Who applies the rules | Status |
+| --- | --- | --- | --- | --- |
+| Codex Automation | Codex app | Codex | The agent, by following its prompt | In use |
+| Agent on GitHub Actions | Actions schedule | Any coding agent with an API key | The agent, inside a wrapper that enforces the limits before `gh issue create` | Available |
+| Claude Routines | Routines | Claude | The agent, by following its prompt | [Not yet wired](https://github.com/kaizen-agents-org/.github/issues/227) |
+| API client | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | The client, in code | [Planned](https://github.com/kaizen-agents-org/.github/issues/229) |
 
-**Codex Automation and Claude Routines are agent environments.** They already
-have a scheduler, a model, and the ability to run `gh`, so one prompt does
-everything: read the repository, count what is open, create the issue. These are
-purpose-built implementations, each shaped around its host.
+The difference that matters is **how far the enforcement sits from the model**.
 
-**The API client is different, and this is the point of it.** A model API only
-answers questions; it cannot create an issue. So the work splits:
+**Agent implementations** run the whole scout in one session: read the
+repository, count what is open, create the issue. Where the host allows it, the
+limits can still be enforced outside the model — the Actions implementation
+gives the agent a wrapper script instead of raw `gh`, and that script re-checks
+the creation, WIP, and open-issue limits and refuses to proceed past them. Codex
+Automation and Claude Routines have no such seam today: their limits live in the
+prompt, because that is the only place they can live.
+
+**The API client**, once built, moves the enforcement out entirely. A model API
+cannot create an issue, so the work splits by construction:
 
 - the **model** reads the repository content it is given and returns candidate
   findings as JSON — see
@@ -52,14 +58,11 @@ answers questions; it cannot create an issue. So the work splits:
 - the **client** applies every limit, checks for duplicates, attaches labels, and
   makes the only GitHub write
 
-That split is why the API client is the implementation to prefer where there is
-a choice. Under an agent implementation, "stop when four issues are already
-open" is an instruction a model can miscount or overlook. Under the API client
-it is `if (openIssues.length >= limit) return` — the model is never asked to
-enforce a rule it could get wrong, because it is never handed the ability to
-break it.
+One consequence is unique to that ordering: the backlog check runs *before* the
+model is called, so a scout pointed at a repository with a full queue costs
+nothing. Every agent implementation has to call the model to find that out.
 
-The API client also has no provider of its own. Any endpoint speaking the
+The client also has no provider of its own. Any endpoint speaking the
 OpenAI-compatible shape works; switching between them is a base URL and a
 credential, not a second implementation. That includes a local gateway holding a
 subscription credential, which is how a scout runs without a separate metered
@@ -175,6 +178,11 @@ pre-provisions the labels instead.
 
 ## The API client
 
+> **Not built yet.** This section is the specification the client is being
+> implemented against; see
+> [#229](https://github.com/kaizen-agents-org/.github/issues/229). To run a
+> scout today, use Codex Automation or the Actions workflow.
+
 The client is one command. Whatever starts it — cron, launchd, a CI schedule —
 supplies only timing.
 
@@ -262,24 +270,30 @@ For every implementation, without running a model:
 `onboarding/scripts/enable-scout.sh` performs these checks when rendering a
 per-repository scout and refuses to render one that would violate them.
 
-For an **agent implementation**, that is close to the limit of what can be
-checked: the rendered prompt can be asserted to state the issues-only boundary,
-the default-branch rule, the limits, and the label policy, but whether the agent
-observes them only shows up in what it files.
+How much more can be checked depends on where the enforcement sits.
 
-For the **API client**, the same rules are ordinary code, so they can be tested
-directly with no model involved:
+**Where the agent is given a wrapper instead of raw `gh`** — as in the Actions
+implementation — the wrapper's refusals are testable without a model, and
+`test-scout-fleet-contract.sh` exercises them: the creation, WIP, and open-issue
+limits, and the exact label set.
 
-- a backlog at the limit produces no model call at all
-- a response that violates the schema is rejected rather than repaired
-- a finding matching an open issue is dropped
-- more findings than the creation limit result in exactly the limit being filed
-- only the configured labels are applied
+**Where the limits live only in the prompt** — Codex Automation and Claude
+Routines today — the rendered prompt can be asserted to state the issues-only
+boundary, the default-branch rule, the limits, and the label policy, but whether
+the agent observes them only shows up in what it files.
 
-This is the concrete reason to prefer the API client where the choice exists.
-The rules are the same either way; only one of them can be proven.
+**The API client** moves one more thing inside the testable boundary. Because it
+decides *whether to call the model at all*, this becomes checkable:
+
+- a backlog at the limit produces no model call
+- a response violating the schema is rejected rather than repaired
+- a finding matching an open issue is dropped before creation
+
+The first of those is the one no agent implementation can offer: a wrapper can
+refuse to file, but the model has already run and already cost something.
 
 What no implementation can check mechanically is whether the findings are any
 good. That is a prompt-quality question, and it is why the creation and backlog
 limits exist: a scout is allowed to be wrong occasionally, as long as being
 wrong is cheap and bounded.
+
