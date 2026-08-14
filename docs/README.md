@@ -74,8 +74,9 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - What any scout must guarantee, independent of what runs it
    - Issues-only boundary, default-branch evidence, creation and backlog limits
    - Why execution authorization is not a scout decision
-   - Runner options: GitHub Actions (default), Codex Automation, Claude
-     Routines, manual
+   - Three implementations: Codex Automation, Claude Routines, and an API
+     client that works against any OpenAI-compatible endpoint
+   - Why the API client enforces the limits in code rather than in a prompt
 
 1. [Repository Improvement Scout](./repo-improvement-scout.md)
    - How this organization runs its own scout, as a Codex automation

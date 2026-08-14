@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kaizen-agents-org/.github/blob/main/onboarding/automations/scout.findings.schema.json",
+  "title": "Scout findings",
+  "description": "What a model returns to a scout client. The model proposes; the client decides what is filed. Nothing here grants permission to create an issue -- the client applies the limits, checks for duplicates, and owns every GitHub write. Deliberately narrow so it survives the JSON Schema subsets that constrained decoding accepts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "Candidate improvements, most valuable first. May be empty, and often should be: a repository with nothing bounded and evidence-backed to fix is a normal result, not a failure.",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "body", "evidence"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Issue title without a prefix. The client adds '[scout] '.",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "body": {
+            "type": "string",
+            "description": "Issue body in Markdown: what is wrong, why it matters, and what a bounded change looks like. Omit the PR linkage section -- the client appends it so every implementation closes its source issue.",
+            "minLength": 40,
+            "maxLength": 8000
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Where this was observed on the default branch: file paths, line ranges, quoted lines, or a doc section. A finding whose evidence cannot be pointed at is speculation and must not be returned.",
+            "minLength": 8,
+            "maxLength": 2000
+          },
+          "confidence": {
+            "type": "string",
+            "description": "How certain the finding is real and worth filing. Clients may drop anything below a configured floor.",
+            "enum": ["high", "medium", "low"]
+          },
+          "area": {
+            "type": "string",
+            "description": "Optional free-form area, such as a component or subsystem, for grouping in reports.",
+            "maxLength": 60
+          }
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "description": "Findings deliberately not returned, and why. Distinguishes 'nothing to fix' from 'plenty to fix but not worth filing yet', which is the difference between a healthy repository and a full backlog.",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What the skipped finding would have been called.",
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why it was not returned: already covered by an open issue or pull request, needs a human decision, too large for one focused change, or no default-branch evidence.",
+            "minLength": 4,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free text for the run report. Never used to decide what is filed.",
+      "maxLength": 2000
+    }
+  }
+}
