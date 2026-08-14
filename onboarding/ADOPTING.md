@@ -13,10 +13,12 @@ few minutes. `pnpm` is needed because one of them is a pnpm workspace.
 
 > **Status: one issue has gone from filing to merge on an outside repository.**
 > `onboarding/versions.json` pins `kaizen-loop v0.1.7`, `builder-agent v0.1.0`,
-> and `verifier v0.1.1`. A clean install from that set produces three working
-> commands, passes `kaizen doctor`, and completed an issue-to-merge run on a
-> Rust repository outside this organization
-> ([evidence](../docs/first-external-run-2026-08-12.md)).
+> and `verifier v0.1.1`. A clean install from this set produces three working
+> commands and passes `kaizen doctor`. The issue-to-merge run on a Rust
+> repository outside this organization used the preceding set with
+> `kaizen-loop v0.1.6`
+> ([evidence](../docs/first-external-run-2026-08-12.md)); `v0.1.7` has been
+> verified separately through installation and doctor checks.
 >
 > `v0.1.7` removed the `umask 077` requirement that earlier sets carried:
 > workspaces are now created private from the start, so a run works under the
