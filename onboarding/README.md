@@ -286,7 +286,7 @@ detected:
 {
   "version": 1,
   "toolchain": {
-    "kaizen-loop": "v0.1.6",
+    "kaizen-loop": "v0.1.7",
     "builder-agent": "v0.1.0",
     "verifier": "v0.1.1"
   },

@@ -12,18 +12,20 @@ prebuilt packages, so the first install compiles three repositories and takes a
 few minutes. `pnpm` is needed because one of them is a pnpm workspace.
 
 > **Status: one issue has gone from filing to merge on an outside repository.**
-> `onboarding/versions.json` pins `kaizen-loop v0.1.6`, `builder-agent v0.1.0`,
+> `onboarding/versions.json` pins `kaizen-loop v0.1.7`, `builder-agent v0.1.0`,
 > and `verifier v0.1.1`. A clean install from that set produces three working
 > commands, passes `kaizen doctor`, and completed an issue-to-merge run on a
 > Rust repository outside this organization
 > ([evidence](../docs/first-external-run-2026-08-12.md)).
 >
-> Two caveats before you start. Runs currently need `umask 077`, because
-> workspaces are created `0755` while the publication broker requires `0700`
-> ([#217](https://github.com/kaizen-agents-org/.github/issues/217)). And this
-> has been verified on macOS only, by people who control the machine — no
-> third-party maintainer has run it anywhere else yet, so expect rough edges
-> and please report them.
+> `v0.1.7` removed the `umask 077` requirement that earlier sets carried:
+> workspaces are now created private from the start, so a run works under the
+> usual `022`
+> ([#217](https://github.com/kaizen-agents-org/.github/issues/217)).
+>
+> One caveat before you start: this has been verified on macOS only, by people
+> who control the machine — no third-party maintainer has run it anywhere else
+> yet, so expect rough edges and please report them.
 
 ## Install
 

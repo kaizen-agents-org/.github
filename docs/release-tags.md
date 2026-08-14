@@ -58,7 +58,7 @@ following against the exact commits to be tagged:
   nothing in this list exercised a code path that runs `gh`.
 - A Kaizen smoke run passes with the pinned set.
 
-The currently released set is `{kaizen-loop: v0.1.6, builder-agent: v0.1.0,
+The currently released set is `{kaizen-loop: v0.1.7, builder-agent: v0.1.0,
 verifier: v0.1.1}`, recorded in
 [`onboarding/versions.json`](../onboarding/versions.json), which is the
 authority; the JSON above is a shape example. That set completed an
