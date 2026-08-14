@@ -1,13 +1,20 @@
-# Reference scout runner for GitHub Actions.
+# Runs the agent-shaped scout on GitHub Actions.
 #
 # Copy this into the *target* repository as .github/workflows/scout.yml and
 # commit the rendered prompt produced by onboarding/scripts/enable-scout.sh
-# alongside it. See docs/scout-contract.md for what a runner must guarantee.
+# alongside it. See docs/scout-contract.md for what any scout must guarantee.
 #
-# This is the default runner because it assumes the least: a repository, which
-# an adopter necessarily has, plus a model credential. Codex Automation and
-# Claude Routines are equally valid runners, but each requires an account with
-# that provider.
+# Which implementation this is: the agent kind. A coding agent runs here with
+# the rendered prompt and does everything itself -- reads the repository, counts
+# what is open, creates the issue -- so the contract's limits are carried in the
+# prompt rather than in code. Codex Automation and Claude Routines are the same
+# shape hosted elsewhere.
+#
+# The API client is the other kind, and where there is a choice it is the one to
+# prefer: it applies the limits in code instead of asking a model to observe
+# them, and it skips the model call entirely when the backlog is already full.
+# This workflow exists for adopters who would rather hold an API key in
+# repository secrets than run a client somewhere.
 #
 # The workflow supplies the environment. Everything about *what to look for*
 # lives in the rendered prompt, and the contract limits are baked into it at

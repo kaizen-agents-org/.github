@@ -12,21 +12,58 @@ that satisfies everything below is a conforming scout.
 
 ## Why the contract is separate from the runner
 
-The organization's own scout runs as a Codex automation. That is one runner, not
-the definition. A scout that only exists as a Codex automation cannot be adopted
-by anyone who does not use Codex, and a contract expressed only as prompt text
-cannot be checked.
+The organization's own scout runs as a Codex automation. That is one
+implementation, not the definition. A scout that only exists as a Codex
+automation cannot be adopted by anyone who does not use Codex, and a contract
+expressed only as prompt text cannot be checked.
 
 Separating them means:
 
 - **The prompt decides what to look for.** Test coverage, documentation drift,
   dead code, dependency risk — that is a prompt concern, and different targets
   will want different things.
-- **The runner decides when and where.** GitHub Actions, Codex Automation,
-  Claude Routines, or a person pasting the prompt into a chat window.
+- **The implementation decides when it runs and how a model is reached.**
 - **The contract decides what may reach GitHub.** This is the part that must not
   vary, because it is what makes an unattended scout safe to point at a
   repository.
+
+## Three implementations
+
+The rules below are identical for all three. What differs is *who enforces
+them*, and that difference is worth being explicit about.
+
+| Implementation | Schedule | Model | Who applies the rules |
+| --- | --- | --- | --- |
+| Codex Automation | Codex app | Codex | The agent, by following its prompt |
+| Claude Routines | Routines | Claude | The agent, by following its prompt |
+| **API client** | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | **The client, in code** |
+
+**Codex Automation and Claude Routines are agent environments.** They already
+have a scheduler, a model, and the ability to run `gh`, so one prompt does
+everything: read the repository, count what is open, create the issue. These are
+purpose-built implementations, each shaped around its host.
+
+**The API client is different, and this is the point of it.** A model API only
+answers questions; it cannot create an issue. So the work splits:
+
+- the **model** reads the repository content it is given and returns candidate
+  findings as JSON — see
+  [`scout.findings.schema.json`](../onboarding/automations/scout.findings.schema.json)
+- the **client** applies every limit, checks for duplicates, attaches labels, and
+  makes the only GitHub write
+
+That split is why the API client is the implementation to prefer where there is
+a choice. Under an agent implementation, "stop when four issues are already
+open" is an instruction a model can miscount or overlook. Under the API client
+it is `if (openIssues.length >= limit) return` — the model is never asked to
+enforce a rule it could get wrong, because it is never handed the ability to
+break it.
+
+The API client also has no provider of its own. Any endpoint speaking the
+OpenAI-compatible shape works; switching between them is a base URL and a
+credential, not a second implementation. That includes a local gateway holding a
+subscription credential, which is how a scout runs without a separate metered
+bill.
 
 ## Required behaviour
 
@@ -136,39 +173,113 @@ Creating a *missing* label needs write permission on labels; a scout without it
 must fail closed rather than file an unlabelled issue, and the operator
 pre-provisions the labels instead.
 
-## Runners
+## The API client
 
-| Runner | Status | Notes |
+The client is one command. Whatever starts it — cron, launchd, a CI schedule —
+supplies only timing.
+
+```
+1. Read configuration: target, labels, limits, model endpoint.
+2. Ask GitHub what is already open.
+3. Stop here if a limit is already reached. No model call, no cost.
+4. Send the prompt and the repository content to the model,
+   requiring scout.findings.schema.json as the response shape.
+5. Validate the response against the schema. Reject it if it does not match;
+   do not repair it.
+6. Drop findings that duplicate an open issue or pull request.
+7. Create up to the creation limit, applying the configured labels.
+8. Report what was filed and what was skipped.
+```
+
+Step 3 matters more than it looks. The backlog check happens *before* the model
+is called, so a scout pointed at a repository with a full queue costs nothing at
+all. An agent implementation has to call the model to find that out.
+
+Steps 5 through 7 are where the contract is enforced. The model's output is
+data, and it is treated as such: a finding that fails validation is discarded
+rather than fixed up, and one that duplicates existing work never reaches
+`gh issue create`.
+
+### Model endpoint
+
+Any endpoint accepting an OpenAI-compatible request works. The client needs a
+base URL, a credential, and a model name; it has no provider-specific code.
+
+| Endpoint | Credential | Billing |
 | --- | --- | --- |
-| GitHub Actions | **Default** | Fewest prerequisites: a repository and a model credential. Runs in a clean environment, and its logs are visible to anyone with repository access. See [`../onboarding/automations/scout.workflow.yml`](../onboarding/automations/scout.workflow.yml). |
-| Codex Automation | Optional | What this organization runs today; see [`repo-improvement-scout.md`](./repo-improvement-scout.md). |
-| Claude Routines | Optional | Not yet wired. |
-| Manual | Optional | Paste the rendered prompt into any agent session. Useful for evaluating a prompt before scheduling it. |
+| `https://api.anthropic.com/v1` | API key | Metered, separate from any subscription |
+| `https://api.openai.com/v1` | API key | Metered, separate from any subscription |
+| A local gateway on `127.0.0.1` | Gateway token | Whatever subscription the gateway holds |
 
-GitHub Actions is the default because it assumes the least. Codex Automation and
-Claude Routines both require an account with that provider; Actions requires a
-repository, which an adopter necessarily has.
+The third row is how a scout runs without a second bill: a local gateway
+authenticated with an existing subscription exposes an OpenAI-compatible
+endpoint, and the client cannot tell the difference. It does constrain the
+schedule to a machine that can reach the gateway — a hosted CI runner cannot.
 
-The trade is honest and worth stating: with Actions, the model call is yours to
-make and pay for, and the credential lives in repository secrets. With a
-provider's own automation layer, the execution environment comes with the
-subscription. Fewer prerequisites, more visible cost.
+### Structured output
+
+The model must return JSON matching
+[`scout.findings.schema.json`](../onboarding/automations/scout.findings.schema.json).
+The schema is deliberately small — no `$ref`, no `oneOf`, no `format`, no
+`pattern` — because constrained decoding implementations accept different
+subsets, and a schema that only works on one endpoint would undo the point of
+having one client.
+
+When an endpoint supports constrained decoding, pass the schema to it. When it
+does not, validate the response locally and discard anything that does not
+conform. Either way the client validates before acting: an endpoint's promise
+that output matches a schema is not a reason to skip checking.
+
+## Agent implementations
+
+Codex Automation and Claude Routines each run the whole scout inside one agent
+session. They need no client, because the session can already read the
+repository, query GitHub, and create issues.
+
+The rules are unchanged, but they are carried in the prompt rather than in code.
+The prompt must state the issues-only boundary, the default-branch rule, every
+limit, and the label policy — an agent that is not told a limit will not observe
+it. `enable-scout.sh` renders exactly that prompt.
+
+- **Codex Automation** — what this organization runs today; see
+  [`repo-improvement-scout.md`](./repo-improvement-scout.md).
+- **Claude Routines** — see
+  [#227](https://github.com/kaizen-agents-org/.github/issues/227) for the
+  wiring, and for two ways Routines diverges from the contract.
+
+Pasting a rendered prompt into an agent session by hand is the same shape
+without a schedule, and is the cheapest way to judge a prompt before automating
+it.
 
 ## Checking conformance
 
-Behaviour that can be verified without running a model:
+For every implementation, without running a model:
 
-- The runner passes an explicit target, and nothing in the configuration depends
-  on the runner's working directory.
-- Configured limits are within range and are actually passed to the prompt.
+- The target is explicit, and no configuration depends on a working directory.
+- Configured limits are within range and reach whatever enforces them.
 - Granted permissions do not include write access to contents.
-- The rendered prompt states the issues-only boundary, the default-branch rule,
-  the limits, and the label policy.
 
 `onboarding/scripts/enable-scout.sh` performs these checks when rendering a
-per-repository scout, and refuses to install one that would violate them.
+per-repository scout and refuses to render one that would violate them.
 
-What cannot be checked mechanically is whether the findings are any good. That
-is a prompt-quality question, and it is why the creation and backlog limits
-exist: a scout is allowed to be wrong occasionally, as long as being wrong is
-cheap and bounded.
+For an **agent implementation**, that is close to the limit of what can be
+checked: the rendered prompt can be asserted to state the issues-only boundary,
+the default-branch rule, the limits, and the label policy, but whether the agent
+observes them only shows up in what it files.
+
+For the **API client**, the same rules are ordinary code, so they can be tested
+directly with no model involved:
+
+- a backlog at the limit produces no model call at all
+- a response that violates the schema is rejected rather than repaired
+- a finding matching an open issue is dropped
+- more findings than the creation limit result in exactly the limit being filed
+- only the configured labels are applied
+
+This is the concrete reason to prefer the API client where the choice exists.
+The rules are the same either way; only one of them can be proven.
+
+What no implementation can check mechanically is whether the findings are any
+good. That is a prompt-quality question, and it is why the creation and backlog
+limits exist: a scout is allowed to be wrong occasionally, as long as being
+wrong is cheap and bounded.

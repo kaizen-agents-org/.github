@@ -5,12 +5,14 @@ automation named `Kaizen Agents repo improvement scout` that finds small,
 repo-local improvement issues for the normal Kaizen issue-to-PR loop.
 
 What a scout must guarantee, independent of what runs it, is defined in
-[Scout Contract](./scout-contract.md). Codex Automation is one conforming
-runner. GitHub Actions is the default for adopters because it assumes only a
-repository; see
-[`../onboarding/automations/scout.workflow.yml`](../onboarding/automations/scout.workflow.yml).
-Read the contract first if you are wiring a scout somewhere new — this file
-records one deployment, not the definition.
+[Scout Contract](./scout-contract.md). Codex Automation is one of three
+conforming implementations, alongside Claude Routines and the API client. Read
+the contract first if you are wiring a scout somewhere new — this file records
+one deployment, not the definition.
+
+This deployment is the agent kind: one prompt does the finding and the filing,
+so the contract's limits are carried in the prompt. The API client applies the
+same limits in code instead, and is the one to prefer where there is a choice.
 
 The scout is the improve layer in the [Automation Roles](./automation-roles.md) model. It is separate from [Organization Monitor](./org-monitor.md): the organization monitor is conservative coordination health checking, while the scout is proactive backlog discovery.
 
