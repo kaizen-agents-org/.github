@@ -105,11 +105,15 @@ These block adoption without being pipeline bugs.
 
 ## Still broken
 
-- **Workspaces are `0755`** ([#217](https://github.com/kaizen-agents-org/.github/issues/217),
+- ~~**Workspaces are `0755`**~~ — **fixed in kaizen-loop `v0.1.7`**
+  ([#217](https://github.com/kaizen-agents-org/.github/issues/217),
   [kaizen-loop#370](https://github.com/kaizen-agents-org/kaizen-loop/issues/370)).
-  A run needs `umask 077` today. The proper fix is an explicit mode at
-  workspace and worktree creation; note that `mkdir(mode)` is masked by the
-  process umask, so a `chmod` after creation is what actually guarantees it.
+  At the time of this run a scout needed `umask 077`, because workspaces were
+  created `0755` while the broker requires `0700`. Workspaces and worktrees are
+  now created private from the start and revalidated, so a run works under the
+  usual `022`. This mattered more than the workaround suggested: a launchd job
+  inherits launchd's umask rather than an interactive shell's, so scheduled runs
+  were blocked outright.
 - **Verifier false positive on test fixtures.** A shell stub made executable
   with `set_permissions(0o755)` was classified as "high-risk auth/authz code".
   Any change that creates an executable test fixture will trip this.
@@ -228,8 +232,7 @@ completes by hand.
 
 ```sh
 onboarding/scripts/install-kaizen.sh          # pinned set from versions.json
-kaizen doctor --repair --project <slug>       # expect 12/12
-umask 077                                     # until #217 is fixed
+kaizen doctor --repair --project <slug>       # expect all checks passing
 KAIZEN_GITHUB_TOKEN_SOCKET=/opt/kaizen/run/github-publication.sock \
   kaizen fix <issue> --project <slug> --yes
 ```
