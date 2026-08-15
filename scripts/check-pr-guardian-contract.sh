@@ -32,6 +32,11 @@ if [[ ! -f "${reference}" ]]; then
   exit 1
 fi
 
+if grep -q '^```sh$' "${reference}"; then
+  echo 'pr-guardian audit reference must label Bash-only examples as bash' >&2
+  exit 1
+fi
+
 executable="$(
   awk '
     /^```(sh|bash|shell)$/ { in_shell = 1; next }
@@ -40,9 +45,21 @@ executable="$(
   ' "${reference}"
 )"
 
+if ! bash -n <<<"${executable}"; then
+  echo 'pr-guardian audit reference contains a Bash example that does not parse' >&2
+  exit 1
+fi
+
 for pattern in \
   'while :; do' \
+  "owner='owner'" \
+  "repo='repo'" \
+  'pr_number=123' \
+  'gh pr view "${pr_number}" --repo "${owner}/${repo}"' \
   'cursor=${cursor}' \
+  '"${next_cursor}" == "${cursor}"' \
+  "thread_id='PRRT_replace_with_review_thread_id'" \
+  "cursor='replace-with-outer-comments-endCursor'" \
   'hasNextPage' \
   'endCursor' \
   'if ! page="$(gh "${args[@]}")"; then' \
@@ -62,21 +79,30 @@ for pattern in \
   '(.createdAt | type == "string")' \
   '(.outdated | type == "boolean")' \
   '(.comments.pageInfo.hasNextPage | type == "boolean")' \
+  '(.comments.pageInfo.hasNextPage == false)' \
   '($comments.nodes | type == "array")' \
   '($comments.pageInfo.hasNextPage | type == "boolean")' \
   'reviewThreads(first:100, after:$cursor)' \
   'comments(first:100, after:$cursor)' \
   '--paginate' \
-  'pulls/<pr>/reviews?per_page=100' \
-  'pulls/<pr>/comments?per_page=100' \
-  'issues/<pr>/comments?per_page=100' \
-  'commits/<head-sha>/check-runs?per_page=100' \
-  'check-runs/<check-run-id>/annotations?per_page=100' \
+  'pulls/${pr_number}/reviews?per_page=100' \
+  'pulls/${pr_number}/comments?per_page=100' \
+  'issues/${pr_number}/comments?per_page=100' \
+  'commits/${head_sha}/check-runs?per_page=100' \
+  'check-runs/${check_run_id}/annotations?per_page=100' \
   'gh api --method POST' \
   '/replies' \
   'resolveReviewThread(input:{threadId:$threadId})'; do
   if ! grep -Fq -- "${pattern}" <<<"${executable}"; then
     echo "pr-guardian audit reference missing executable contract: ${pattern}" >&2
+    exit 1
+  fi
+done
+
+for pattern in \
+  '"${next_cursor}" == "${cursor}"'; do
+  if [[ "$(grep -Fc -- "${pattern}" <<<"${executable}")" -ne 2 ]]; then
+    echo "pr-guardian audit reference must guard both GraphQL cursors against non-progress: ${pattern}" >&2
     exit 1
   fi
 done
