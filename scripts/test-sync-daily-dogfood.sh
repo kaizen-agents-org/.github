@@ -51,6 +51,36 @@ if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted fail-open review collection guidance"
 fi
 
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak '/"${next_cursor}" == "${cursor}"/d' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted pagination without a cursor progress guard"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak "s/cursor='replace-with-outer-comments-endCursor'/cursor=/" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted nested pagination that refetches the first comment page"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak 's/gh pr view "${pr_number}"/gh pr view <pr>/' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an unquoted shell-redirection placeholder"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+
 thread_validator="$(awk '
   /^  if ! jq -e '\''$/ { capture=1; next }
   capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
