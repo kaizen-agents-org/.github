@@ -99,11 +99,39 @@ fi
 
 cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
   "${weak_guardian_dir}/references/pr-feedback-audit.md"
-sed -i.bak "s/cursor='replace-with-outer-comments-endCursor'/cursor=/" \
+awk '
+  $0 == "pr_number=123" {
+    print
+    print "cursor='\''replace-with-outer-comments-endCursor'\''"
+    next
+  }
+  $0 == "cursor='\''replace-with-outer-comments-endCursor'\''" {
+    print "cursor="
+    next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
   "${weak_guardian_dir}/references/pr-feedback-audit.md"
-rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
 if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
-  fail "contract check accepted nested pagination that refetches the first comment page"
+  fail "contract check accepted nested cursor initialization outside the nested loop"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 2) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted a nested request without cursor forwarding"
 fi
 
 cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \

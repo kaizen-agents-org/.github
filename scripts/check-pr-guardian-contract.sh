@@ -104,7 +104,7 @@ outer_loop="$(awk '
   capture && /^done$/ { exit }
 ' <<<"${executable}")"
 nested_loop="$(awk '
-  /comments\(first:100, after:\$cursor\)/ { capture=1 }
+  /^thread_id='\''PRRT_replace_with_review_thread_id'\''$/ { capture=1 }
   capture { print }
   capture && /^done$/ { exit }
 ' <<<"${executable}")"
@@ -115,6 +115,14 @@ if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${outer_loop}")" -ne 1 ]]; then
 fi
 if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${nested_loop}")" -ne 1 ]]; then
   echo 'pr-guardian audit reference must guard the nested comments cursor exactly once' >&2
+  exit 1
+fi
+if ! grep -Fxq -- "cursor='replace-with-outer-comments-endCursor'" <<<"${nested_loop}"; then
+  echo 'pr-guardian audit reference must initialize the nested cursor from the outer comments page' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc -- 'args+=(-f "cursor=${cursor}")' <<<"${nested_loop}")" -ne 1 ]]; then
+  echo 'pr-guardian audit reference must forward the cursor in the nested comments request' >&2
   exit 1
 fi
 
