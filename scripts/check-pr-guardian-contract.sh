@@ -84,12 +84,11 @@ for pattern in \
   '($comments.pageInfo.hasNextPage | type == "boolean")' \
   'reviewThreads(first:100, after:$cursor)' \
   'comments(first:100, after:$cursor)' \
-  '--paginate' \
-  'pulls/${pr_number}/reviews?per_page=100' \
-  'pulls/${pr_number}/comments?per_page=100' \
-  'issues/${pr_number}/comments?per_page=100' \
-  'commits/${head_sha}/check-runs?per_page=100' \
-  'check-runs/${check_run_id}/annotations?per_page=100' \
+  'gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews?per_page=100"' \
+  'gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/comments?per_page=100"' \
+  'gh api --paginate "repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100"' \
+  'gh api --paginate "repos/${owner}/${repo}/commits/${head_sha}/check-runs?per_page=100"' \
+  'gh api --paginate "repos/${owner}/${repo}/check-runs/${check_run_id}/annotations?per_page=100"' \
   'gh api --method POST' \
   '/replies' \
   'resolveReviewThread(input:{threadId:$threadId})'; do
@@ -99,13 +98,25 @@ for pattern in \
   fi
 done
 
-for pattern in \
-  '"${next_cursor}" == "${cursor}"'; do
-  if [[ "$(grep -Fc -- "${pattern}" <<<"${executable}")" -ne 2 ]]; then
-    echo "pr-guardian audit reference must guard both GraphQL cursors against non-progress: ${pattern}" >&2
-    exit 1
-  fi
-done
+outer_loop="$(awk '
+  /reviewThreads\(first:100, after:\$cursor\)/ { capture=1 }
+  capture { print }
+  capture && /^done$/ { exit }
+' <<<"${executable}")"
+nested_loop="$(awk '
+  /comments\(first:100, after:\$cursor\)/ { capture=1 }
+  capture { print }
+  capture && /^done$/ { exit }
+' <<<"${executable}")"
+cursor_guard='"${next_cursor}" == "${cursor}"'
+if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${outer_loop}")" -ne 1 ]]; then
+  echo 'pr-guardian audit reference must guard the reviewThreads cursor exactly once' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${nested_loop}")" -ne 1 ]]; then
+  echo 'pr-guardian audit reference must guard the nested comments cursor exactly once' >&2
+  exit 1
+fi
 
 for pattern in \
   'if ! page="$(gh "${args[@]}")"; then' \
