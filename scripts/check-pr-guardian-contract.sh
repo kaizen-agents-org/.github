@@ -99,7 +99,7 @@ for pattern in \
 done
 
 outer_loop="$(awk '
-  /reviewThreads\(first:100, after:\$cursor\)/ { capture=1 }
+  !capture && /^cursor=$/ { capture=1 }
   capture { print }
   capture && /^done$/ { exit }
 ' <<<"${executable}")"
@@ -113,6 +113,14 @@ if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${outer_loop}")" -ne 1 ]]; then
   echo 'pr-guardian audit reference must guard the reviewThreads cursor exactly once' >&2
   exit 1
 fi
+if ! grep -Fxq -- 'cursor=' <<<"${outer_loop}"; then
+  echo 'pr-guardian audit reference must initialize the reviewThreads cursor' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc -- 'args+=(-f "cursor=${cursor}")' <<<"${outer_loop}")" -ne 1 ]]; then
+  echo 'pr-guardian audit reference must forward the cursor in the reviewThreads request' >&2
+  exit 1
+fi
 if [[ "$(grep -Fc -- "${cursor_guard}" <<<"${nested_loop}")" -ne 1 ]]; then
   echo 'pr-guardian audit reference must guard the nested comments cursor exactly once' >&2
   exit 1
@@ -123,6 +131,10 @@ if ! grep -Fxq -- "cursor='replace-with-outer-comments-endCursor'" <<<"${nested_
 fi
 if [[ "$(grep -Fc -- 'args+=(-f "cursor=${cursor}")' <<<"${nested_loop}")" -ne 1 ]]; then
   echo 'pr-guardian audit reference must forward the cursor in the nested comments request' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc -- '-f threadId="${thread_id}"' <<<"${nested_loop}")" -ne 1 ]]; then
+  echo 'pr-guardian audit reference must bind the review thread id in the nested comments request' >&2
   exit 1
 fi
 

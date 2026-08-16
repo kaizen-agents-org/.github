@@ -136,6 +136,22 @@ fi
 
 cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
   "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 1) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an outer request without cursor forwarding"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
 sed -i.bak 's/gh pr view "${pr_number}"/gh pr view <pr>/' \
   "${weak_guardian_dir}/references/pr-feedback-audit.md"
 rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
