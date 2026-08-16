@@ -51,6 +51,117 @@ if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted fail-open review collection guidance"
 fi
 
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak '/"${next_cursor}" == "${cursor}"/d' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted pagination without a cursor progress guard"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak \
+  's#gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews#gh api "repos/${owner}/${repo}/pulls/${pr_number}/reviews#' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted a REST endpoint without --paginate"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "  if [[ \"${next_cursor}\" == \"${cursor}\" ]]; then" {
+    guard += 1
+    capture = 1
+    block = ""
+  }
+  capture {
+    block = block $0 ORS
+    if ($0 == "  fi") {
+      if (guard == 1) {
+        printf "%s%s", block, block
+      }
+      capture = 0
+    }
+    next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted both cursor guards in the outer loop"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "pr_number=123" {
+    print
+    print "cursor='\''replace-with-outer-comments-endCursor'\''"
+    next
+  }
+  $0 == "cursor='\''replace-with-outer-comments-endCursor'\''" {
+    print "cursor="
+    next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted nested cursor initialization outside the nested loop"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 2) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted a nested request without cursor forwarding"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 1) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an outer request without cursor forwarding"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak 's/gh pr view "${pr_number}"/gh pr view <pr>/' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an unquoted shell-redirection placeholder"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+
 thread_validator="$(awk '
   /^  if ! jq -e '\''$/ { capture=1; next }
   capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
