@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "repositories": [
+    {
+      "repository": "kaizen-agents-org/.github",
+      "projectSlug": "kaizen-agents-org-.github",
+      "localCheckout": ".github",
+      "monitor": true,
+      "weeklyReadiness": true
+    },
+    {
+      "repository": "kaizen-agents-org/builder-agent",
+      "projectSlug": "kaizen-agents-org-builder-agent",
+      "localCheckout": "builder-agent",
+      "monitor": true,
+      "weeklyReadiness": true
+    },
+    {
+      "repository": "kaizen-agents-org/kaizen-loop",
+      "projectSlug": "kaizen-agents-org-kaizen-loop",
+      "localCheckout": "kaizen-loop",
+      "monitor": true,
+      "weeklyReadiness": true
+    },
+    {
+      "repository": "kaizen-agents-org/verifier",
+      "projectSlug": "kaizen-agents-org-verifier",
+      "localCheckout": "verifier",
+      "monitor": true,
+      "weeklyReadiness": true
+    }
+  ]
+}

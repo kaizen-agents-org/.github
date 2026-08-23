@@ -24,9 +24,9 @@ The runtime schedule is configured in the Codex app and should preserve this spl
 | Automation | Cadence | Runtime | Target repositories | Purpose |
 | --- | --- | --- | --- | --- |
 | Kaizen Agents repo improvement scout | Daily at 02:45, 10:45, and 18:45 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Frequent proactive repo-local issue discovery. |
-| Kaizen Agents org monitor | Daily at 04:15 | Worktree | `.github`, `builder-agent`, `kaizen-loop`, `verifier` | Conservative coordination check after the nighttime scout run. |
-| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Open or update a readiness report PR. |
-| Kaizen Agents readiness issue creator | Daily at 10:30 | Worktree | `.github`, `kaizen-loop`, `builder-agent`, `verifier` | Create readiness issues from the latest merged report on `main`. |
+| Kaizen Agents org monitor | Daily at 04:15 | Worktree | Entries with `monitor: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Conservative coordination check after the nighttime scout run. |
+| Kaizen Agents weekly readiness review | Mondays at 09:30 | Worktree | Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Open or update a readiness report PR. |
+| Kaizen Agents readiness issue creator | Daily at 10:30 | Worktree | Entries with `weeklyReadiness: true` in [`onboarding/fleet.json`](../onboarding/fleet.json) | Create readiness issues from the latest merged report on `main`. |
 
 ## Responsibility Model
 
@@ -44,13 +44,16 @@ created issue bodies. The section tells implementers to include a GitHub closing
 keyword in the PR body and verify `closingIssuesReferences` before reporting a
 PR ready, so merged implementation PRs close their source issues.
 
-Within `kaizen-agents-org`, issue-creating automations add both `kaizen` and
-`kaizen:authorized` at creation time under the organization's explicit
-dogfooding policy. The label actor needs at least triage permission in the
-target repository. External operation mode retains human execution
-authorization by default; it does not inherit this policy implicitly.
-Each issue creator verifies that `kaizen:authorized` exists in its target
-repository and bootstraps the label when needed. It fails closed and reports a
-blocked candidate if the label cannot be created and re-verified. Bootstrap
-requires write permission; triage is sufficient only for applying an existing
-label, so a maintainer must pre-provision it when the automation lacks write.
+Within `kaizen-agents-org`, issue-creating automations add `kaizen`,
+`kaizen:authorized`, and `kaizen:ready` at creation time under the
+organization's explicit dogfooding policy. Authorization and opt-in queue
+selection are separate gates, so both labels are required for scheduled work.
+The authorization-label actor needs at least triage permission in the target
+repository. External operation mode retains explicit maintainer authorization
+and queue selection; it does not inherit this policy implicitly.
+Each issue creator verifies that `kaizen:authorized` and `kaizen:ready` exist in
+its target repository and bootstraps either label when needed. It fails closed
+and reports a blocked candidate if either label cannot be created and
+re-verified. Bootstrap requires write permission; triage is sufficient only for
+applying an existing label, so a maintainer must pre-provision missing labels
+when the automation lacks write.

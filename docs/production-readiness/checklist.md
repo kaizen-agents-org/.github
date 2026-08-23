@@ -4,8 +4,9 @@ Use this checklist for each weekly readiness review.
 
 ## Repository State
 
-- Confirm local checkout availability for `.github`, `kaizen-loop`,
-  `builder-agent`, and `verifier`.
+- From the validated registry, confirm local checkout availability for every
+  `weeklyReadiness: true` entry; record unavailable or mismatched checkouts
+  rather than substituting a fixed repository list.
 - Record local branch and upstream state.
 - Distinguish local-only observations from default-branch facts.
 - Check open PR and open `kaizen` issue counts per repository.
@@ -13,12 +14,11 @@ Use this checklist for each weekly readiness review.
 
 ## Verification
 
-- Run or cite the latest available verification for `kaizen-loop`:
-  `npm test`, `npm run typecheck`, and `npm run build`.
-- Run or cite the latest available verification for `builder-agent`:
-  `npm test` and `npm run validate:json`.
-- Run or cite the latest available verification for `verifier`:
-  `pnpm typecheck`, `pnpm test`, and `pnpm schema:check`.
+- For every validated `weeklyReadiness: true` entry, derive its canonical
+  verification commands from default-branch CI configuration, package/build
+  metadata, and repository documentation, then run or cite those commands.
+- Record the exact repository-specific commands and do not assume a Node.js
+  stack or reuse another repository's verification contract.
 - Record exact failures, including whether they are environment/setup failures
   or product failures.
 
@@ -64,19 +64,23 @@ Use this checklist for each weekly readiness review.
 - Include structured issue candidates with target repository, evidence,
   documentation basis, and skip reason when the finding is not ready for issue
   creation.
-- Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md` and
-  updates [Production Readiness Log](../production-readiness-log.md).
+- Create or update a ready-for-review PR that adds `logs/YYYY-MM-DD.md`, updates
+  [Production Readiness Log](../production-readiness-log.md), and adds or
+  updates exactly one `../metrics/<ISO-week>.md` weekly metrics snapshot.
 - Run `pr-guardian` on the report PR until it is merge-ready or blocked.
 - Let the issue-creator automation create at most three focused issues per
   target repository after that report PR is merged to `main`. The issue creator
   checks daily, so issue creation does not depend on the report PR merging
   within the same hourly window. Created issue titles must use the
-  `[readiness-review]` prefix and receive both `kaizen` and
-  `kaizen:authorized` under the explicit `kaizen-agents-org` dogfooding policy.
+  `[readiness-review]` prefix and receive `kaizen`, `kaizen:authorized`, and
+  `kaizen:ready` under the explicit `kaizen-agents-org` dogfooding policy.
+  Authorization and opt-in queue selection are separate gates.
   The label actor must have at least triage permission in the target repository;
-  external operation mode retains human authorization by default.
-  Before issue creation, verify or bootstrap the `kaizen:authorized` label; if
-  that setup cannot be verified, report the candidate as blocked instead of
-  creating an issue without authorization. Bootstrap requires write permission;
-  triage is sufficient only to apply an existing label, so require maintainer
-  pre-provisioning when the automation lacks write.
+  external operation mode retains explicit maintainer authorization and queue
+  selection.
+  Before issue creation, verify or bootstrap both `kaizen:authorized` and
+  `kaizen:ready`; if either setup cannot be verified, report the candidate as
+  blocked instead of creating an issue without authorization and queue
+  selection. Bootstrap requires write permission; triage is sufficient only to
+  apply an existing label, so require maintainer pre-provisioning when the
+  automation lacks write.

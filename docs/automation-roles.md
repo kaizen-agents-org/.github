@@ -2,6 +2,31 @@
 
 Kaizen Agents uses four Codex automations in three layers: improve, maintain, and readiness-check.
 
+<!-- automation-contract: automation=scout; issues=[scout]; prs=none; per-repo-limit=2; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: automation=monitor; issues=[monitor]; prs=none; per-repo-limit=1; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: automation=weekly-readiness-review; issues=none; prs=readiness-report; per-repo-limit=0; source=default-branch; roles-doc=docs/automation-roles.md -->
+<!-- automation-contract: automation=readiness-issue-creator; issues=[readiness-review]; prs=none; per-repo-limit=3; source=merged-default-branch-readiness-report; roles-doc=docs/automation-roles.md -->
+
+The comments above are stable machine-readable summaries used by
+`scripts/check-automation-prompt-contract.sh`. Keep each marker aligned with
+the prose below and with the matching managed prompt.
+
+The reviewed repository scope for the organization monitor, weekly readiness
+review, and downstream readiness issue creator lives in `onboarding/fleet.json`.
+Consumers validate the registry and read only the entries enabled for their
+role; the issue creator consumes the same `weeklyReadiness: true` entries as its
+upstream weekly review. They must not infer missing targets, mutate the registry,
+or use it as permission to write to a target repository. Adding or removing a
+fleet entry requires a separate normal ready-for-review pull request to this
+repository.
+
+Fleet membership is observation scope, not write authorization. Organization
+automations may automatically create issues or bootstrap/apply execution labels
+only for repositories whose lowercased owner is exactly `kaizen-agents-org`.
+This comparison must not alter the complete repository identity passed to GitHub;
+entries owned elsewhere remain report-only and require an explicit external
+human action.
+
 | Layer | Automation | Responsibility | May create issues | May create PRs |
 | --- | --- | --- | --- | --- |
 | Improve | `Kaizen Agents repo improvement scout` | Find concrete repo-local improvement work for the normal Kaizen issue-to-PR loop. | Yes, `[scout]` issues. | No. |
@@ -29,14 +54,21 @@ Kaizen Agents uses four Codex automations in three layers: improve, maintain, an
 | `[monitor]` | `org-monitor` | Operation, sync, scheduler, CI, source-order, or coordination drift. |
 | `[readiness-review]` | `readiness-issue-creator` | Work approved through a merged dated readiness report. |
 
-## Execution Authorization
+## Execution Authorization And Queue Selection
 
 Issues created by `repo-improvement-scout`, `org-monitor`, and
-`readiness-issue-creator` in `kaizen-agents-org` repositories receive both the
-`kaizen` and `kaizen:authorized` labels at creation time. This is an explicit
-dogfooding policy for the Kaizen Agents organization: these source-managed
-automations are trusted to submit ready-to-run work to the scheduled Kaizen
-loop.
+`readiness-issue-creator` in `kaizen-agents-org` repositories receive the
+`kaizen`, `kaizen:authorized`, and `kaizen:ready` labels at creation time. The
+labels serve different purposes: `kaizen` identifies Kaizen intake,
+`kaizen:authorized` records trusted execution approval, and `kaizen:ready`
+admits the issue to the fleet's opt-in scheduled selection queue. Authorization
+alone does not make an issue selectable.
+
+This is an explicit dogfooding policy for the Kaizen Agents organization: these
+source-managed automations are trusted to submit ready-to-run work to the
+scheduled Kaizen loop. Before creating an issue, they verify that both
+`kaizen:authorized` and `kaizen:ready` exist and fail closed if either label
+cannot be applied.
 
 The actor that applies `kaizen:authorized` must have at least triage permission
 in the target repository. `kaizen-loop` validates the permission of the label
@@ -44,18 +76,31 @@ event actor before accepting the authorization, so a label applied by an actor
 without sufficient permission does not open the execution gate.
 
 Before creating issues in a target repository, the automation verifies that
-the `kaizen:authorized` label exists and bootstraps the label when it is
-missing. Creating a repository label requires write permission; triage is only
-sufficient for applying an existing label. If the automation lacks write
-permission, a maintainer with write permission must pre-provision the label. If
-the automation cannot create or verify the label, it fails closed: it reports
-the candidate as blocked and does not create an issue whose execution
-authorization could be silently omitted.
+the `kaizen:authorized` and `kaizen:ready` labels exist and bootstraps either
+label when it is missing. Creating a repository label requires write
+permission; triage is only sufficient for applying an existing label. If the
+automation lacks write permission, a maintainer with write permission must
+pre-provision the labels. If the automation cannot create or verify either
+label, it fails closed: it reports the candidate as blocked and does not create
+an issue whose execution authorization or queue selection could be silently
+omitted.
 
 This policy is not the default for external operation mode. Third-party and
-external deployments keep human approval as the default and should add
-`kaizen:authorized` only through an authorized maintainer action or an
-equivalent explicitly adopted local policy.
+external deployments keep human approval and queue selection as explicit
+maintainer actions. They should add `kaizen:authorized` and their configured
+selection label only after review, or adopt an equivalent explicit local
+policy.
+
+### Existing Issue Triage
+
+Do not bulk-add `kaizen:ready` to every open `kaizen` issue. For existing open
+issues created by the three trusted organization automations, a maintainer
+should confirm the automation prefix and provenance, verify that the work is
+still actionable and not already owned by an issue or PR, and respect the
+current backlog and WIP limits. Add `kaizen:ready` only to the issues deliberately
+queued for the next scheduled runs. Leave public, external, stale, duplicate,
+or clarification-dependent issues unselected; close or relabel them through
+normal triage as appropriate.
 
 ## Limits
 
@@ -68,6 +113,13 @@ Each automation applies limits per target repository so one repository cannot co
 | `readiness-issue-creator` | At most three issues per target repository per run. |
 
 The shared backlog guard still applies: skip new issue creation for a target repository when it already has four or more open issues labeled `kaizen`, except where a monitor prompt explicitly allows a concrete closed-loop health finding to bypass that guard.
+
+The fixed organization-wide repository improvement scout also applies a
+generated-PR WIP guard per target repository. It creates no new issue when that
+repository has five or more open generated PRs. Branches or PR titles prefixed with `kaizen/`, `codex/`, `claude/`, `agent/`, `[scout]`, `[monitor]`, or `kaizen:` count as generated. Those prefixes count as generated unless there is evidence that they are human-authored maintenance.
+When this guard is reached, the scout reports the eligible finding as skipped
+due to the WIP cap. Opt-in per-repository scouts instead use their configured
+WIP limit for all open pull requests.
 
 Every issue-creating automation must include a `PR linkage requirement` section
 in each created issue body. The section tells the implementer to put a GitHub

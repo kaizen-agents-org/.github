@@ -29,18 +29,209 @@ fail() {
 bash "${guardian_contract_check}" >/dev/null \
   || fail "strict pr-guardian source contract was rejected"
 
-weak_guardian="$(mktemp)"
-trap 'rm -f "${weak_guardian}"' EXIT
+weak_guardian_dir="$(mktemp -d)"
+weak_guardian="${weak_guardian_dir}/SKILL.md"
+mkdir -p "${weak_guardian_dir}/references"
+trap 'rm -rf "${weak_guardian_dir}"' EXIT
 sed \
   -e 's/isDraft,mergeable,mergeStateStatus/isDraft,mergeStateStatus/' \
   -e 's/including outdated threads/only current threads/' \
   "${repo_root}/skills/pr-guardian/SKILL.md" > "${weak_guardian}"
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
 if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
   fail "contract check accepted weakened pr-guardian guidance"
 fi
-rm -f "${weak_guardian}"
+
+cp "${repo_root}/skills/pr-guardian/SKILL.md" "${weak_guardian}"
+sed '/(.errors == null)/d' \
+  "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted fail-open review collection guidance"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak '/"${next_cursor}" == "${cursor}"/d' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted pagination without a cursor progress guard"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak \
+  's#gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews#gh api "repos/${owner}/${repo}/pulls/${pr_number}/reviews#' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted a REST endpoint without --paginate"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "  if [[ \"${next_cursor}\" == \"${cursor}\" ]]; then" {
+    guard += 1
+    capture = 1
+    block = ""
+  }
+  capture {
+    block = block $0 ORS
+    if ($0 == "  fi") {
+      if (guard == 1) {
+        printf "%s%s", block, block
+      }
+      capture = 0
+    }
+    next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted both cursor guards in the outer loop"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "pr_number=123" {
+    print
+    print "cursor='\''replace-with-outer-comments-endCursor'\''"
+    next
+  }
+  $0 == "cursor='\''replace-with-outer-comments-endCursor'\''" {
+    print "cursor="
+    next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted nested cursor initialization outside the nested loop"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 2) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted a nested request without cursor forwarding"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+awk '
+  $0 == "    args+=(-f \"cursor=${cursor}\")" {
+    binding += 1
+    if (binding == 1) next
+  }
+  { print }
+' "${weak_guardian_dir}/references/pr-feedback-audit.md" \
+  > "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated"
+mv "${weak_guardian_dir}/references/pr-feedback-audit.md.mutated" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an outer request without cursor forwarding"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+sed -i.bak 's/gh pr view "${pr_number}"/gh pr view <pr>/' \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+rm "${weak_guardian_dir}/references/pr-feedback-audit.md.bak"
+if bash "${guardian_contract_check}" "${weak_guardian}" >/dev/null 2>&1; then
+  fail "contract check accepted an unquoted shell-redirection placeholder"
+fi
+
+cp "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md" \
+  "${weak_guardian_dir}/references/pr-feedback-audit.md"
+
+thread_validator="$(awk '
+  /^  if ! jq -e '\''$/ { capture=1; next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{"comments": null}],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a malformed nested comments connection"
+fi
+if jq -e "${thread_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [{
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "src/example.ts",
+            "comments": {
+              "nodes": [],
+              "pageInfo": {"hasNextPage": false, "endCursor": null}
+            }
+          }],
+          "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }
+      }
+    }
+  }
+}
+JSON
+  fail "reviewThreads validation accepted a thread without an id"
+fi
+comment_validator="$(awk '
+  /^  if ! jq -e '\''$/ { validator+=1; capture=(validator == 2); next }
+  capture && /^  '\'' >\/dev\/null <<<"\$\{page\}"; then$/ { exit }
+  capture { print }
+' "${repo_root}/skills/pr-guardian/references/pr-feedback-audit.md")"
+if jq -e "${comment_validator}" >/dev/null <<'JSON'; then
+{
+  "errors": null,
+  "data": {
+    "node": {
+      "comments": {
+        "nodes": [{}],
+        "pageInfo": {"hasNextPage": false, "endCursor": null}
+      }
+    }
+  }
+}
+JSON
+  fail "review comment pagination accepted a malformed comment node"
+fi
+rm -rf "${weak_guardian_dir}"
 trap - EXIT
-echo "PASS: weakened pr-guardian guidance is rejected before sync"
+echo "PASS: weakened pr-guardian guidance and audit collection are rejected before sync"
 
 make_targets() {
   local parent="$1"

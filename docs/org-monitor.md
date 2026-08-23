@@ -14,16 +14,18 @@ This timing reflects the monitor's conservative purpose: it checks organization-
 
 ## Scope
 
-The monitor reviews the active organization repositories:
+The reviewed scope source is [`../onboarding/fleet.json`](../onboarding/fleet.json).
+The monitor validates that file from the `.github` default branch and reviews
+every entry with `monitor: true`; there is no separately maintained repository
+table or fixed exclusion list. An entry with `monitor: false` is not an active
+target, while changing that flag in a reviewed registry PR changes the next
+monitor run's scope.
 
-| Area | Repositories |
-| --- | --- |
-| Organization docs and shared assets | `kaizen-agents-org/.github` |
-| Builder component | `kaizen-agents-org/builder-agent` |
-| Orchestrator component | `kaizen-agents-org/kaizen-loop` |
-| Independent verifier component | `kaizen-agents-org/verifier` |
-
-The local automation may inspect local checkouts for these repositories as well as their GitHub remotes. `coderabbit` and `renovate-config` are downstream shared-configuration repositories, not active monitor targets; they are mentioned only when `.github` sync evidence requires it.
+The local automation may inspect local checkouts for active entries as well as
+their GitHub remotes. Adding, removing, enabling, or disabling a target requires
+a separate normal ready-for-review pull request for the registry change. The
+monitor never edits the registry and does not infer a fallback scope when
+validation fails.
 
 ## Local Kaizen Loop Scheduler
 
@@ -70,8 +72,8 @@ Automatic issue creation is intentionally conservative:
 - Create an issue only when the target repository is clear, the improvement is actionable, and the work is not already covered.
 - Skip new issue creation for a repository when it already has four or more open `kaizen` issues, except for concrete, duplicate-free closed-loop health findings about sync, scheduler, or CI drift.
 - Limit automatic issue creation to at most one issue per target repository per run.
-- Before creating the first issue in a target repository, verify that `kaizen:authorized` exists and create the label when it is missing. Label creation requires write permission; triage is only sufficient to apply an existing label. Without write permission, require a maintainer to pre-provision it. If the label cannot be created and verified, report the candidate as blocked and do not create an issue without execution authorization.
-- Add both the `kaizen` and `kaizen:authorized` labels. Automatic authorization is limited to the `kaizen-agents-org` dogfooding policy, and the actor applying `kaizen:authorized` must have at least triage permission in the target repository so `kaizen-loop` accepts the label event. External operation mode keeps human authorization as the default.
+- Before creating the first issue in a target repository, verify that `kaizen:authorized` and `kaizen:ready` exist and create either label when it is missing. Label creation requires write permission; triage is only sufficient to apply an existing label. Without write permission, require a maintainer to pre-provision missing labels. If either label cannot be created and verified, report the candidate as blocked and do not create an issue without both execution authorization and queue selection.
+- Add the `kaizen`, `kaizen:authorized`, and `kaizen:ready` labels. Authorization and opt-in queue selection are separate gates. Automatic approval of both is limited to the `kaizen-agents-org` dogfooding policy, and the actor applying `kaizen:authorized` must have at least triage permission in the target repository so `kaizen-loop` accepts the label event. External operation mode keeps authorization and selection as explicit maintainer actions.
 - Prefix issue titles with `[monitor]`.
 - Include observed evidence, affected repositories, recommended action, and relevant links or file references in the issue body.
 - Include a `Documentation basis` section anchored to [Documentation Sources](./documentation-sources.md), citing organization documents in that canonical source order before project-local docs, then cite the source that justifies the issue scope.

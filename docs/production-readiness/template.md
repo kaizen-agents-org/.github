@@ -12,10 +12,10 @@ entry and latest summary row.
 
 Reviewed repositories:
 
-- `kaizen-agents-org/.github`
-- `kaizen-agents-org/kaizen-loop`
-- `kaizen-agents-org/builder-agent`
-- `kaizen-agents-org/verifier`
+<!-- Populate one row for every validated `weeklyReadiness: true` entry in
+`onboarding/fleet.json`; do not substitute a remembered repository list. -->
+
+- `<owner/repository>`
 
 ## Summary
 
@@ -90,11 +90,12 @@ Recommended order:
 
 These candidates are the only inputs the readiness issue-creator automation may
 turn into GitHub issues. Created issue titles use the `[readiness-review]`
-prefix.
+prefix. Use each candidate's complete `<owner/repository>` fleet identity as
+the target; do not reconstruct it with a fixed organization prefix.
 
 | Candidate | Target repository | Status | Evidence | Documentation basis |
 | --- | --- | --- | --- | --- |
-| <short issue title> | `kaizen-agents-org/<repo>` | ready / blocked / duplicate / unclear / report-only | <report evidence> | <docs and headings> |
+| <short issue title> | `<owner/repository>` | ready / blocked / duplicate / unclear / report-only | <report evidence> | <docs and headings> |
 
 ## Current Readiness Judgment
 

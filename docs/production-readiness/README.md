@@ -12,11 +12,18 @@ The readiness loop has three phases:
 
 1. The weekly review produces a dated report and structured issue candidates.
 2. The weekly review opens or updates a normal ready-for-review PR containing
-   only the dated report and the readiness log index update.
+   only the dated report, the readiness log index update, and one weekly metrics
+   snapshot under `../metrics/<ISO-week>.md`.
 3. After a human merges that report PR, the issue-creator automation's daily
    post-merge poll consumes the latest dated report from `main` and creates
    focused, duplicate-free `kaizen` issues with the `[readiness-review]` title
    prefix when the candidates pass validation.
+
+The repository denominator is the set of entries with `weeklyReadiness: true`
+in [`../../onboarding/fleet.json`](../../onboarding/fleet.json). The weekly
+review validates and reads that reviewed registry but never edits it. A fleet
+addition or removal is handled in a separate normal ready-for-review pull
+request.
 
 ## Documents
 
@@ -36,11 +43,12 @@ Run the readiness review once per week. Each review should:
 1. Read the previous readiness log entry.
 2. Read the latest weekly metrics snapshot under `../metrics/` when present.
 3. Inspect the current repository, CI, issue, PR, and automation state.
-4. Run or cite available verification for `kaizen-loop`, `builder-agent`, and
-   `verifier`.
+4. Run or cite available verification for every validated
+   `weeklyReadiness: true` fleet entry, using each entry's complete `repository`
+   value.
 5. Collect or update `../metrics/<ISO-week>.md` with denominator-bearing
-   `kaizen status --metrics` results for `.github`, `kaizen-loop`,
-   `builder-agent`, and `verifier`.
+   `kaizen status --metrics` results for every repository in that same validated
+   fleet scope.
 6. Compare the current state with the previous week.
 7. Produce a concise dated report and structured issue candidates that cite the
    weekly metrics snapshot.

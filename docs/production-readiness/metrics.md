@@ -45,10 +45,11 @@ metrics should be reported as gaps, not estimated.
 
 The weekly readiness review persists collected metrics under
 `docs/metrics/<ISO-week>.md` before opening the readiness report PR. Each
-snapshot should cite the source commands, cover `.github`, `kaizen-loop`,
-`builder-agent`, and `verifier`, and include the denominator used for each
-reported rate. Missing metrics stay visible as unavailable rows with the
-inspected denominator and the reason the numerator could not be collected.
+snapshot should cite the source commands, cover every `weeklyReadiness: true`
+entry in the validated `onboarding/fleet.json` registry, and include the
+denominator used for each reported rate. Missing metrics stay visible as
+unavailable rows with the inspected denominator and the reason the numerator
+could not be collected.
 
 ## Interpretation
 

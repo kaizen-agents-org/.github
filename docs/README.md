@@ -38,6 +38,21 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Compatibility manifest ownership
    - Release and install verification checklist
 
+1. [First External Issue-to-Merge Run](./first-external-run-2026-08-12.md)
+   - Verified evidence for the first run outside this organization
+   - The four release-blocking defects it exposed, and why dogfooding hid them
+   - Design lessons for kaizen-loop: error propagation, postcondition checks,
+     harness artifacts, test-mode blind spots, environment assumptions
+   - Known-broken list and reproduction steps
+
+1. [Onboarding](../onboarding/README.md)
+   - Explicit branch-protection preview and apply workflow
+   - Required administrator permissions
+   - Backup and rollback guidance
+   - Target repository and observation snapshot inputs
+   - Deterministic safety, branch-protection, smoke, and vendored-skill checks
+   - Exit behavior and focused fixture tests
+
 1. [Daily Dogfood Sync](./daily-dogfood-sync.md)
    - Daily deterministic sync workflow
    - Shared skill sync delegation
@@ -55,7 +70,16 @@ This directory contains the organization-level documentation for Kaizen Agents.
    - Safety boundaries for monitor automation
    - Source prompt stored under `../automations/`
 
+1. [Scout Contract](./scout-contract.md)
+   - What any scout must guarantee, independent of what runs it
+   - Issues-only boundary, default-branch evidence, creation and backlog limits
+   - Why execution authorization is not a scout decision
+   - Three implementations: Codex Automation, Claude Routines, and an API
+     client that works against any OpenAI-compatible endpoint
+   - Why the API client enforces the limits in code rather than in a prompt
+
 1. [Repository Improvement Scout](./repo-improvement-scout.md)
+   - How this organization runs its own scout, as a Codex automation
    - Proactive repo-local improvement discovery
    - `[scout]` issue creation rules
    - Source prompt stored under `../automations/`
