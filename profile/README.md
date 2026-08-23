@@ -2,6 +2,8 @@
 
 Kaizen Agents turns GitHub Issues into high-quality, reviewable pull requests.
 
+Like a parent bird incubating its eggs, **Kaizen Agents incubates AI agents**—giving them the structure, checks, and care they need to mature into reliable contributors.
+
 The system is intentionally conservative: automation can build, verify, and open a PR, but human maintainers still own merge decisions.
 
 ## Philosophy
