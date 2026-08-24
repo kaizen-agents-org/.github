@@ -131,7 +131,7 @@ function readClaimRecord(path) {
     const serialized = fs.readFileSync(claimPath, 'utf8');
     return { serialized, mtimeMs: fs.statSync(claimPath).mtimeMs };
   } catch (error) {
-    if (error.code === 'ENOENT') return null;
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR' || error.code === 'EISDIR') return null;
     throw error;
   }
 }

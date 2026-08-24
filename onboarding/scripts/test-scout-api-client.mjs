@@ -122,6 +122,30 @@ test('new lock claims are fully published as regular files', async () => {
   assert.equal(fs.existsSync(lockPath), false);
 });
 
+test('a legacy-directory to regular-file race retries instead of aborting', async () => {
+  const lockPath = join(tmpdir(), `scout-representation-${process.pid}-${Date.now()}.lock`);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.mkdirSync(lockPath);
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'legacy', startedAt: 0 }));
+  const originalReadFileSync = fs.readFileSync;
+  let changed = false;
+  fs.readFileSync = function (path, ...args) {
+    if (!changed && path === claimPath) {
+      changed = true;
+      fs.rmSync(lockPath, { recursive: true });
+      fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'replacement', startedAt: Date.now() }));
+    }
+    return originalReadFileSync.call(this, path, ...args);
+  };
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  } finally {
+    fs.readFileSync = originalReadFileSync;
+    fs.rmSync(lockPath, { force: true, recursive: true });
+  }
+  assert.equal(changed, true);
+});
+
 test('an abandoned reclaim directory does not block future runs forever', async () => {
   const lockPath = join(tmpdir(), `scout-reclaim-${process.pid}-${Date.now()}.lock`);
   const reclaimPath = `${lockPath}.reclaim.2147483647.abandoned`;
