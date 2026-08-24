@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { acquireFileLock, boundedContext, flattenPaginated, openAiModel, runScout, validateFindings } from '../automations/scout-api-client.mjs';
 
@@ -108,6 +108,20 @@ test('a stale claim-less lock directory is reclaimed', async () => {
   fs.utimesSync(lockPath, old, old);
   const release = await acquireFileLock(lockPath, 500, 10);
   release();
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('an abandoned reclaim directory does not block future runs forever', async () => {
+  const lockPath = join(tmpdir(), `scout-reclaim-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.abandoned`;
+  fs.mkdirSync(reclaimPath);
+  const claimPath = join(reclaimPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'abandoned', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  const release = await acquireFileLock(lockPath, 500, 10);
+  release();
+  assert.equal(fs.existsSync(reclaimPath), false);
   assert.equal(fs.existsSync(lockPath), false);
 });
 

@@ -137,8 +137,30 @@ function reclaimLock(lockPath, expectedClaim) {
     catch (error) { if (error.code !== 'EEXIST') throw error; }
     return false;
   }
-  fs.rmSync(reclaimPath, { recursive: true });
+  try { fs.rmSync(reclaimPath, { recursive: true }); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
   return true;
+}
+
+function removeStaleReclaimDirectories(lockPath, staleMs) {
+  const parent = dirname(lockPath);
+  const prefix = `${lockPath.split('/').at(-1)}.reclaim.`;
+  for (const entry of fs.readdirSync(parent).filter((name) => name.startsWith(prefix))) {
+    const reclaimPath = join(parent, entry);
+    try {
+      const expectedClaim = readClaim(reclaimPath);
+      let owner = null;
+      if (expectedClaim !== null) {
+        try { owner = JSON.parse(expectedClaim); } catch { owner = null; }
+      }
+      const stat = fs.statSync(expectedClaim === null ? reclaimPath : join(reclaimPath, 'claim.json'));
+      if ((expectedClaim === null || !ownerIsAlive(owner)) && Date.now() - stat.mtimeMs >= staleMs) {
+        fs.rmSync(reclaimPath, { recursive: true });
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
 }
 
 export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
@@ -146,6 +168,7 @@ export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs =
   fs.mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
   const base = lockPath.split('/').at(-1);
   while (true) {
+    removeStaleReclaimDirectories(lockPath, staleMs);
     if (fs.readdirSync(dirname(lockPath)).some((entry) => entry.startsWith(`${base}.reclaim.`))) {
       if (Date.now() - started >= waitMs) fail(`single-flight lock timeout: ${lockPath}`);
       await new Promise((resolvePromise) => setTimeout(resolvePromise, LOCK_RETRY_MS));
