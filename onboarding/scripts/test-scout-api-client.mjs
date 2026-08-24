@@ -95,18 +95,29 @@ test('context is deterministically bounded by aggregate bytes', () => {
 test('lock release cannot remove a replacement claim', async () => {
   const lockPath = join(tmpdir(), `scout-claim-${process.pid}-${Date.now()}.lock`);
   const release = await acquireFileLock(lockPath, 1000, 1000);
-  fs.writeFileSync(join(lockPath, 'claim.json'), JSON.stringify({ pid: process.pid, token: 'replacement' }));
+  fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, token: 'replacement' }));
   release();
   assert.equal(fs.existsSync(lockPath), true);
   fs.rmSync(lockPath, { recursive: true });
 });
 
-test('a stale claim-less lock directory is reclaimed', async () => {
+test('a legacy claim-less lock directory fails closed', async () => {
   const lockPath = join(tmpdir(), `scout-incomplete-${process.pid}-${Date.now()}.lock`);
   fs.mkdirSync(lockPath);
   const old = new Date(Date.now() - 1000);
   fs.utimesSync(lockPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 10), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
+test('new lock claims are fully published as regular files', async () => {
+  const lockPath = join(tmpdir(), `scout-atomic-${process.pid}-${Date.now()}.lock`);
   const release = await acquireFileLock(lockPath, 500, 10);
+  assert.equal(fs.lstatSync(lockPath).isFile(), true);
+  const claim = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  assert.equal(claim.pid, process.pid);
+  assert.equal(claim.hostname, hostname());
   release();
   assert.equal(fs.existsSync(lockPath), false);
 });

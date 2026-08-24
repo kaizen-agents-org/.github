@@ -218,9 +218,11 @@ client does not assume cron, launchd, or CI provides overlap control. `lockPath`
 must be on host-local storage. Claims include host identity, and a foreign-host
 claim is never reclaimed by comparing its PID with a local process; it fails
 closed until the owning host or an operator releases it. Multi-host scheduling
-requires an external distributed coordinator. A stale local claim, including a
-directory left before its claim file was written, is reclaimed by atomic
-quarantine only after its owner process is no longer alive.
+requires an external distributed coordinator. New claims are fully written to a
+host-local candidate file and published at `lockPath` by an atomic hard link, so
+there is no visible claim-less creation window. Stale local claims are reclaimed
+by atomic quarantine only after their owner process is no longer alive. A
+claim-less directory from an older client fails closed for operator inspection.
 
 ### Running the reference client
 
