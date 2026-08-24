@@ -41,6 +41,21 @@ grep -Fq 'issues: write' "${workflow}" \
   || fail "normal scout lacks issue creation permission"
 grep -Fq 'scout-dry-run:' "${workflow}" \
   || fail "scout does not isolate dry runs in a read-only job"
+grep -Fq 'scout-failure-notification:' "${workflow}" \
+  || fail "scout failures do not have a notification job"
+grep -Fq 'needs: scout' "${workflow}" \
+  || fail "scout failure notification is not tied to the scout job"
+grep -Fq "if: \${{ always() && needs.scout.result == 'failure' }}" "${workflow}" \
+  || fail "scout failure notification is not fail-closed on job failure"
+grep -Fq 'issues: write' "${workflow}" \
+  || fail "scout failure notification lacks issue permission"
+grep -Fq 'could not check for an existing scout failure notification' "${workflow}" \
+  || fail "scout failure notification suppresses duplicate-check failures"
+grep -Fq 'gh issue create' "${workflow}" \
+  || fail "scout failure notification cannot create an issue"
+if grep -Fq '_No open scout issues._' "${workflow}"; then
+  fail "scout report suppresses GitHub API failures"
+fi
 [[ "$(grep -Ec '^  issues: read$' "${workflow}")" -eq 1 ]] \
   || fail "dry-run default must grant exactly read-only issue access"
 grep -Fq 'scout-target:' "${repo_root}/onboarding/automations/scout.prompt.template.md" \
@@ -104,6 +119,13 @@ cat > "${fixture}/bin/gh" <<'FAKE_GH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$1 $2" in
+  "secret list")
+    if [[ "${SCOUT_TEST_SECRET_PRESENT:-true}" == true ]]; then
+      printf 'ANTHROPIC_API_KEY\n'
+    else
+      printf '[]\n'
+    fi
+    ;;
   "pr list") printf '%s\n' "${SCOUT_TEST_OPEN_PRS:-0}" ;;
   "issue list") printf '%s\n' "${SCOUT_TEST_OPEN_ISSUES:-0}" ;;
   "issue create")
@@ -204,6 +226,28 @@ grep -Fq '`kaizen`, `team:maintenance`' "${fixture}/dry-1.out" \
   || fail "label placeholder was not rendered"
 grep -Fq 'Create no more than `2` issues' "${fixture}/dry-1.out" \
   || fail "creation limit placeholder was not rendered"
+
+export SCOUT_TEST_SECRET_PRESENT=false
+"${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/manual-without-secret.md" \
+  --labels "kaizen,team:maintenance" \
+  --dry-run >"${fixture}/manual-without-secret.out"
+grep -Fq 'Dry run: scout remains disabled' "${fixture}/manual-without-secret.out" \
+  || fail "manual scout incorrectly required the GitHub Actions secret"
+if "${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/missing-secret.md" \
+  --labels "kaizen,team:maintenance" \
+  --runner github-actions \
+  --dry-run >"${fixture}/missing-secret.out" 2>&1; then
+  fail "scout accepted a repository without ANTHROPIC_API_KEY"
+fi
+grep -Fq 'gh secret set ANTHROPIC_API_KEY --repo owner/repository' "${fixture}/missing-secret.out" \
+  || fail "missing secret failure did not provide the setup command"
+export SCOUT_TEST_SECRET_PRESENT=true
 
 if "${enable}" \
   --repo owner/repository \
