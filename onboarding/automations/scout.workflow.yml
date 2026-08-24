@@ -312,8 +312,54 @@ jobs:
             --search '"[scout]" in:title' \
             --json number,title,createdAt \
             --jq '.[] | "- #\(.number) \(.title)"' \
-            >> "$GITHUB_STEP_SUMMARY" 2>/dev/null \
-            || echo "_No open scout issues._" >> "$GITHUB_STEP_SUMMARY"
+            >> "$GITHUB_STEP_SUMMARY"
+
+  scout-failure-notification:
+    name: notify scout failure
+    needs: scout
+    if: ${{ always() && needs.scout.result == 'failure' }}
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: none
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Open one failure notification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCOUT_REPOSITORY: ${{ github.repository }}
+          SCOUT_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCOUT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="[scout] workflow failure"
+          if ! existing="$(gh issue list \
+            --repo "$SCOUT_REPOSITORY" \
+            --state open \
+            --search '"[scout] workflow failure" in:title' \
+            --json number,title \
+            --jq '[.[] | select(.title == "[scout] workflow failure")] | .[0].number')"; then
+            echo "::error::could not check for an existing scout failure notification; refusing to create a possibly duplicate issue." >&2
+            exit 1
+          fi
+          if [[ -n "$existing" && "$existing" != "null" ]]; then
+            echo "Scout failure notification issue #$existing is already open."
+            exit 0
+          fi
+          body=$(cat <<EOF
+          The scheduled Kaizen Scout workflow failed and requires investigation.
+
+          Run: $SCOUT_RUN_URL
+          Commit: $SCOUT_SHA
+
+          This notification is opened automatically. Resolve the underlying workflow failure before closing it.
+          EOF
+          )
+          gh issue create \
+            --repo "$SCOUT_REPOSITORY" \
+            --title "$title" \
+            --body "$body"
 
   scout-dry-run:
     name: scout (dry run)

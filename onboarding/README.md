@@ -76,8 +76,19 @@ onboarding/scripts/enable-scout.sh \
   --repo owner/repository \
   --readiness-evidence /path/to/scout-readiness.json \
   --output .github/kaizen/scout.prompt.md \
+  --runner github-actions \
   --confirm owner/repository
 ```
+
+The GitHub Actions runner uses Claude Code with metered Anthropic API access.
+When `--runner github-actions` is selected, the script verifies that the target
+repository has an `ANTHROPIC_API_KEY` secret name without reading its value. If
+it is missing, set it explicitly with
+`gh secret set ANTHROPIC_API_KEY --repo owner/repository`. Codex Automation and
+manual runs do not require this secret check.
+The workflow opens one durable failure-notification issue when a scheduled
+scout run fails; if that notification cannot be checked or created, the
+notification job also fails visibly.
 
 The evidence is a snapshot produced or reviewed by the repository owner:
 
