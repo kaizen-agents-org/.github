@@ -7,6 +7,7 @@ template="${script_dir}/../automations/scout.prompt.template.md"
 repo=""
 evidence=""
 output=""
+runner="manual"
 labels="kaizen"
 wip_limit=4
 creation_limit=2
@@ -19,6 +20,7 @@ creation_seen=false
 usage() {
   cat >&2 <<'USAGE'
 usage: enable-scout.sh --repo owner/repo --readiness-evidence FILE --output FILE
+                       [--runner github-actions|codex-automation|manual]
                        [--labels label1,label2] [--wip-limit N]
                        [--creation-limit N] [--confirm owner/repo] [--dry-run]
 
@@ -29,6 +31,10 @@ prints the rendered prompt without writing the output file.
 The rendered prompt carries its own target and limits and names no runner.
 For the default GitHub Actions runner, copy ../automations/scout.workflow.yml to
 .github/workflows/scout.yml and render --output .github/kaizen/scout.prompt.md.
+The default GitHub Actions runner requires the ANTHROPIC_API_KEY repository
+secret; pass --runner github-actions to verify that the secret name is present
+without reading its value. Codex Automation and manual runs do not require
+that secret check.
 Codex Automation, Claude Routines, and manual runs may use a runner-owned path.
 docs/scout-contract.md defines what any runner must guarantee.
 USAGE
@@ -62,6 +68,13 @@ while [[ $# -gt 0 ]]; do
       [[ -z "${output}" ]] || fail "--output may be supplied only once"
       require_value "$1" "${2:-}"
       output="$2"
+      shift 2
+      ;;
+    --runner)
+      require_value "$1" "${2:-}"
+      [[ "${2}" == "github-actions" || "${2}" == "codex-automation" || "${2}" == "manual" ]] \
+        || fail "--runner must be github-actions, codex-automation, or manual"
+      runner="$2"
       shift 2
       ;;
     --labels)
@@ -130,6 +143,15 @@ fi
 [[ -f "${evidence}" ]] || fail "readiness evidence is missing: ${evidence}"
 [[ -n "${labels}" && "${labels}" != *, && "${labels}" != ,* && "${labels}" != *,,* ]] \
   || fail "--labels must be a comma-separated list without empty entries"
+
+if [[ "${runner}" == "github-actions" ]]; then
+  command -v gh >/dev/null 2>&1 \
+    || fail "gh is required to verify the ANTHROPIC_API_KEY repository secret"
+  secret_names="$(gh secret list --repo "${repo}" --json name --jq '.[].name')" \
+    || fail "could not verify repository secrets for ${repo}; refusing to enable a workflow that may be unable to run"
+  grep -Fqx 'ANTHROPIC_API_KEY' <<< "${secret_names}" \
+    || fail "repository secret ANTHROPIC_API_KEY is missing; set it with: gh secret set ANTHROPIC_API_KEY --repo ${repo}"
+fi
 
 IFS=',' read -r -a label_values <<< "${labels}"
 kaizen_label_present=false
