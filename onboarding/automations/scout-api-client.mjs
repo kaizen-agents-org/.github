@@ -107,7 +107,11 @@ function defaultLockPath(target) {
 }
 
 function ownerIsAlive(owner) {
-  if (!Number.isInteger(owner?.pid) || typeof owner.hostname !== 'string') return false;
+  if (!Number.isInteger(owner?.pid)) return false;
+  // Claims created before hostname was added may still have a live local owner
+  // during an in-place upgrade, so they are intentionally unreclaimable.
+  if (owner.hostname === undefined) return true;
+  if (typeof owner.hostname !== 'string') return false;
   // PIDs are host-local. A foreign-host claim fails closed rather than being
   // reclaimed based on an unrelated local process.
   if (owner.hostname !== hostname()) return true;

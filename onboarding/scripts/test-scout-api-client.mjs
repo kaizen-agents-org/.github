@@ -137,6 +137,18 @@ test('a foreign-host claim fails closed instead of using its PID locally', async
   fs.rmSync(lockPath, { recursive: true });
 });
 
+test('a hostname-less legacy claim remains fail-closed during upgrades', async () => {
+  const lockPath = join(tmpdir(), `scout-legacy-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: process.pid, token: 'legacy', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
 test('intake backlog uses the paginated issues query', () => {
   const source = fs.readFileSync(new URL('../automations/scout-api-client.mjs', import.meta.url), 'utf8');
   assert.match(source, /ghJsonPaginated\(target, `issues\?state=open&labels=/);
