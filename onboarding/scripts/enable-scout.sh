@@ -29,6 +29,9 @@ prints the rendered prompt without writing the output file.
 The rendered prompt carries its own target and limits and names no runner.
 For the default GitHub Actions runner, copy ../automations/scout.workflow.yml to
 .github/workflows/scout.yml and render --output .github/kaizen/scout.prompt.md.
+The default GitHub Actions runner requires the ANTHROPIC_API_KEY repository
+secret; this command verifies that the secret name is present without reading
+its value.
 Codex Automation, Claude Routines, and manual runs may use a runner-owned path.
 docs/scout-contract.md defines what any runner must guarantee.
 USAGE
@@ -130,6 +133,13 @@ fi
 [[ -f "${evidence}" ]] || fail "readiness evidence is missing: ${evidence}"
 [[ -n "${labels}" && "${labels}" != *, && "${labels}" != ,* && "${labels}" != *,,* ]] \
   || fail "--labels must be a comma-separated list without empty entries"
+
+command -v gh >/dev/null 2>&1 \
+  || fail "gh is required to verify the ANTHROPIC_API_KEY repository secret"
+secret_names="$(gh secret list --repo "${repo}" --json name --jq '.[].name')" \
+  || fail "could not verify repository secrets for ${repo}; refusing to enable a workflow that may be unable to run"
+grep -Fqx 'ANTHROPIC_API_KEY' <<< "${secret_names}" \
+  || fail "repository secret ANTHROPIC_API_KEY is missing; set it with: gh secret set ANTHROPIC_API_KEY --repo ${repo}"
 
 IFS=',' read -r -a label_values <<< "${labels}"
 kaizen_label_present=false
