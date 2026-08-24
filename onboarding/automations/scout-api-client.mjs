@@ -129,7 +129,7 @@ function readClaim(path) {
 }
 
 function reclaimLock(lockPath, expectedClaim) {
-  const reclaimPath = `${lockPath}.reclaim.${randomUUID()}`;
+  const reclaimPath = `${lockPath}.reclaim.${process.pid}.${randomUUID()}`;
   try {
     fs.renameSync(lockPath, reclaimPath);
   } catch (error) {
@@ -152,13 +152,10 @@ function removeStaleReclaimDirectories(lockPath, staleMs) {
   for (const entry of fs.readdirSync(parent).filter((name) => name.startsWith(prefix))) {
     const reclaimPath = join(parent, entry);
     try {
-      const expectedClaim = readClaim(reclaimPath);
-      let owner = null;
-      if (expectedClaim !== null) {
-        try { owner = JSON.parse(expectedClaim); } catch { owner = null; }
-      }
-      const stat = fs.statSync(expectedClaim === null ? reclaimPath : join(reclaimPath, 'claim.json'));
-      if ((expectedClaim === null || !ownerIsAlive(owner)) && Date.now() - stat.mtimeMs >= staleMs) {
+      const reclaimerPid = Number(entry.slice(prefix.length).split('.')[0]);
+      const reclaimerAlive = Number.isInteger(reclaimerPid) && ownerIsAlive({ pid: reclaimerPid, hostname: hostname() });
+      const stat = fs.statSync(reclaimPath);
+      if (!reclaimerAlive && Date.now() - stat.ctimeMs >= staleMs) {
         fs.rmSync(reclaimPath, { recursive: true });
       }
     } catch (error) {

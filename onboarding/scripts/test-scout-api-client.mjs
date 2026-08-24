@@ -113,16 +113,28 @@ test('a stale claim-less lock directory is reclaimed', async () => {
 
 test('an abandoned reclaim directory does not block future runs forever', async () => {
   const lockPath = join(tmpdir(), `scout-reclaim-${process.pid}-${Date.now()}.lock`);
-  const reclaimPath = `${lockPath}.reclaim.abandoned`;
+  const reclaimPath = `${lockPath}.reclaim.2147483647.abandoned`;
   fs.mkdirSync(reclaimPath);
   const claimPath = join(reclaimPath, 'claim.json');
   fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'abandoned', startedAt: 0 }));
-  const old = new Date(Date.now() - 1000);
-  fs.utimesSync(claimPath, old, old);
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
   const release = await acquireFileLock(lockPath, 500, 10);
   release();
   assert.equal(fs.existsSync(reclaimPath), false);
   assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('an active reclaimer quarantine is not deleted based on the old claim age', async () => {
+  const lockPath = join(tmpdir(), `scout-active-reclaim-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.${process.pid}.active`;
+  fs.mkdirSync(reclaimPath);
+  const claimPath = join(reclaimPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'old-owner', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(reclaimPath), true);
+  fs.rmSync(reclaimPath, { recursive: true });
 });
 
 test('a foreign-host claim fails closed instead of using its PID locally', async () => {
