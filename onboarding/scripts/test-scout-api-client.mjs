@@ -13,7 +13,7 @@ const base = () => ({ target: 'owner/repo', labels: ['kaizen', 'team:maintenance
 function deps({ state = { openIssues: [], openPullRequests: [] }, response = valid(), labels = true } = {}) {
   const calls = { model: 0, creates: [] };
   return { calls, github: {
-    openState: async () => state,
+    openState: async () => ({ ...state, duplicateIssues: state.openIssues }),
     verifyLabels: async () => labels,
     defaultBranchContext: async () => ({ defaultBranch: 'main', content: 'README content' }),
     createIssue: async (_target, title, body, applied) => { calls.creates.push({ title, body, applied }); return 'https://github.test/issues/1'; }
@@ -46,11 +46,30 @@ test('duplicate open work is dropped and no issue is created', async () => {
   assert.match(result.skipped[0].reason, /duplicate/);
 });
 
+test('an unlabelled open issue still suppresses duplicate work', async () => {
+  const finding = valid().findings[0];
+  const d = deps();
+  d.github.openState = async () => ({ openIssues: [], duplicateIssues: [{ title: finding.title }], openPullRequests: [] });
+  const result = await runScout(base(), d);
+  assert.equal(d.calls.creates.length, 0);
+  assert.match(result.skipped[0].reason, /duplicate/);
+});
+
 test('creation limit and configured labels are enforced', async () => {
   const d = deps({ response: valid(10) });
   const result = await runScout(base(), d);
   assert.equal(result.filed.length, 1); assert.deepEqual(d.calls.creates[0].applied, base().labels);
   assert.match(d.calls.creates[0].title, /^\[scout\] /); assert.match(d.calls.creates[0].body, /PR linkage requirement/);
+  assert.match(d.calls.creates[0].body, /docs\/scout-contract\.md/);
+});
+
+test('a second equivalent finding is suppressed after the first create', async () => {
+  const response = valid(2);
+  response.findings[1].title = response.findings[0].title;
+  const d = deps({ response });
+  const result = await runScout({ ...base(), creationLimit: 2 }, d);
+  assert.equal(d.calls.creates.length, 1);
+  assert.match(result.skipped.at(-1).reason, /duplicate/);
 });
 
 test('missing configured label fails closed', async () => {

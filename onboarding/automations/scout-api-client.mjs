@@ -83,8 +83,8 @@ export function validateFindings(value) {
   return value;
 }
 
-function issueBody(body) {
-  return `${body}\n\n## PR linkage requirement\nThe implementation PR must target this repository's default branch, include a GitHub closing keyword such as \`Closes #<this issue number>\`, and verify \`closingIssuesReferences\` before reporting the PR ready.`;
+function issueBody(body, evidence) {
+  return `${body}\n\n## Evidence\n${evidence}\n\n## PR linkage requirement\nThe implementation PR must target this repository's default branch, include a GitHub closing keyword such as \`Closes #<this issue number>\`, and verify \`closingIssuesReferences\` before reporting the PR ready.`;
 }
 
 export async function runScout(config, dependencies) {
@@ -117,11 +117,16 @@ export async function runScout(config, dependencies) {
       skipped.push({ title: finding.title, reason: 'creation limit reached' });
       continue;
     }
-    if ([...existing.openIssues, ...existing.openPullRequests].some((item) => findingMatches(finding, item))) {
+    const current = await github.openState(config.target, config.labels[0]);
+    if (current.openIssues.length >= config.openIssueLimit) {
+      skipped.push({ title: finding.title, reason: 'open issue limit reached before creation' });
+      continue;
+    }
+    if ([...current.duplicateIssues, ...current.openPullRequests, ...filed].some((item) => findingMatches(finding, item))) {
       skipped.push({ title: finding.title, reason: 'duplicate open issue or pull request' });
       continue;
     }
-    const url = await github.createIssue(config.target, `[scout] ${finding.title}`, issueBody(finding.body), labels);
+    const url = await github.createIssue(config.target, `[scout] ${finding.title}`, issueBody(finding.body, finding.evidence), labels);
     filed.push({ title: finding.title, url });
   }
   return { filed, skipped, notes: response.notes };
@@ -140,8 +145,10 @@ function makeGithub() {
     async openState(target, intakeLabel) {
       const issues = ghJson(target, `issues?state=open&labels=${encodeURIComponent(intakeLabel)}&per_page=100`)
         .filter((item) => !item.pull_request);
+      const duplicateIssues = ghJson(target, 'issues?state=open&per_page=100')
+        .filter((item) => !item.pull_request);
       const prs = ghJson(target, 'pulls?state=open&per_page=100');
-      return { openIssues: issues, openPullRequests: prs };
+      return { openIssues: issues, duplicateIssues, openPullRequests: prs };
     },
     async verifyLabels(target, labels) {
       const available = ghJson(target, 'labels?per_page=100').map((label) => label.name);
@@ -174,15 +181,24 @@ function makeGithub() {
 }
 
 async function openAiModel(config) {
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+  const endpoint = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+  const request = {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}) },
     body: JSON.stringify({
       model: config.name,
       messages: [{ role: 'user', content: config.request }],
-      response_format: { type: 'json_schema', json_schema: { name: 'scout_findings', strict: true, schema: SCHEMA } }
+      ...(config.constrainedDecoding === false ? {} : {
+        response_format: { type: 'json_schema', json_schema: { name: 'scout_findings', strict: true, schema: SCHEMA } }
+      })
     })
-  });
+  };
+  let response = await fetch(endpoint, request);
+  if (!response.ok && config.constrainedDecoding !== false && [400, 404, 422].includes(response.status)) {
+    const body = JSON.parse(request.body);
+    delete body.response_format;
+    response = await fetch(endpoint, { ...request, body: JSON.stringify(body) });
+  }
   if (!response.ok) fail(`model request failed with HTTP ${response.status}`);
   const payload = await response.json();
   const text = payload?.choices?.[0]?.message?.content;
