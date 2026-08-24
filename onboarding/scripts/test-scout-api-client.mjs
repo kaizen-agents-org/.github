@@ -3,8 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runScout, validateFindings } from '../automations/scout-api-client.mjs';
-import { flattenPaginated, openAiModel } from '../automations/scout-api-client.mjs';
+import { acquireFileLock, boundedContext, flattenPaginated, openAiModel, runScout, validateFindings } from '../automations/scout-api-client.mjs';
 
 const valid = (count = 1) => ({ findings: Array.from({ length: count }, (_, i) => ({
   title: `Improve bounded behavior ${i}`,
@@ -85,6 +84,21 @@ test('paginated results flatten every page for label and duplicate callers', () 
   const pages = [Array.from({ length: 100 }, (_, i) => ({ name: `label-${i}` })), [{ name: 'kaizen' }]];
   assert.equal(flattenPaginated(pages).length, 101);
   assert.equal(flattenPaginated(pages).at(-1).name, 'kaizen');
+});
+
+test('context is deterministically bounded by aggregate bytes', () => {
+  const content = boundedContext(['alpha', 'βeta', 'gamma'], 8);
+  assert.ok(Buffer.byteLength(content) <= 8);
+  assert.equal(content.split('\n\n')[0], 'alpha');
+});
+
+test('lock release cannot remove a replacement claim', async () => {
+  const lockPath = join(tmpdir(), `scout-claim-${process.pid}-${Date.now()}.lock`);
+  const release = await acquireFileLock(lockPath, 1000, 1000);
+  fs.writeFileSync(join(lockPath, 'claim.json'), JSON.stringify({ pid: process.pid, token: 'replacement' }));
+  release();
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
 });
 
 test('schema and JSON-only instructions remain when constrained decoding is disabled', async () => {

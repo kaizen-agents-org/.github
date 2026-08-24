@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { dirname, join } from 'node:path';
@@ -99,6 +100,7 @@ function issueBody(body, evidence) {
 const LOCK_WAIT_MS = 30000;
 const LOCK_STALE_MS = 120000;
 const LOCK_RETRY_MS = 50;
+const DEFAULT_CONTEXT_BYTE_BUDGET = 400000;
 
 function defaultLockPath(target) {
   return join(tmpdir(), `scout-api-client-${target.replace(/[^A-Za-z0-9._-]+/g, '_')}.lock`);
@@ -114,32 +116,49 @@ function ownerIsAlive(owner) {
   }
 }
 
-async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
+export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
   const started = Date.now();
   fs.mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
+  const base = lockPath.split('/').at(-1);
   while (true) {
+    if (fs.readdirSync(dirname(lockPath)).some((entry) => entry.startsWith(`${base}.reclaim.`))) {
+      if (Date.now() - started >= waitMs) fail(`single-flight lock timeout: ${lockPath}`);
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, LOCK_RETRY_MS));
+      continue;
+    }
     try {
-      const handle = fs.openSync(lockPath, 'wx', 0o600);
-      fs.writeFileSync(handle, JSON.stringify({ pid: process.pid, startedAt: Date.now() }));
+      fs.mkdirSync(lockPath, 0o700);
+      const claim = { pid: process.pid, token: randomUUID(), startedAt: Date.now() };
+      fs.writeFileSync(join(lockPath, 'claim.json'), JSON.stringify(claim), { mode: 0o600 });
       return () => {
-        fs.closeSync(handle);
-        try { fs.unlinkSync(lockPath); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        let current;
+        try { current = JSON.parse(fs.readFileSync(join(lockPath, 'claim.json'), 'utf8')); } catch { return; }
+        if (current.token !== claim.token || current.pid !== process.pid) return;
+        try { fs.rmSync(lockPath, { recursive: true }); } catch (error) { if (error.code !== 'ENOENT') throw error; }
       };
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
       let stale = false;
       try {
-        const stat = fs.statSync(lockPath);
+        const stat = fs.statSync(join(lockPath, 'claim.json'));
         let owner;
-        try { owner = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { owner = null; }
+        try { owner = JSON.parse(fs.readFileSync(join(lockPath, 'claim.json'), 'utf8')); } catch { owner = null; }
         stale = !ownerIsAlive(owner) && Date.now() - stat.mtimeMs >= staleMs;
+        if (stale) {
+          const reclaimPath = `${lockPath}.reclaim.${randomUUID()}`;
+          try {
+            fs.renameSync(lockPath, reclaimPath);
+            const reclaimed = JSON.parse(fs.readFileSync(join(reclaimPath, 'claim.json'), 'utf8'));
+            if (reclaimed.token === owner?.token && !ownerIsAlive(reclaimed)) fs.rmSync(reclaimPath, { recursive: true });
+            else fs.renameSync(reclaimPath, lockPath);
+          } catch (reclaimError) {
+            if (reclaimError.code !== 'ENOENT' && reclaimError.code !== 'EEXIST') throw reclaimError;
+          }
+          continue;
+        }
       } catch (statError) {
         if (statError.code === 'ENOENT') continue;
         throw statError;
-      }
-      if (stale) {
-        try { fs.unlinkSync(lockPath); } catch (unlinkError) { if (unlinkError.code !== 'ENOENT') throw unlinkError; }
-        continue;
       }
       if (Date.now() - started >= waitMs) fail(`single-flight lock timeout: ${lockPath}`);
       await new Promise((resolvePromise) => setTimeout(resolvePromise, LOCK_RETRY_MS));
@@ -153,11 +172,39 @@ async function withSingleFlight(config, target, action, dependencies) {
   try { return await action(); } finally { release(); }
 }
 
+function contextBudget(value) {
+  const budget = value ?? DEFAULT_CONTEXT_BYTE_BUDGET;
+  if (!Number.isInteger(budget) || budget < 10000 || budget > 2000000) {
+    fail('contextByteBudget must be an integer from 10000 to 2000000');
+  }
+  return budget;
+}
+
+export function boundedContext(entries, maxBytes) {
+  let used = 0;
+  const content = [];
+  for (const entry of entries) {
+    const separator = content.length ? '\n\n' : '';
+    const separatorBytes = Buffer.byteLength(separator);
+    if (used + separatorBytes >= maxBytes) break;
+    const bytes = Buffer.from(entry, 'utf8');
+    const remaining = maxBytes - used - separatorBytes;
+    let selected = bytes.subarray(0, Math.min(bytes.length, remaining));
+    while (selected.length > 0 && Buffer.byteLength(selected.toString('utf8')) > remaining) {
+      selected = selected.subarray(0, -1);
+    }
+    content.push(`${separator}${selected.toString('utf8')}`);
+    used += separatorBytes + Buffer.byteLength(selected.toString('utf8'));
+  }
+  return content.join('');
+}
+
 export async function runScout(config, dependencies) {
   repositoryName(config.target);
   configuredLabels(config.labels);
   const configuredIntakeLabel = intakeLabel(config);
   limits(config);
+  const maxContextBytes = contextBudget(config.contextByteBudget);
   if (typeof config.model?.baseUrl !== 'string' || !config.model.baseUrl.startsWith('http')) fail('model.baseUrl is required');
   if (typeof config.model?.name !== 'string' || !config.model.name) fail('model.name is required');
   const { github, model } = dependencies;
@@ -167,7 +214,7 @@ export async function runScout(config, dependencies) {
   const labelsVerified = await github.verifyLabels(config.target, config.labels);
   if (!labelsVerified) return { filed: [], skipped: [{ reason: 'configured label is missing' }] };
   const labels = config.labels;
-  const context = await github.defaultBranchContext(config.target);
+  const context = await github.defaultBranchContext(config.target, { maxBytes: maxContextBytes });
   const raw = await model({
     model: config.model.name,
     schema: SCHEMA,
@@ -240,19 +287,20 @@ function makeGithub() {
       const available = ghJsonPaginated(target, 'labels?per_page=100').map((label) => label.name);
       return labels.every((label) => available.includes(label));
     },
-    async defaultBranchContext(target) {
+    async defaultBranchContext(target, options = {}) {
       const repository = ghJson(target, '');
       const branch = repository.default_branch;
       if (!branch) fail('GitHub did not return a default branch');
       const tree = ghJson(target, `git/trees/${encodeURIComponent(branch)}?recursive=1`).tree ?? [];
       const textEntries = tree.filter((entry) => entry.type === 'blob' && entry.size <= 100000)
-        .filter((entry) => /\.(md|mdx|json|ya?ml|sh|mjs|js|ts|py|toml|txt)$/i.test(entry.path)).slice(0, 40);
-      const content = [];
+        .filter((entry) => /\.(md|mdx|json|ya?ml|sh|mjs|js|ts|py|toml|txt)$/i.test(entry.path))
+        .sort((a, b) => a.path.localeCompare(b.path)).slice(0, 40);
+      const entries = [];
       for (const entry of textEntries) {
         const blob = ghJson(target, `git/blobs/${entry.sha}`);
-        content.push(`--- ${entry.path} ---\n${Buffer.from(blob.content, 'base64').toString('utf8')}`);
+        entries.push(`--- ${entry.path} ---\n${Buffer.from(blob.content, 'base64').toString('utf8')}`);
       }
-      return { defaultBranch: branch, content: content.join('\n\n') };
+      return { defaultBranch: branch, content: boundedContext(entries, options.maxBytes ?? DEFAULT_CONTEXT_BYTE_BUDGET) };
     },
     async createIssue(target, title, body, labels) {
       const args = ['issue', 'create', '--repo', target, '--title', title, '--body', body];

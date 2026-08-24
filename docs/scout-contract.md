@@ -210,14 +210,7 @@ data, and it is treated as such: a finding that fails validation is discarded
 rather than fixed up, and one that duplicates existing work never reaches
 `gh issue create`.
 
-The final duplicate, backlog, WIP, and issue-creation section is protected by a
-single-flight lock. Overlapping invocations may do the model work concurrently,
-but they wait before the final state read and issue write, then release the lock
-in a finally path even when the write fails. The lock is scheduler-independent:
-the client does not assume cron, launchd, or CI provides overlap control. Set
-lockPath to a shared filesystem path when multiple hosts participate; a local
-default is suitable for schedulers on one host. A stale lock is reclaimed only
-when its recorded owner process is no longer alive.
+The final duplicate, backlog, WIP, and issue-creation section is protected by a single-flight lock. Overlapping invocations may do model work concurrently, but they wait before the final state read and issue write, then release the lock in a finally path even when the write fails. The lock is scheduler-independent: the client does not assume cron, launchd, or CI provides overlap control. Set `lockPath` to a shared filesystem path when multiple hosts participate; a local default is suitable for schedulers on one host. A stale lock is reclaimed only when its recorded owner process is no longer alive.
 
 ### Running the reference client
 
@@ -229,6 +222,7 @@ Create a configuration file with an explicit repository and all limits. The
   "target": "owner/repository",
   "intakeLabel": "kaizen",
   "labels": ["kaizen"],
+  "contextByteBudget": 400000,
   "openIssueLimit": 4,
   "wipLimit": 4,
   "creationLimit": 2,
