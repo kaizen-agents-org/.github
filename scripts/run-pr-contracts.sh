@@ -5,6 +5,7 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${repo_root}"
 
 bash scripts/test-pull-request-ci-contract.sh
+bash onboarding/scripts/test-scout-api-client.sh
 bash scripts/test-automation-prompt-contract.sh
 bash scripts/test-dogfood-selection-label-contract.sh
 bash scripts/test-sync-daily-dogfood.sh

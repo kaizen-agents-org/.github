@@ -37,7 +37,7 @@ them*, and that difference is worth being explicit about.
 | Codex Automation | Codex app | Codex | The agent, by following its prompt | In use |
 | Agent on GitHub Actions | Actions schedule | Any coding agent with an API key | The agent, inside a wrapper that enforces the limits before `gh issue create` | Available |
 | Claude Routines | Routines | Claude | The agent, by following its prompt | [Not yet wired](https://github.com/kaizen-agents-org/.github/issues/227) |
-| API client | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | The client, in code | [Planned](https://github.com/kaizen-agents-org/.github/issues/229) |
+| API client | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | The client, in code | Available: `onboarding/automations/scout-api-client.mjs` |
 
 The difference that matters is **how far the enforcement sits from the model**.
 
@@ -49,7 +49,7 @@ the creation, WIP, and open-issue limits and refuses to proceed past them. Codex
 Automation and Claude Routines have no such seam today: their limits live in the
 prompt, because that is the only place they can live.
 
-**The API client**, once built, moves the enforcement out entirely. A model API
+**The API client** moves the enforcement out entirely. A model API
 cannot create an issue, so the work splits by construction:
 
 - the **model** reads the repository content it is given and returns candidate
@@ -178,10 +178,11 @@ pre-provisions the labels instead.
 
 ## The API client
 
-> **Not built yet.** This section is the specification the client is being
-> implemented against; see
-> [#229](https://github.com/kaizen-agents-org/.github/issues/229). To run a
-> scout today, use Codex Automation or the Actions workflow.
+The reference implementation is
+[`../onboarding/automations/scout-api-client.mjs`](../onboarding/automations/scout-api-client.mjs).
+It is deliberately a single Node.js command with no package dependency. Issue
+[#229](https://github.com/kaizen-agents-org/.github/issues/229) tracks its
+implementation and contract tests.
 
 The client is one command. Whatever starts it — cron, launchd, a CI schedule —
 supplies only timing.
@@ -207,6 +208,34 @@ Steps 5 through 7 are where the contract is enforced. The model's output is
 data, and it is treated as such: a finding that fails validation is discarded
 rather than fixed up, and one that duplicates existing work never reaches
 `gh issue create`.
+
+### Running the reference client
+
+Create a configuration file with an explicit repository and all limits. The
+`labels` array is never inferred; every configured label must already exist.
+
+```json
+{
+  "target": "owner/repository",
+  "labels": ["kaizen"],
+  "openIssueLimit": 4,
+  "wipLimit": 4,
+  "creationLimit": 2,
+  "model": {
+    "baseUrl": "http://127.0.0.1:8080/v1",
+    "name": "scout"
+  },
+  "prompt": "Find bounded, evidence-backed improvements."
+}
+```
+
+Run it with `node onboarding/automations/scout-api-client.mjs CONFIG.json`.
+Set `SCOUT_MODEL_API_KEY` for a metered endpoint; do not put credentials in the
+configuration file. The client reads the default branch and repository content
+through explicit `gh api` calls, stops before the model when backlog or WIP is
+full, validates the response locally, and uses `gh issue create` as its only
+GitHub write. A local gateway is supported by changing only `baseUrl`, the
+credential, and model name; no provider-specific branch is used.
 
 ### Model endpoint
 
@@ -296,4 +325,3 @@ What no implementation can check mechanically is whether the findings are any
 good. That is a prompt-quality question, and it is why the creation and backlog
 limits exist: a scout is allowed to be wrong occasionally, as long as being
 wrong is cheap and bounded.
-
