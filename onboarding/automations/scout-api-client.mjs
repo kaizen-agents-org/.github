@@ -27,6 +27,13 @@ function configuredLabels(value) {
   return [...new Set(value)];
 }
 
+function intakeLabel(config) {
+  if (typeof config.intakeLabel !== 'string' || !config.intakeLabel || !config.labels.includes(config.intakeLabel)) {
+    fail('intakeLabel must be explicitly configured and included in labels');
+  }
+  return config.intakeLabel;
+}
+
 function limits(config) {
   const { openIssueLimit, wipLimit, creationLimit } = config;
   if (![openIssueLimit, wipLimit].every((value) => Number.isInteger(value) && value >= 1 && value <= 4) ||
@@ -90,11 +97,12 @@ function issueBody(body, evidence) {
 export async function runScout(config, dependencies) {
   repositoryName(config.target);
   configuredLabels(config.labels);
+  const configuredIntakeLabel = intakeLabel(config);
   limits(config);
   if (typeof config.model?.baseUrl !== 'string' || !config.model.baseUrl.startsWith('http')) fail('model.baseUrl is required');
   if (typeof config.model?.name !== 'string' || !config.model.name) fail('model.name is required');
   const { github, model } = dependencies;
-  const existing = await github.openState(config.target, config.labels[0]);
+  const existing = await github.openState(config.target, configuredIntakeLabel);
   if (existing.openIssues.length >= config.openIssueLimit) return { filed: [], skipped: [{ reason: 'open issue limit reached' }] };
   if (existing.openPullRequests.length >= config.wipLimit) return { filed: [], skipped: [{ reason: 'open pull request WIP limit reached' }] };
   const labelsVerified = await github.verifyLabels(config.target, config.labels);
@@ -117,9 +125,13 @@ export async function runScout(config, dependencies) {
       skipped.push({ title: finding.title, reason: 'creation limit reached' });
       continue;
     }
-    const current = await github.openState(config.target, config.labels[0]);
+    const current = await github.openState(config.target, configuredIntakeLabel);
     if (current.openIssues.length >= config.openIssueLimit) {
       skipped.push({ title: finding.title, reason: 'open issue limit reached before creation' });
+      continue;
+    }
+    if (current.openPullRequests.length >= config.wipLimit) {
+      skipped.push({ title: finding.title, reason: 'open pull request WIP limit reached before creation' });
       continue;
     }
     if ([...current.duplicateIssues, ...current.openPullRequests, ...filed].some((item) => findingMatches(finding, item))) {
@@ -140,12 +152,21 @@ function ghJson(target, endpoint) {
   }
 }
 
+function ghJsonPaginated(target, endpoint) {
+  try {
+    const pages = JSON.parse(execFileSync('gh', ['api', '--paginate', '--slurp', `repos/${target}/${endpoint}`], { encoding: 'utf8' }));
+    return pages.flatMap((page) => Array.isArray(page) ? page : page.items ?? []);
+  } catch (error) {
+    fail(`Paginated GitHub query failed: ${error.stderr?.trim() || error.message}`);
+  }
+}
+
 function makeGithub() {
   return {
     async openState(target, intakeLabel) {
       const issues = ghJson(target, `issues?state=open&labels=${encodeURIComponent(intakeLabel)}&per_page=100`)
         .filter((item) => !item.pull_request);
-      const duplicateIssues = ghJson(target, 'issues?state=open&per_page=100')
+      const duplicateIssues = ghJsonPaginated(target, 'issues?state=open&per_page=100')
         .filter((item) => !item.pull_request);
       const prs = ghJson(target, 'pulls?state=open&per_page=100');
       return { openIssues: issues, duplicateIssues, openPullRequests: prs };

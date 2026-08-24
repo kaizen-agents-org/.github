@@ -8,7 +8,7 @@ const valid = (count = 1) => ({ findings: Array.from({ length: count }, (_, i) =
   evidence: 'docs/scout-contract.md: section Required behaviour',
 })), skipped: [] });
 
-const base = () => ({ target: 'owner/repo', labels: ['kaizen', 'team:maintenance'], openIssueLimit: 4, wipLimit: 4, creationLimit: 1, model: { baseUrl: 'http://gateway.test/v1', name: 'scout' } });
+const base = () => ({ target: 'owner/repo', intakeLabel: 'kaizen', labels: ['kaizen', 'team:maintenance'], openIssueLimit: 4, wipLimit: 4, creationLimit: 1, model: { baseUrl: 'http://gateway.test/v1', name: 'scout' } });
 
 function deps({ state = { openIssues: [], openPullRequests: [] }, response = valid(), labels = true } = {}) {
   const calls = { model: 0, creates: [] };
@@ -26,10 +26,30 @@ test('backlog limit stops before model call', async () => {
   assert.equal(d.calls.model, 0); assert.equal(result.filed.length, 0);
 });
 
+test('intake label is explicit and independent of label order', async () => {
+  const d = deps({ state: { openIssues: [{ title: 'x' }], openPullRequests: [] } });
+  const config = { ...base(), labels: ['team:maintenance', 'kaizen'], intakeLabel: 'kaizen', openIssueLimit: 1 };
+  const result = await runScout(config, d);
+  assert.equal(d.calls.model, 0); assert.equal(result.filed.length, 0);
+  await assert.rejects(() => runScout({ ...base(), intakeLabel: undefined }, deps()), /intakeLabel/);
+});
+
 test('WIP limit stops before model call', async () => {
   const d = deps({ state: { openIssues: [], openPullRequests: [{ title: 'x' }] } });
   const result = await runScout({ ...base(), wipLimit: 1 }, d);
   assert.equal(d.calls.model, 0); assert.equal(result.filed.length, 0);
+});
+
+test('WIP limit is rechecked immediately before creation', async () => {
+  const d = deps();
+  let calls = 0;
+  d.github.openState = async () => {
+    calls += 1;
+    return { openIssues: [], duplicateIssues: [], openPullRequests: calls > 1 ? [{ title: 'new PR' }] : [] };
+  };
+  const result = await runScout({ ...base(), wipLimit: 1 }, d);
+  assert.equal(d.calls.creates.length, 0);
+  assert.match(result.skipped[0].reason, /WIP/);
 });
 
 test('null and invalid schema roots are rejected', () => {

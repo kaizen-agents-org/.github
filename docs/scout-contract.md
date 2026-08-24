@@ -36,7 +36,7 @@ them*, and that difference is worth being explicit about.
 | --- | --- | --- | --- | --- |
 | Codex Automation | Codex app | Codex | The agent, by following its prompt | In use |
 | Agent on GitHub Actions | Actions schedule | Any coding agent with an API key | The agent, inside a wrapper that enforces the limits before `gh issue create` | Available |
-| Claude Routines | Routines | Claude | The agent, by following its prompt | Blocked: no conforming GitHub read/write boundary |
+| Claude Routines | Routines | Claude | The agent, by following its prompt | [Not yet wired](https://github.com/kaizen-agents-org/.github/issues/227) |
 | API client | cron, launchd, CI — anything that runs a command | Any OpenAI-compatible endpoint | The client, in code | Available: `onboarding/automations/scout-api-client.mjs` |
 
 The difference that matters is **how far the enforcement sits from the model**.
@@ -158,6 +158,7 @@ A finding that needs discussion is a report line, not an issue.
 | Input | Meaning |
 | --- | --- |
 | Target repository | `owner/name`, explicit |
+| Intake label | Explicit label used for the open-issue backlog check; must be present in Labels |
 | Labels | Applied to created issues; must include the intake label the loop filters on |
 | Creation limit | Issues per run (1–2) |
 | Open-issue limit | Stop when the target has this many open intake-labelled issues |
@@ -217,6 +218,7 @@ Create a configuration file with an explicit repository and all limits. The
 ```json
 {
   "target": "owner/repository",
+  "intakeLabel": "kaizen",
   "labels": ["kaizen"],
   "openIssueLimit": 4,
   "wipLimit": 4,
@@ -280,40 +282,13 @@ it. `enable-scout.sh` renders exactly that prompt.
 
 - **Codex Automation** — what this organization runs today; see
   [`repo-improvement-scout.md`](./repo-improvement-scout.md).
-- **Claude Routines** — evaluated for [#227](https://github.com/kaizen-agents-org/.github/issues/227),
-  but not wired because the currently documented Cowork capabilities cannot
-  provide a conforming GitHub issue scout. See [the evaluation below](#claude-routines-evaluation-2026-08-25).
+- **Claude Routines** — see
+  [#227](https://github.com/kaizen-agents-org/.github/issues/227) for the
+  wiring, and for two ways Routines diverges from the contract.
 
 Pasting a rendered prompt into an agent session by hand is the same shape
 without a schedule, and is the cheapest way to judge a prompt before automating
 it.
-
-### Claude Routines evaluation (2026-08-25)
-
-This is a documented no-go, not a relaxation of the scout contract. The
-evaluation uses the current Claude documentation and intentionally does not
-infer capabilities from Codex Automation or GitHub Actions.
-
-| Contract question | Current evidence | Result |
-| --- | --- | --- |
-| Can a routine read the target repository's default branch? | The [GitHub integration](https://support.claude.com/en/articles/10167454-use-the-github-integration) can sync selected files and folders from an accessible repository, and says only file names and contents on a branch are retrieved. | Partial: repository content can be supplied, but the routine does not expose an explicit checkout/default-branch proof boundary. |
-| Does it have `gh` or an equivalent for issues, PRs, and labels? | The same GitHub integration documentation says it retrieves files, not PRs or other metadata. No documented equivalent for the required explicit-repository issue/PR/label operations was found. | No: the scout cannot perform its required backlog, duplicate, WIP, label, or issue-creation operations. |
-| Can credentials be restricted to the scout's required scope? | Cowork documents connected tools and permission modes, while the GitHub integration documents repository access. Neither documents a least-privilege credential that grants contents read plus issue/PR/label reads and issue creation while denying contents write. | Unverified: do not claim the issues-only boundary is enforced. |
-| Can cadence and concurrency be controlled? | [Scheduled tasks](https://support.claude.com/en/articles/13854387-schedule-recurring-tasks-in-claude-cowork) support recurring schedules and separate sessions. The documentation does not describe a concurrency group, overlap lock, or single-flight guarantee. | Partial: cadence exists; duplicate-prevention concurrency is unverified. |
-| Is run output observable and auditable? | Scheduled tasks expose upcoming and past runs in Cowork. The documentation does not establish a shared, repository-visible audit trail for the GitHub reads/writes required by this contract. | Partial: operator-visible history exists; contract-level audit evidence is unverified. |
-
-The [Cowork overview](https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork)
-also says scheduled tasks run in the cloud, cannot be tied to a folder on the
-computer, and only tasks requiring local files or apps run locally. That rules
-out treating a local checkout, `gh` installation, or local secret as an
-implicit escape hatch for the missing GitHub operations.
-
-Until Claude documents an equivalent GitHub tool/API with explicit repository
-selection, issue/PR/label reads, issue creation, least-privilege credentials,
-and overlap control, Claude Routines remains report-only and is not a scout
-runner. GitHub Actions remains the default. Re-evaluate this section when
-those capabilities are documented; do not copy the rendered prompt into a
-scheduled task and call it conforming in the meantime.
 
 ## Checking conformance
 
