@@ -2,7 +2,9 @@
 
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SCHEMA_FILE = new URL('./scout.findings.schema.json', import.meta.url);
@@ -94,6 +96,63 @@ function issueBody(body, evidence) {
   return `${body}\n\n## Evidence\n${evidence}\n\n## PR linkage requirement\nThe implementation PR must target this repository's default branch, include a GitHub closing keyword such as \`Closes #<this issue number>\`, and verify \`closingIssuesReferences\` before reporting the PR ready.`;
 }
 
+const LOCK_WAIT_MS = 30000;
+const LOCK_STALE_MS = 120000;
+const LOCK_RETRY_MS = 50;
+
+function defaultLockPath(target) {
+  return join(tmpdir(), `scout-api-client-${target.replace(/[^A-Za-z0-9._-]+/g, '_')}.lock`);
+}
+
+function ownerIsAlive(owner) {
+  if (!Number.isInteger(owner?.pid)) return false;
+  try {
+    process.kill(owner.pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
+
+async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
+  const started = Date.now();
+  fs.mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
+  while (true) {
+    try {
+      const handle = fs.openSync(lockPath, 'wx', 0o600);
+      fs.writeFileSync(handle, JSON.stringify({ pid: process.pid, startedAt: Date.now() }));
+      return () => {
+        fs.closeSync(handle);
+        try { fs.unlinkSync(lockPath); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      };
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      let stale = false;
+      try {
+        const stat = fs.statSync(lockPath);
+        let owner;
+        try { owner = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { owner = null; }
+        stale = !ownerIsAlive(owner) && Date.now() - stat.mtimeMs >= staleMs;
+      } catch (statError) {
+        if (statError.code === 'ENOENT') continue;
+        throw statError;
+      }
+      if (stale) {
+        try { fs.unlinkSync(lockPath); } catch (unlinkError) { if (unlinkError.code !== 'ENOENT') throw unlinkError; }
+        continue;
+      }
+      if (Date.now() - started >= waitMs) fail(`single-flight lock timeout: ${lockPath}`);
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, LOCK_RETRY_MS));
+    }
+  }
+}
+
+async function withSingleFlight(config, target, action, dependencies) {
+  if (dependencies.singleFlight) return dependencies.singleFlight(target, action);
+  const release = await acquireFileLock(config.lockPath ?? defaultLockPath(target), config.lockWaitMs, config.lockStaleMs);
+  try { return await action(); } finally { release(); }
+}
+
 export async function runScout(config, dependencies) {
   repositoryName(config.target);
   configuredLabels(config.labels);
@@ -120,27 +179,29 @@ export async function runScout(config, dependencies) {
   const response = validateFindings(raw);
   const filed = [];
   const skipped = [...(response.skipped ?? [])];
-  for (const finding of response.findings) {
-    if (filed.length >= config.creationLimit) {
-      skipped.push({ title: finding.title, reason: 'creation limit reached' });
-      continue;
+  await withSingleFlight(config, config.target, async () => {
+    for (const finding of response.findings) {
+      if (filed.length >= config.creationLimit) {
+        skipped.push({ title: finding.title, reason: 'creation limit reached' });
+        continue;
+      }
+      const current = await github.openState(config.target, configuredIntakeLabel);
+      if (current.openIssues.length >= config.openIssueLimit) {
+        skipped.push({ title: finding.title, reason: 'open issue limit reached before creation' });
+        continue;
+      }
+      if (current.openPullRequests.length >= config.wipLimit) {
+        skipped.push({ title: finding.title, reason: 'open pull request WIP limit reached before creation' });
+        continue;
+      }
+      if ([...current.duplicateIssues, ...current.openPullRequests, ...filed].some((item) => findingMatches(finding, item))) {
+        skipped.push({ title: finding.title, reason: 'duplicate open issue or pull request' });
+        continue;
+      }
+      const url = await github.createIssue(config.target, `[scout] ${finding.title}`, issueBody(finding.body, finding.evidence), labels);
+      filed.push({ title: finding.title, url });
     }
-    const current = await github.openState(config.target, configuredIntakeLabel);
-    if (current.openIssues.length >= config.openIssueLimit) {
-      skipped.push({ title: finding.title, reason: 'open issue limit reached before creation' });
-      continue;
-    }
-    if (current.openPullRequests.length >= config.wipLimit) {
-      skipped.push({ title: finding.title, reason: 'open pull request WIP limit reached before creation' });
-      continue;
-    }
-    if ([...current.duplicateIssues, ...current.openPullRequests, ...filed].some((item) => findingMatches(finding, item))) {
-      skipped.push({ title: finding.title, reason: 'duplicate open issue or pull request' });
-      continue;
-    }
-    const url = await github.createIssue(config.target, `[scout] ${finding.title}`, issueBody(finding.body, finding.evidence), labels);
-    filed.push({ title: finding.title, url });
-  }
+  }, dependencies);
   return { filed, skipped, notes: response.notes };
 }
 
@@ -152,10 +213,14 @@ function ghJson(target, endpoint) {
   }
 }
 
+export function flattenPaginated(pages) {
+  return pages.flatMap((page) => Array.isArray(page) ? page : page.items ?? []);
+}
+
 function ghJsonPaginated(target, endpoint) {
   try {
     const pages = JSON.parse(execFileSync('gh', ['api', '--paginate', '--slurp', `repos/${target}/${endpoint}`], { encoding: 'utf8' }));
-    return pages.flatMap((page) => Array.isArray(page) ? page : page.items ?? []);
+    return flattenPaginated(pages);
   } catch (error) {
     fail(`Paginated GitHub query failed: ${error.stderr?.trim() || error.message}`);
   }
@@ -172,7 +237,7 @@ function makeGithub() {
       return { openIssues: issues, duplicateIssues, openPullRequests: prs };
     },
     async verifyLabels(target, labels) {
-      const available = ghJson(target, 'labels?per_page=100').map((label) => label.name);
+      const available = ghJsonPaginated(target, 'labels?per_page=100').map((label) => label.name);
       return labels.every((label) => available.includes(label));
     },
     async defaultBranchContext(target) {
@@ -201,14 +266,17 @@ function makeGithub() {
   };
 }
 
-async function openAiModel(config) {
+export async function openAiModel(config) {
   const endpoint = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
   const request = {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}) },
     body: JSON.stringify({
       model: config.name,
-      messages: [{ role: 'user', content: config.request }],
+      messages: [
+        { role: 'system', content: `Return only valid JSON matching this scout findings schema. Do not use Markdown or prose.\n${JSON.stringify(SCHEMA)}` },
+        { role: 'user', content: config.request }
+      ],
       ...(config.constrainedDecoding === false ? {} : {
         response_format: { type: 'json_schema', json_schema: { name: 'scout_findings', strict: true, schema: SCHEMA } }
       })

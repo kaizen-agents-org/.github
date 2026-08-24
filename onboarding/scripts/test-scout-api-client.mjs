@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { runScout, validateFindings } from '../automations/scout-api-client.mjs';
+import { flattenPaginated, openAiModel } from '../automations/scout-api-client.mjs';
 
 const valid = (count = 1) => ({ findings: Array.from({ length: count }, (_, i) => ({
   title: `Improve bounded behavior ${i}`,
@@ -50,6 +54,74 @@ test('WIP limit is rechecked immediately before creation', async () => {
   const result = await runScout({ ...base(), wipLimit: 1 }, d);
   assert.equal(d.calls.creates.length, 0);
   assert.match(result.skipped[0].reason, /WIP/);
+});
+
+test('overlapping runs serialize the final duplicate and creation claim', async () => {
+  const lockPath = join(tmpdir(), `scout-test-${process.pid}-${Date.now()}.lock`);
+  const finding = valid().findings[0];
+  const state = { openIssues: [], openPullRequests: [] };
+  const calls = { creates: 0, active: 0, maxActive: 0 };
+  const github = {
+    openState: async () => ({ openIssues: [...state.openIssues], duplicateIssues: [...state.openIssues], openPullRequests: [] }),
+    verifyLabels: async () => true,
+    defaultBranchContext: async () => ({ defaultBranch: 'main', content: 'README content' }),
+    createIssue: async () => {
+      calls.creates += 1; calls.active += 1; calls.maxActive = Math.max(calls.maxActive, calls.active);
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+      state.openIssues.push({ title: finding.title }); calls.active -= 1;
+      return 'https://github.test/issues/1';
+    }
+  };
+  const dependencies = { github, model: async () => ({ findings: [finding], skipped: [] }) };
+  const config = { ...base(), creationLimit: 1, lockPath };
+  const results = await Promise.all([runScout(config, dependencies), runScout(config, dependencies)]);
+  assert.equal(calls.creates, 1);
+  assert.equal(calls.maxActive, 1);
+  assert.equal(results.filter((result) => result.filed.length === 1).length, 1);
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('paginated results flatten every page for label and duplicate callers', () => {
+  const pages = [Array.from({ length: 100 }, (_, i) => ({ name: `label-${i}` })), [{ name: 'kaizen' }]];
+  assert.equal(flattenPaginated(pages).length, 101);
+  assert.equal(flattenPaginated(pages).at(-1).name, 'kaizen');
+});
+
+test('schema and JSON-only instructions remain when constrained decoding is disabled', async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (_url, options) => {
+    request = JSON.parse(options.body);
+    return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(valid()) } }] }) };
+  };
+  try {
+    await openAiModel({ baseUrl: 'http://gateway.test/v1', name: 'scout', request: 'inspect', constrainedDecoding: false });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(request.response_format, undefined);
+  assert.match(request.messages[0].content, /Return only valid JSON/);
+  assert.match(request.messages[0].content, /findings/);
+  assert.match(request.messages[0].content, /evidence/);
+});
+
+test('schema and JSON-only instructions remain after response-format fallback', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    if (requests.length === 1) return { ok: false, status: 422 };
+    return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(valid()) } }] }) };
+  };
+  try {
+    await openAiModel({ baseUrl: 'http://gateway.test/v1', name: 'scout', request: 'inspect' });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].response_format, undefined);
+  assert.match(requests[1].messages[0].content, /Return only valid JSON/);
+  assert.match(requests[1].messages[0].content, /scout findings schema/);
 });
 
 test('null and invalid schema roots are rejected', () => {
