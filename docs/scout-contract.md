@@ -210,7 +210,17 @@ data, and it is treated as such: a finding that fails validation is discarded
 rather than fixed up, and one that duplicates existing work never reaches
 `gh issue create`.
 
-The final duplicate, backlog, WIP, and issue-creation section is protected by a single-flight lock. Overlapping invocations may do model work concurrently, but they wait before the final state read and issue write, then release the lock in a finally path even when the write fails. The lock is scheduler-independent: the client does not assume cron, launchd, or CI provides overlap control. Set `lockPath` to a shared filesystem path when multiple hosts participate; a local default is suitable for schedulers on one host. A stale lock is reclaimed only when its recorded owner process is no longer alive.
+The final duplicate, backlog, WIP, and issue-creation section is protected by a
+single-flight lock. Overlapping invocations may do model work concurrently, but
+they wait before the final state read and issue write, then release the lock in a
+finally path even when the write fails. The lock is scheduler-independent: the
+client does not assume cron, launchd, or CI provides overlap control. `lockPath`
+must be on host-local storage. Claims include host identity, and a foreign-host
+claim is never reclaimed by comparing its PID with a local process; it fails
+closed until the owning host or an operator releases it. Multi-host scheduling
+requires an external distributed coordinator. A stale local claim, including a
+directory left before its claim file was written, is reclaimed by atomic
+quarantine only after its owner process is no longer alive.
 
 ### Running the reference client
 

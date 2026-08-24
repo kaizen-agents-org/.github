@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -107,13 +107,38 @@ function defaultLockPath(target) {
 }
 
 function ownerIsAlive(owner) {
-  if (!Number.isInteger(owner?.pid)) return false;
+  if (!Number.isInteger(owner?.pid) || typeof owner.hostname !== 'string') return false;
+  // PIDs are host-local. A foreign-host claim fails closed rather than being
+  // reclaimed based on an unrelated local process.
+  if (owner.hostname !== hostname()) return true;
   try {
     process.kill(owner.pid, 0);
     return true;
   } catch (error) {
     return error.code === 'EPERM';
   }
+}
+
+function readClaim(path) {
+  try { return fs.readFileSync(join(path, 'claim.json'), 'utf8'); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+}
+
+function reclaimLock(lockPath, expectedClaim) {
+  const reclaimPath = `${lockPath}.reclaim.${randomUUID()}`;
+  try {
+    fs.renameSync(lockPath, reclaimPath);
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'EEXIST') return false;
+    throw error;
+  }
+  if (readClaim(reclaimPath) !== expectedClaim) {
+    try { fs.renameSync(reclaimPath, lockPath); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    return false;
+  }
+  fs.rmSync(reclaimPath, { recursive: true });
+  return true;
 }
 
 export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
@@ -128,38 +153,33 @@ export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs =
     }
     try {
       fs.mkdirSync(lockPath, 0o700);
-      const claim = { pid: process.pid, token: randomUUID(), startedAt: Date.now() };
-      fs.writeFileSync(join(lockPath, 'claim.json'), JSON.stringify(claim), { mode: 0o600 });
+      const claim = { pid: process.pid, hostname: hostname(), token: randomUUID(), startedAt: Date.now() };
+      const serializedClaim = JSON.stringify(claim);
+      fs.writeFileSync(join(lockPath, 'claim.json'), serializedClaim, { mode: 0o600 });
       return () => {
-        let current;
-        try { current = JSON.parse(fs.readFileSync(join(lockPath, 'claim.json'), 'utf8')); } catch { return; }
-        if (current.token !== claim.token || current.pid !== process.pid) return;
-        try { fs.rmSync(lockPath, { recursive: true }); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        reclaimLock(lockPath, serializedClaim);
       };
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
+      let expectedClaim = null;
       let stale = false;
       try {
-        const stat = fs.statSync(join(lockPath, 'claim.json'));
+        const claimPath = join(lockPath, 'claim.json');
+        const stat = fs.statSync(claimPath);
         let owner;
-        try { owner = JSON.parse(fs.readFileSync(join(lockPath, 'claim.json'), 'utf8')); } catch { owner = null; }
+        expectedClaim = fs.readFileSync(claimPath, 'utf8');
+        try { owner = JSON.parse(expectedClaim); } catch { owner = null; }
         stale = !ownerIsAlive(owner) && Date.now() - stat.mtimeMs >= staleMs;
-        if (stale) {
-          const reclaimPath = `${lockPath}.reclaim.${randomUUID()}`;
-          try {
-            fs.renameSync(lockPath, reclaimPath);
-            const reclaimed = JSON.parse(fs.readFileSync(join(reclaimPath, 'claim.json'), 'utf8'));
-            if (reclaimed.token === owner?.token && !ownerIsAlive(reclaimed)) fs.rmSync(reclaimPath, { recursive: true });
-            else fs.renameSync(reclaimPath, lockPath);
-          } catch (reclaimError) {
-            if (reclaimError.code !== 'ENOENT' && reclaimError.code !== 'EEXIST') throw reclaimError;
-          }
-          continue;
-        }
       } catch (statError) {
-        if (statError.code === 'ENOENT') continue;
-        throw statError;
+        if (statError.code !== 'ENOENT') throw statError;
+        try {
+          stale = Date.now() - fs.statSync(lockPath).mtimeMs >= staleMs;
+          expectedClaim = null;
+        } catch (directoryError) {
+          if (directoryError.code !== 'ENOENT') throw directoryError;
+        }
       }
+      if (stale && reclaimLock(lockPath, expectedClaim)) continue;
       if (Date.now() - started >= waitMs) fail(`single-flight lock timeout: ${lockPath}`);
       await new Promise((resolvePromise) => setTimeout(resolvePromise, LOCK_RETRY_MS));
     }
@@ -276,7 +296,7 @@ function ghJsonPaginated(target, endpoint) {
 function makeGithub() {
   return {
     async openState(target, intakeLabel) {
-      const issues = ghJson(target, `issues?state=open&labels=${encodeURIComponent(intakeLabel)}&per_page=100`)
+      const issues = ghJsonPaginated(target, `issues?state=open&labels=${encodeURIComponent(intakeLabel)}&per_page=100`)
         .filter((item) => !item.pull_request);
       const duplicateIssues = ghJsonPaginated(target, 'issues?state=open&per_page=100')
         .filter((item) => !item.pull_request);

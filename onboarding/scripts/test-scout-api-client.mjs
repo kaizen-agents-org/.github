@@ -101,6 +101,33 @@ test('lock release cannot remove a replacement claim', async () => {
   fs.rmSync(lockPath, { recursive: true });
 });
 
+test('a stale claim-less lock directory is reclaimed', async () => {
+  const lockPath = join(tmpdir(), `scout-incomplete-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(lockPath, old, old);
+  const release = await acquireFileLock(lockPath, 500, 10);
+  release();
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('a foreign-host claim fails closed instead of using its PID locally', async () => {
+  const lockPath = join(tmpdir(), `scout-foreign-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: process.pid, hostname: 'remote.invalid', token: 'remote', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
+test('intake backlog uses the paginated issues query', () => {
+  const source = fs.readFileSync(new URL('../automations/scout-api-client.mjs', import.meta.url), 'utf8');
+  assert.match(source, /ghJsonPaginated\(target, `issues\?state=open&labels=/);
+});
+
 test('schema and JSON-only instructions remain when constrained decoding is disabled', async () => {
   const originalFetch = globalThis.fetch;
   let request;
