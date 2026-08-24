@@ -5,6 +5,7 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 enable="${repo_root}/onboarding/scripts/enable-scout.sh"
 validator="${repo_root}/onboarding/scripts/validate-fleet.mjs"
 workflow="${repo_root}/onboarding/automations/scout.workflow.yml"
+contract="${repo_root}/docs/scout-contract.md"
 fixture_base="${KAIZEN_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 fixture="$(mktemp -d "${fixture_base%/}/scout-fleet-contract.XXXXXX")"
 trap 'rm -rf "${fixture}"' EXIT
@@ -13,6 +14,16 @@ fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
+
+# Claude Routines is intentionally not wired until its documented GitHub
+# capabilities can satisfy the scout contract. Keep the no-go decision from
+# silently regressing to an unsafe prompt-only integration.
+grep -Fq 'Claude Routines evaluation (2026-08-25)' "${contract}" \
+  || fail "Claude Routines evaluation is missing from the scout contract"
+grep -Fq 'Claude Routines remains report-only and is not a scout' "${contract}" \
+  || fail "Claude Routines report-only boundary is missing"
+grep -Fq 'cannot perform its required backlog, duplicate, WIP, label, or issue-creation operations' "${contract}" \
+  || fail "Claude Routines GitHub-operation blocker is missing"
 
 grep -Fq 'organization monitor, weekly readiness review, and downstream readiness issue' \
   "${repo_root}/onboarding/README.md" \
@@ -217,11 +228,20 @@ grep -Fq 'Create no more than `2` issues' "${fixture}/dry-1.out" \
   || fail "creation limit placeholder was not rendered"
 
 export SCOUT_TEST_SECRET_PRESENT=false
+"${enable}" \
+  --repo owner/repository \
+  --readiness-evidence "${fixture}/readiness.json" \
+  --output "${fixture}/manual-without-secret.md" \
+  --labels "kaizen,team:maintenance" \
+  --dry-run >"${fixture}/manual-without-secret.out"
+grep -Fq 'Dry run: scout remains disabled' "${fixture}/manual-without-secret.out" \
+  || fail "manual scout incorrectly required the GitHub Actions secret"
 if "${enable}" \
   --repo owner/repository \
   --readiness-evidence "${fixture}/readiness.json" \
   --output "${fixture}/missing-secret.md" \
   --labels "kaizen,team:maintenance" \
+  --runner github-actions \
   --dry-run >"${fixture}/missing-secret.out" 2>&1; then
   fail "scout accepted a repository without ANTHROPIC_API_KEY"
 fi
