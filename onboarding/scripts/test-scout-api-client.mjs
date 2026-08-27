@@ -172,6 +172,45 @@ test('an active reclaimer quarantine is not deleted based on the old claim age',
   fs.rmSync(reclaimPath, { recursive: true });
 });
 
+test('quarantine restoration never overwrites a newer live claim', async () => {
+  const lockPath = join(tmpdir(), `scout-no-clobber-${process.pid}-${Date.now()}.lock`);
+  const staleClaim = JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'stale', startedAt: 0 });
+  const secondClaim = JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'second', startedAt: Date.now() });
+  const thirdClaim = JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'third', startedAt: Date.now() });
+  fs.writeFileSync(lockPath, staleClaim);
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(lockPath, old, old);
+
+  const originalRenameSync = fs.renameSync;
+  const originalLinkSync = fs.linkSync;
+  let reclaimPath;
+  fs.renameSync = function (source, destination) {
+    if (source === lockPath && reclaimPath === undefined) {
+      fs.unlinkSync(lockPath);
+      fs.writeFileSync(lockPath, secondClaim);
+      reclaimPath = destination;
+    }
+    return originalRenameSync.call(this, source, destination);
+  };
+  fs.linkSync = function (source, destination) {
+    if (source === reclaimPath && destination === lockPath) {
+      fs.writeFileSync(lockPath, thirdClaim, { flag: 'wx' });
+    }
+    return originalLinkSync.call(this, source, destination);
+  };
+
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), thirdClaim);
+    assert.equal(fs.readFileSync(reclaimPath, 'utf8'), secondClaim);
+  } finally {
+    fs.renameSync = originalRenameSync;
+    fs.linkSync = originalLinkSync;
+    fs.rmSync(lockPath, { force: true });
+    if (reclaimPath !== undefined) fs.rmSync(reclaimPath, { force: true, recursive: true });
+  }
+});
+
 test('a foreign-host claim fails closed instead of using its PID locally', async () => {
   const lockPath = join(tmpdir(), `scout-foreign-${process.pid}-${Date.now()}.lock`);
   fs.mkdirSync(lockPath);

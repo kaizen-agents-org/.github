@@ -163,8 +163,17 @@ function reclaimLock(lockPath, expectedClaim) {
     throw error;
   }
   if (readClaim(reclaimPath) !== expectedClaim) {
-    try { fs.renameSync(reclaimPath, lockPath); }
-    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    try {
+      // A plain rename would replace a newer regular-file claim on POSIX.
+      // Restore regular-file claims with a no-clobber hard link instead. If a
+      // newer claim already exists, preserve the quarantine and fail closed.
+      if (fs.lstatSync(reclaimPath).isFile()) {
+        fs.linkSync(reclaimPath, lockPath);
+        fs.unlinkSync(reclaimPath);
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT' && error.code !== 'EEXIST') throw error;
+    }
     return false;
   }
   try { fs.rmSync(reclaimPath, { recursive: true }); }
