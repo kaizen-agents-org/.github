@@ -122,6 +122,35 @@ test('new lock claims are fully published as regular files', async () => {
   assert.equal(fs.existsSync(lockPath), false);
 });
 
+test('candidate cleanup failures do not replace lock contention', async () => {
+  const lockPath = join(tmpdir(), `scout-cleanup-${process.pid}-${Date.now()}.lock`);
+  fs.writeFileSync(lockPath, JSON.stringify({
+    pid: process.pid,
+    hostname: hostname(),
+    token: 'owner',
+    startedAt: Date.now(),
+  }));
+  const originalUnlinkSync = fs.unlinkSync;
+  const leakedCandidates = [];
+  fs.unlinkSync = function (path, ...args) {
+    if (path.startsWith(`${lockPath}.claim.`)) {
+      leakedCandidates.push(path);
+      const error = new Error('candidate cleanup refused');
+      error.code = 'EACCES';
+      throw error;
+    }
+    return originalUnlinkSync.call(this, path, ...args);
+  };
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+    assert.ok(leakedCandidates.length > 0);
+  } finally {
+    fs.unlinkSync = originalUnlinkSync;
+    fs.rmSync(lockPath, { force: true });
+    for (const candidatePath of leakedCandidates) fs.rmSync(candidatePath, { force: true });
+  }
+});
+
 test('a legacy-directory to regular-file race retries instead of aborting', async () => {
   const lockPath = join(tmpdir(), `scout-representation-${process.pid}-${Date.now()}.lock`);
   const claimPath = join(lockPath, 'claim.json');
@@ -172,6 +201,21 @@ test('an active reclaimer quarantine is not deleted based on the old claim age',
   fs.rmSync(reclaimPath, { recursive: true });
 });
 
+test('an abandoned reclaimer cannot expose a quarantined live owner', async () => {
+  const lockPath = join(tmpdir(), `scout-live-owner-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.2147483647.abandoned`;
+  fs.writeFileSync(reclaimPath, JSON.stringify({
+    pid: process.pid,
+    hostname: hostname(),
+    token: 'live-owner',
+    startedAt: Date.now(),
+  }));
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 10), /timeout/);
+  assert.equal(fs.existsSync(reclaimPath), true);
+  fs.rmSync(reclaimPath, { force: true });
+});
+
 test('quarantine restoration never overwrites a newer live claim', async () => {
   const lockPath = join(tmpdir(), `scout-no-clobber-${process.pid}-${Date.now()}.lock`);
   const staleClaim = JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'stale', startedAt: 0 });
@@ -215,7 +259,7 @@ test('a foreign-host claim fails closed instead of using its PID locally', async
   const lockPath = join(tmpdir(), `scout-foreign-${process.pid}-${Date.now()}.lock`);
   fs.mkdirSync(lockPath);
   const claimPath = join(lockPath, 'claim.json');
-  fs.writeFileSync(claimPath, JSON.stringify({ pid: process.pid, hostname: 'remote.invalid', token: 'remote', startedAt: 0 }));
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: 'remote.invalid', token: 'remote', startedAt: 0 }));
   const old = new Date(Date.now() - 1000);
   fs.utimesSync(claimPath, old, old);
   await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
@@ -227,7 +271,7 @@ test('a hostname-less legacy claim remains fail-closed during upgrades', async (
   const lockPath = join(tmpdir(), `scout-legacy-${process.pid}-${Date.now()}.lock`);
   fs.mkdirSync(lockPath);
   const claimPath = join(lockPath, 'claim.json');
-  fs.writeFileSync(claimPath, JSON.stringify({ pid: process.pid, token: 'legacy', startedAt: 0 }));
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, token: 'legacy', startedAt: 0 }));
   const old = new Date(Date.now() - 1000);
   fs.utimesSync(claimPath, old, old);
   await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
@@ -235,9 +279,10 @@ test('a hostname-less legacy claim remains fail-closed during upgrades', async (
   fs.rmSync(lockPath, { recursive: true });
 });
 
-test('intake backlog uses the paginated issues query', () => {
+test('intake backlog uses paginated issue and pull request queries', () => {
   const source = fs.readFileSync(new URL('../automations/scout-api-client.mjs', import.meta.url), 'utf8');
   assert.match(source, /ghJsonPaginated\(target, `issues\?state=open&labels=/);
+  assert.match(source, /ghJsonPaginated\(target, 'pulls\?state=open&per_page=100'\)/);
 });
 
 test('schema and JSON-only instructions remain when constrained decoding is disabled', async () => {

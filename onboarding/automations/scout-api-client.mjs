@@ -4,8 +4,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { hostname, tmpdir } from 'node:os';
-import { resolve } from 'node:path';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SCHEMA_FILE = new URL('./scout.findings.schema.json', import.meta.url);
@@ -148,8 +147,9 @@ function createLockFile(lockPath) {
   try {
     fs.linkSync(candidatePath, lockPath);
   } finally {
-    try { fs.unlinkSync(candidatePath); }
-    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    // Cleanup must not replace an EEXIST contention result or turn a
+    // successfully published lock into a failed acquisition.
+    try { fs.unlinkSync(candidatePath); } catch {}
   }
   return serializedClaim;
 }
@@ -183,14 +183,18 @@ function reclaimLock(lockPath, expectedClaim) {
 
 function removeStaleReclaimDirectories(lockPath, staleMs) {
   const parent = dirname(lockPath);
-  const prefix = `${lockPath.split('/').at(-1)}.reclaim.`;
+  const prefix = `${basename(lockPath)}.reclaim.`;
   for (const entry of fs.readdirSync(parent).filter((name) => name.startsWith(prefix))) {
     const reclaimPath = join(parent, entry);
     try {
       const reclaimerPid = Number(entry.slice(prefix.length).split('.')[0]);
       const reclaimerAlive = Number.isInteger(reclaimerPid) && ownerIsAlive({ pid: reclaimerPid, hostname: hostname() });
+      const record = readClaimRecord(reclaimPath);
+      if (record === null) continue;
+      let owner;
+      try { owner = JSON.parse(record.serialized); } catch { continue; }
       const stat = fs.statSync(reclaimPath);
-      if (!reclaimerAlive && Date.now() - stat.ctimeMs >= staleMs) {
+      if (!reclaimerAlive && !ownerIsAlive(owner) && Date.now() - stat.ctimeMs >= staleMs) {
         fs.rmSync(reclaimPath, { recursive: true });
       }
     } catch (error) {
@@ -202,7 +206,7 @@ function removeStaleReclaimDirectories(lockPath, staleMs) {
 export async function acquireFileLock(lockPath, waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS) {
   const started = Date.now();
   fs.mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
-  const base = lockPath.split('/').at(-1);
+  const base = basename(lockPath);
   while (true) {
     removeStaleReclaimDirectories(lockPath, staleMs);
     if (fs.readdirSync(dirname(lockPath)).some((entry) => entry.startsWith(`${base}.reclaim.`))) {
@@ -347,7 +351,7 @@ function makeGithub() {
         .filter((item) => !item.pull_request);
       const duplicateIssues = ghJsonPaginated(target, 'issues?state=open&per_page=100')
         .filter((item) => !item.pull_request);
-      const prs = ghJson(target, 'pulls?state=open&per_page=100');
+      const prs = ghJsonPaginated(target, 'pulls?state=open&per_page=100');
       return { openIssues: issues, duplicateIssues, openPullRequests: prs };
     },
     async verifyLabels(target, labels) {
