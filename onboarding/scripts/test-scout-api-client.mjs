@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { hostname, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { acquireFileLock, boundedContext, flattenPaginated, openAiModel, runScout, validateFindings } from '../automations/scout-api-client.mjs';
 
 const valid = (count = 1) => ({ findings: Array.from({ length: count }, (_, i) => ({
@@ -216,42 +216,34 @@ test('an abandoned reclaimer cannot expose a quarantined live owner', async () =
   fs.rmSync(reclaimPath, { force: true });
 });
 
-test('quarantine restoration never overwrites a newer live claim', async () => {
-  const lockPath = join(tmpdir(), `scout-no-clobber-${process.pid}-${Date.now()}.lock`);
+test('a stale reader cannot quarantine a newer live claim', async () => {
+  const lockPath = join(tmpdir(), `scout-serialized-reclaim-${process.pid}-${Date.now()}.lock`);
   const staleClaim = JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'stale', startedAt: 0 });
   const secondClaim = JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'second', startedAt: Date.now() });
-  const thirdClaim = JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'third', startedAt: Date.now() });
   fs.writeFileSync(lockPath, staleClaim);
   const old = new Date(Date.now() - 1000);
   fs.utimesSync(lockPath, old, old);
 
-  const originalRenameSync = fs.renameSync;
-  const originalLinkSync = fs.linkSync;
-  let reclaimPath;
-  fs.renameSync = function (source, destination) {
-    if (source === lockPath && reclaimPath === undefined) {
+  const originalMkdirSync = fs.mkdirSync;
+  let replaced = false;
+  fs.mkdirSync = function (path, options) {
+    if (path === `${lockPath}.mutation` && !replaced) {
+      replaced = true;
       fs.unlinkSync(lockPath);
       fs.writeFileSync(lockPath, secondClaim);
-      reclaimPath = destination;
     }
-    return originalRenameSync.call(this, source, destination);
-  };
-  fs.linkSync = function (source, destination) {
-    if (source === reclaimPath && destination === lockPath) {
-      fs.writeFileSync(lockPath, thirdClaim, { flag: 'wx' });
-    }
-    return originalLinkSync.call(this, source, destination);
+    return originalMkdirSync.call(this, path, options);
   };
 
   try {
     await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
-    assert.equal(fs.readFileSync(lockPath, 'utf8'), thirdClaim);
-    assert.equal(fs.readFileSync(reclaimPath, 'utf8'), secondClaim);
+    assert.equal(replaced, true);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), secondClaim);
+    assert.equal(fs.readdirSync(dirname(lockPath)).some((entry) => entry.startsWith(`${basename(lockPath)}.reclaim.`)), false);
   } finally {
-    fs.renameSync = originalRenameSync;
-    fs.linkSync = originalLinkSync;
+    fs.mkdirSync = originalMkdirSync;
     fs.rmSync(lockPath, { force: true });
-    if (reclaimPath !== undefined) fs.rmSync(reclaimPath, { force: true, recursive: true });
+    fs.rmSync(`${lockPath}.mutation`, { force: true, recursive: true });
   }
 });
 

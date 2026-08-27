@@ -139,7 +139,41 @@ function readClaim(path) {
   return readClaimRecord(path)?.serialized ?? null;
 }
 
+function withLockMutationGate(lockPath, operation) {
+  const gatePath = `${lockPath}.mutation`;
+  try {
+    fs.mkdirSync(gatePath, { mode: 0o700 });
+  } catch (error) {
+    if (error.code === 'EEXIST') return { acquired: false };
+    throw error;
+  }
+  let value;
+  let operationError;
+  try { value = operation(); } catch (error) { operationError = error; }
+  let cleanupError;
+  try { fs.rmdirSync(gatePath); } catch (error) { cleanupError = error; }
+  // A crash or cleanup failure may leave this gate behind. That intentionally
+  // fails closed: removing it requires operator confirmation that no lock
+  // mutation is still in flight. Preserve the operation failure when both the
+  // operation and cleanup fail so cleanup cannot disguise the primary result.
+  if (operationError) throw operationError;
+  if (cleanupError) throw cleanupError;
+  return { acquired: true, value };
+}
+
+function lockContentionError(lockPath) {
+  const error = new Error(`single-flight lock contention: ${lockPath}`);
+  error.code = 'EEXIST';
+  return error;
+}
+
 function createLockFile(lockPath) {
+  const gated = withLockMutationGate(lockPath, () => createLockFileWithoutGate(lockPath));
+  if (!gated.acquired) throw lockContentionError(lockPath);
+  return gated.value;
+}
+
+function createLockFileWithoutGate(lockPath) {
   const claim = { pid: process.pid, hostname: hostname(), token: randomUUID(), startedAt: Date.now() };
   const serializedClaim = JSON.stringify(claim);
   const candidatePath = `${lockPath}.claim.${process.pid}.${claim.token}`;
@@ -155,30 +189,23 @@ function createLockFile(lockPath) {
 }
 
 function reclaimLock(lockPath, expectedClaim) {
-  const reclaimPath = `${lockPath}.reclaim.${process.pid}.${randomUUID()}`;
-  try {
-    fs.renameSync(lockPath, reclaimPath);
-  } catch (error) {
-    if (error.code === 'ENOENT' || error.code === 'EEXIST') return false;
-    throw error;
-  }
-  if (readClaim(reclaimPath) !== expectedClaim) {
+  const gated = withLockMutationGate(lockPath, () => {
+    // A stale observation made before entering the gate must never move the
+    // current visible claim. All cooperating publishers use this same gate.
+    if (readClaim(lockPath) !== expectedClaim) return false;
+    const reclaimPath = `${lockPath}.reclaim.${process.pid}.${randomUUID()}`;
     try {
-      // A plain rename would replace a newer regular-file claim on POSIX.
-      // Restore regular-file claims with a no-clobber hard link instead. If a
-      // newer claim already exists, preserve the quarantine and fail closed.
-      if (fs.lstatSync(reclaimPath).isFile()) {
-        fs.linkSync(reclaimPath, lockPath);
-        fs.unlinkSync(reclaimPath);
-      }
+      fs.renameSync(lockPath, reclaimPath);
     } catch (error) {
-      if (error.code !== 'ENOENT' && error.code !== 'EEXIST') throw error;
+      if (error.code === 'ENOENT' || error.code === 'EEXIST') return false;
+      throw error;
     }
-    return false;
-  }
-  try { fs.rmSync(reclaimPath, { recursive: true }); }
-  catch (error) { if (error.code !== 'ENOENT') throw error; }
-  return true;
+    if (readClaim(reclaimPath) !== expectedClaim) return false;
+    try { fs.rmSync(reclaimPath, { recursive: true }); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    return true;
+  });
+  return gated.acquired && gated.value;
 }
 
 function removeStaleReclaimDirectories(lockPath, staleMs) {
