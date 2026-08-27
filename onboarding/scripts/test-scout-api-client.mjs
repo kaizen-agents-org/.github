@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { hostname, tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
 import { acquireFileLock, boundedContext, flattenPaginated, openAiModel, runScout, validateFindings } from '../automations/scout-api-client.mjs';
 
 const valid = (count = 1) => ({ findings: Array.from({ length: count }, (_, i) => ({
@@ -95,10 +95,186 @@ test('context is deterministically bounded by aggregate bytes', () => {
 test('lock release cannot remove a replacement claim', async () => {
   const lockPath = join(tmpdir(), `scout-claim-${process.pid}-${Date.now()}.lock`);
   const release = await acquireFileLock(lockPath, 1000, 1000);
-  fs.writeFileSync(join(lockPath, 'claim.json'), JSON.stringify({ pid: process.pid, token: 'replacement' }));
+  fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, token: 'replacement' }));
   release();
   assert.equal(fs.existsSync(lockPath), true);
   fs.rmSync(lockPath, { recursive: true });
+});
+
+test('a legacy claim-less lock directory fails closed', async () => {
+  const lockPath = join(tmpdir(), `scout-incomplete-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(lockPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 10), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
+test('new lock claims are fully published as regular files', async () => {
+  const lockPath = join(tmpdir(), `scout-atomic-${process.pid}-${Date.now()}.lock`);
+  const release = await acquireFileLock(lockPath, 500, 10);
+  assert.equal(fs.lstatSync(lockPath).isFile(), true);
+  const claim = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  assert.equal(claim.pid, process.pid);
+  assert.equal(claim.hostname, hostname());
+  release();
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('candidate cleanup failures do not replace lock contention', async () => {
+  const lockPath = join(tmpdir(), `scout-cleanup-${process.pid}-${Date.now()}.lock`);
+  fs.writeFileSync(lockPath, JSON.stringify({
+    pid: process.pid,
+    hostname: hostname(),
+    token: 'owner',
+    startedAt: Date.now(),
+  }));
+  const originalUnlinkSync = fs.unlinkSync;
+  const leakedCandidates = [];
+  fs.unlinkSync = function (path, ...args) {
+    if (path.startsWith(`${lockPath}.claim.`)) {
+      leakedCandidates.push(path);
+      const error = new Error('candidate cleanup refused');
+      error.code = 'EACCES';
+      throw error;
+    }
+    return originalUnlinkSync.call(this, path, ...args);
+  };
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+    assert.ok(leakedCandidates.length > 0);
+  } finally {
+    fs.unlinkSync = originalUnlinkSync;
+    fs.rmSync(lockPath, { force: true });
+    for (const candidatePath of leakedCandidates) fs.rmSync(candidatePath, { force: true });
+  }
+});
+
+test('a legacy-directory to regular-file race retries instead of aborting', async () => {
+  const lockPath = join(tmpdir(), `scout-representation-${process.pid}-${Date.now()}.lock`);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.mkdirSync(lockPath);
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'legacy', startedAt: 0 }));
+  const originalReadFileSync = fs.readFileSync;
+  let changed = false;
+  fs.readFileSync = function (path, ...args) {
+    if (!changed && path === claimPath) {
+      changed = true;
+      fs.rmSync(lockPath, { recursive: true });
+      fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'replacement', startedAt: Date.now() }));
+    }
+    return originalReadFileSync.call(this, path, ...args);
+  };
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  } finally {
+    fs.readFileSync = originalReadFileSync;
+    fs.rmSync(lockPath, { force: true, recursive: true });
+  }
+  assert.equal(changed, true);
+});
+
+test('an abandoned reclaim directory does not block future runs forever', async () => {
+  const lockPath = join(tmpdir(), `scout-reclaim-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.2147483647.abandoned`;
+  fs.mkdirSync(reclaimPath);
+  const claimPath = join(reclaimPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'abandoned', startedAt: 0 }));
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+  const release = await acquireFileLock(lockPath, 500, 10);
+  release();
+  assert.equal(fs.existsSync(reclaimPath), false);
+  assert.equal(fs.existsSync(lockPath), false);
+});
+
+test('an active reclaimer quarantine is not deleted based on the old claim age', async () => {
+  const lockPath = join(tmpdir(), `scout-active-reclaim-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.${process.pid}.active`;
+  fs.mkdirSync(reclaimPath);
+  const claimPath = join(reclaimPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'old-owner', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(reclaimPath), true);
+  fs.rmSync(reclaimPath, { recursive: true });
+});
+
+test('an abandoned reclaimer cannot expose a quarantined live owner', async () => {
+  const lockPath = join(tmpdir(), `scout-live-owner-${process.pid}-${Date.now()}.lock`);
+  const reclaimPath = `${lockPath}.reclaim.2147483647.abandoned`;
+  fs.writeFileSync(reclaimPath, JSON.stringify({
+    pid: process.pid,
+    hostname: hostname(),
+    token: 'live-owner',
+    startedAt: Date.now(),
+  }));
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 10), /timeout/);
+  assert.equal(fs.existsSync(reclaimPath), true);
+  fs.rmSync(reclaimPath, { force: true });
+});
+
+test('a stale reader cannot quarantine a newer live claim', async () => {
+  const lockPath = join(tmpdir(), `scout-serialized-reclaim-${process.pid}-${Date.now()}.lock`);
+  const staleClaim = JSON.stringify({ pid: 2147483647, hostname: hostname(), token: 'stale', startedAt: 0 });
+  const secondClaim = JSON.stringify({ pid: process.pid, hostname: hostname(), token: 'second', startedAt: Date.now() });
+  fs.writeFileSync(lockPath, staleClaim);
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(lockPath, old, old);
+
+  const originalMkdirSync = fs.mkdirSync;
+  let replaced = false;
+  fs.mkdirSync = function (path, options) {
+    if (path === `${lockPath}.mutation` && !replaced) {
+      replaced = true;
+      fs.unlinkSync(lockPath);
+      fs.writeFileSync(lockPath, secondClaim);
+    }
+    return originalMkdirSync.call(this, path, options);
+  };
+
+  try {
+    await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+    assert.equal(replaced, true);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), secondClaim);
+    assert.equal(fs.readdirSync(dirname(lockPath)).some((entry) => entry.startsWith(`${basename(lockPath)}.reclaim.`)), false);
+  } finally {
+    fs.mkdirSync = originalMkdirSync;
+    fs.rmSync(lockPath, { force: true });
+    fs.rmSync(`${lockPath}.mutation`, { force: true, recursive: true });
+  }
+});
+
+test('a foreign-host claim fails closed instead of using its PID locally', async () => {
+  const lockPath = join(tmpdir(), `scout-foreign-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, hostname: 'remote.invalid', token: 'remote', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
+test('a hostname-less legacy claim remains fail-closed during upgrades', async () => {
+  const lockPath = join(tmpdir(), `scout-legacy-${process.pid}-${Date.now()}.lock`);
+  fs.mkdirSync(lockPath);
+  const claimPath = join(lockPath, 'claim.json');
+  fs.writeFileSync(claimPath, JSON.stringify({ pid: 2147483647, token: 'legacy', startedAt: 0 }));
+  const old = new Date(Date.now() - 1000);
+  fs.utimesSync(claimPath, old, old);
+  await assert.rejects(() => acquireFileLock(lockPath, 25, 1), /timeout/);
+  assert.equal(fs.existsSync(lockPath), true);
+  fs.rmSync(lockPath, { recursive: true });
+});
+
+test('intake backlog uses paginated issue and pull request queries', () => {
+  const source = fs.readFileSync(new URL('../automations/scout-api-client.mjs', import.meta.url), 'utf8');
+  assert.match(source, /ghJsonPaginated\(target, `issues\?state=open&labels=/);
+  assert.match(source, /ghJsonPaginated\(target, 'pulls\?state=open&per_page=100'\)/);
 });
 
 test('schema and JSON-only instructions remain when constrained decoding is disabled', async () => {
